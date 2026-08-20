@@ -2,7 +2,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { adminApi } from "@/api/client";
 import { sessionTokens } from "@/api/session";
 
-describe("OpenAPI 0.3.0 client", () => {
+describe("OpenAPI 0.5.0 client", () => {
   beforeEach(() => {
     sessionStorage.clear();
     vi.restoreAllMocks();
@@ -14,7 +14,9 @@ describe("OpenAPI 0.3.0 client", () => {
 
     await adminApi.listSubscriptions();
 
-    expect(fetchMock).toHaveBeenCalledWith("http://localhost:3000/admin/v1/subscriptions", expect.objectContaining({ headers: expect.objectContaining({ Authorization: "Bearer stf_test" }) }));
+    const request = fetchMock.mock.calls[0]?.[0] as Request;
+    expect(request.url).toBe("http://localhost:3000/admin/v1/subscriptions");
+    expect(request.headers.get("Authorization")).toBe("Bearer stf_test");
   });
 
   it("encodes the subscription id in the token rotation path", async () => {
@@ -23,6 +25,7 @@ describe("OpenAPI 0.3.0 client", () => {
 
     await adminApi.rotateSubscriptionToken("subscription/id");
 
-    expect(fetchMock).toHaveBeenCalledWith("http://localhost:3000/admin/v1/subscriptions/subscription%2Fid/tokens/rotate", expect.any(Object));
+    const request = fetchMock.mock.calls[0]?.[0] as Request;
+    expect(request.url).toBe("http://localhost:3000/admin/v1/subscriptions/subscription%2Fid/tokens/rotate");
   });
 });

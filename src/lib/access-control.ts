@@ -1,5 +1,3 @@
-import type { AuthPrincipal } from "@/api/types";
-
-export function can(principal: AuthPrincipal | undefined, permission: string) {
+export function can(principal: { permissions: string[] } | undefined, permission: string) {
   return principal?.permissions.includes(permission) ?? false;
 }

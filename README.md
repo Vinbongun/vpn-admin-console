@@ -9,7 +9,7 @@ pnpm install
 pnpm dev
 ```
 
-API-клиент соответствует OpenAPI 0.3.0 из `vpn-platform-backend`. Базовый URL задаётся через `NEXT_PUBLIC_API_URL`. Staff token хранится только в `sessionStorage`; permissions всегда берутся из `/admin/v1/auth/me`.
+API-клиент генерируется из OpenAPI 0.5.0 репозитория `vpn-platform-backend` командой `pnpm generate:api`. Базовый URL задаётся через `NEXT_PUBLIC_API_URL`. Staff token хранится только в `sessionStorage`; roles и permissions всегда берутся из `/admin/v1/auth/me`.
 
 ## Проверки
 

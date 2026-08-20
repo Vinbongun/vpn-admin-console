@@ -1,59 +1,32 @@
-/** Types mirrored from vpn-platform-backend OpenAPI 0.3.0 (PR #3). */
-export type ApiAudience = "customer" | "staff";
+import type { components, operations } from "@/api/generated";
 
-export type SessionToken = {
-  accessToken: string;
-  tokenType: "Bearer";
-  audience: ApiAudience;
-  expiresAt: string;
-};
+type Schemas = components["schemas"];
 
-export type AuthPrincipal = {
-  audience: ApiAudience;
-  identityId: string;
-  sessionId: string;
-  email: string;
-  permissions: string[];
-};
+export type AuthPrincipal = Schemas["AuthPrincipal"];
+export type StaffProfile = Schemas["StaffProfile"];
+export type SessionToken = Schemas["SessionToken"];
+export type PasswordLogin = Schemas["PasswordLogin"];
+export type StaffOtpVerify = Schemas["OtpVerify"];
+export type CustomerPasswordLogin = Schemas["CustomerPasswordLogin"];
+export type CustomerOtpRequest = Schemas["CustomerOtpRequest"];
+export type CustomerOtpVerify = Schemas["CustomerOtpVerify"];
+export type SubscriptionSummary = Schemas["SubscriptionSummary"];
+export type SubscriptionDetail = Schemas["SubscriptionDetail"];
+export type SubscriptionPage = Schemas["SubscriptionPage"];
+export type CreateSubscription = Schemas["CreateSubscription"];
+export type UpdateSubscription = Schemas["UpdateSubscription"];
+export type RotateSubscriptionToken = Schemas["RotateSubscriptionToken"];
+export type IssuedSubscriptionToken = Schemas["IssuedSubscriptionToken"];
+export type CustomerSummary = Schemas["CustomerSummary"];
+export type CustomerPage = Schemas["CustomerPage"];
+export type BrandMembershipSummary = Schemas["BrandMembershipSummary"];
+export type UpdateMembership = Schemas["UpdateMembership"];
+export type PlanSummary = Schemas["PlanSummary"];
+export type PlanPage = Schemas["PlanPage"];
+export type AuditEventSummary = Schemas["AuditEventSummary"];
+export type AuditEventPage = Schemas["AuditEventPage"];
 
-export type SubscriptionStatus =
-  | "PENDING"
-  | "TRIAL"
-  | "ACTIVE"
-  | "PAST_DUE"
-  | "EXPIRED"
-  | "SUSPENDED"
-  | "REVOKED";
-
-export type SubscriptionSummary = {
-  id: string;
-  brandCode: string;
-  planCode?: string | null;
-  status: SubscriptionStatus;
-  startsAt: string;
-  expiresAt: string;
-  revision: string;
-  tokenPrefix?: string | null;
-};
-
-export type CreateSubscription = {
-  brandMembershipId: string;
-  planId?: string;
-  status: "PENDING" | "TRIAL" | "ACTIVE";
-  startsAt: string;
-  expiresAt: string;
-};
-
-export type RotateSubscriptionToken = { expiresAt?: string };
-
-export type IssuedSubscriptionToken = {
-  token: string;
-  tokenPrefix: string;
-  expiresAt?: string | null;
-};
-
-export type PasswordLogin = { email: string; password: string };
-export type StaffOtpVerify = { email: string; code: string };
-export type CustomerPasswordLogin = PasswordLogin & { brandCode: string };
-export type CustomerOtpRequest = { email: string; brandCode: string };
-export type CustomerOtpVerify = StaffOtpVerify & { brandCode: string };
+export type AdminSubscriptionQuery = NonNullable<operations["listAdminSubscriptions"]["parameters"]["query"]>;
+export type AdminCustomerQuery = NonNullable<operations["listAdminCustomers"]["parameters"]["query"]>;
+export type AdminPlanQuery = NonNullable<operations["listAdminPlans"]["parameters"]["query"]>;
+export type AdminAuditQuery = NonNullable<operations["listAdminAuditEvents"]["parameters"]["query"]>;
