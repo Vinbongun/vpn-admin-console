@@ -45,8 +45,5 @@
     "tailwindcss": "^4.3.3",
     "typescript": "^6.0.2",
     "vitest": "^4.1.11"
-  },
-  "pnpm": {
-    "ignoredBuiltDependencies": ["unrs-resolver"]
   }
 }
