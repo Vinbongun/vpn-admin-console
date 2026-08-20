@@ -1,0 +1,32 @@
+import type { components, operations } from "@/api/generated";
+
+type Schemas = components["schemas"];
+
+export type AuthPrincipal = Schemas["AuthPrincipal"];
+export type StaffProfile = Schemas["StaffProfile"];
+export type SessionToken = Schemas["SessionToken"];
+export type PasswordLogin = Schemas["PasswordLogin"];
+export type StaffOtpVerify = Schemas["OtpVerify"];
+export type CustomerPasswordLogin = Schemas["CustomerPasswordLogin"];
+export type CustomerOtpRequest = Schemas["CustomerOtpRequest"];
+export type CustomerOtpVerify = Schemas["CustomerOtpVerify"];
+export type SubscriptionSummary = Schemas["SubscriptionSummary"];
+export type SubscriptionDetail = Schemas["SubscriptionDetail"];
+export type SubscriptionPage = Schemas["SubscriptionPage"];
+export type CreateSubscription = Schemas["CreateSubscription"];
+export type UpdateSubscription = Schemas["UpdateSubscription"];
+export type RotateSubscriptionToken = Schemas["RotateSubscriptionToken"];
+export type IssuedSubscriptionToken = Schemas["IssuedSubscriptionToken"];
+export type CustomerSummary = Schemas["CustomerSummary"];
+export type CustomerPage = Schemas["CustomerPage"];
+export type BrandMembershipSummary = Schemas["BrandMembershipSummary"];
+export type UpdateMembership = Schemas["UpdateMembership"];
+export type PlanSummary = Schemas["PlanSummary"];
+export type PlanPage = Schemas["PlanPage"];
+export type AuditEventSummary = Schemas["AuditEventSummary"];
+export type AuditEventPage = Schemas["AuditEventPage"];
+
+export type AdminSubscriptionQuery = NonNullable<operations["listAdminSubscriptions"]["parameters"]["query"]>;
+export type AdminCustomerQuery = NonNullable<operations["listAdminCustomers"]["parameters"]["query"]>;
+export type AdminPlanQuery = NonNullable<operations["listAdminPlans"]["parameters"]["query"]>;
+export type AdminAuditQuery = NonNullable<operations["listAdminAuditEvents"]["parameters"]["query"]>;

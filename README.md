@@ -9,7 +9,7 @@ pnpm install
 pnpm dev
 ```
 
-Страница `/login` содержит только демонстрационный вход. Текущий сотрудник и permissions приходят из `src/lib/mock-admin-api.ts`; этот слой предназначен для замены сгенерированным OpenAPI-клиентом.
+API-клиент генерируется из OpenAPI 0.5.0 репозитория `vpn-platform-backend` командой `pnpm generate:api`. Базовый URL задаётся через `NEXT_PUBLIC_API_URL`. Staff token хранится только в `sessionStorage`; roles и permissions всегда берутся из `/admin/v1/auth/me`.
 
 ## Проверки
 
