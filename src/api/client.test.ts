@@ -2,7 +2,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { adminApi } from "@/api/client";
 import { sessionTokens } from "@/api/session";
 
-describe("OpenAPI 0.5.0 client", () => {
+describe("OpenAPI 0.6.0 client", () => {
   beforeEach(() => {
     sessionStorage.clear();
     vi.restoreAllMocks();
@@ -27,5 +27,16 @@ describe("OpenAPI 0.5.0 client", () => {
 
     const request = fetchMock.mock.calls[0]?.[0] as Request;
     expect(request.url).toBe("http://localhost:3000/admin/v1/subscriptions/subscription%2Fid/tokens/rotate");
+  });
+
+  it("sends endpoint filters through the typed infrastructure client", async () => {
+    sessionTokens.setStaff("stf_test");
+    const fetchMock = vi.spyOn(globalThis, "fetch").mockResolvedValue(new Response(JSON.stringify({ items: [], page: 2, pageSize: 25, total: 0 }), { status: 200 }));
+
+    await adminApi.listInfrastructureEndpoints({ page: 2, pageSize: 25, sourceCode: "remnawave", countryCode: "DE", protocol: "VLESS", healthStatus: "HEALTHY" });
+
+    const request = fetchMock.mock.calls[0]?.[0] as Request;
+    expect(request.url).toBe("http://localhost:3000/admin/v1/infrastructure/endpoints?page=2&pageSize=25&sourceCode=remnawave&countryCode=DE&protocol=VLESS&healthStatus=HEALTHY");
+    expect(request.headers.get("Authorization")).toBe("Bearer stf_test");
   });
 });

@@ -471,6 +471,70 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/admin/v1/infrastructure/summary": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["getInfrastructureSummary"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/v1/infrastructure/sources": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["listControlPlaneSources"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/v1/infrastructure/endpoints": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["listInfrastructureEndpoints"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/v1/infrastructure/incidents": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["listInfrastructureIncidents"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -684,6 +748,67 @@ export interface components {
             profileUri: string;
             /** Format: date-time */
             expiresAt?: string;
+        };
+        InfrastructureSummary: {
+            sources: number;
+            endpoints: number;
+            healthy: number;
+            unhealthy: number;
+            openIncidents: number;
+        };
+        ControlPlaneSourceSummary: {
+            /** Format: uuid */
+            id: string;
+            code: string;
+            providerType: string;
+            status: string;
+            capabilities: {
+                [key: string]: unknown;
+            };
+            /** Format: date-time */
+            lastInventoryAt?: string | null;
+            lastInventoryStatus?: string | null;
+            lastInventoryError?: string | null;
+            endpointCount: number;
+            unhealthyCount: number;
+        };
+        InfrastructureEndpointSummary: {
+            /** Format: uuid */
+            id: string;
+            sourceCode: string;
+            name: string;
+            countryCode: string;
+            city?: string | null;
+            protocol: string;
+            transport?: string | null;
+            healthStatus: string;
+            /** Format: date-time */
+            lastSeenAt?: string | null;
+            /** Format: date-time */
+            lastProbeAt?: string | null;
+        };
+        InfrastructureEndpointPage: components["schemas"]["PageMetadata"] & {
+            items: components["schemas"]["InfrastructureEndpointSummary"][];
+        };
+        InfrastructureIncidentSummary: {
+            /** Format: uuid */
+            id: string;
+            /** Format: uuid */
+            endpointId?: string | null;
+            endpointName?: string | null;
+            /** @enum {string} */
+            severity: "INFO" | "WARNING" | "CRITICAL";
+            /** @enum {string} */
+            status: "OPEN" | "ACKNOWLEDGED" | "RESOLVED";
+            kind: string;
+            summary: string;
+            /** Format: date-time */
+            openedAt: string;
+            /** Format: date-time */
+            resolvedAt?: string | null;
+        };
+        InfrastructureIncidentPage: components["schemas"]["PageMetadata"] & {
+            items: components["schemas"]["InfrastructureIncidentSummary"][];
         };
     };
     responses: never;
@@ -1583,6 +1708,112 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content?: never;
+            };
+        };
+    };
+    getInfrastructureSummary: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Infrastructure health counters */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["InfrastructureSummary"];
+                };
+            };
+            /** @description Staff authentication required */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description infrastructure.read permission required */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    listControlPlaneSources: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Control-plane sources and inventory state */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ControlPlaneSourceSummary"][];
+                };
+            };
+        };
+    };
+    listInfrastructureEndpoints: {
+        parameters: {
+            query?: {
+                page?: number;
+                pageSize?: number;
+                sourceCode?: string;
+                countryCode?: string;
+                protocol?: string;
+                healthStatus?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Filtered endpoint inventory */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["InfrastructureEndpointPage"];
+                };
+            };
+        };
+    };
+    listInfrastructureIncidents: {
+        parameters: {
+            query?: {
+                page?: number;
+                pageSize?: number;
+                status?: "OPEN" | "ACKNOWLEDGED" | "RESOLVED";
+                severity?: "INFO" | "WARNING" | "CRITICAL";
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Infrastructure incidents */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["InfrastructureIncidentPage"];
+                };
             };
         };
     };

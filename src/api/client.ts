@@ -4,6 +4,8 @@ import { sessionTokens } from "@/api/session";
 import type {
   AdminAuditQuery,
   AdminCustomerQuery,
+  AdminInfrastructureEndpointQuery,
+  AdminInfrastructureIncidentQuery,
   AdminPlanQuery,
   AdminSubscriptionQuery,
   AuthPrincipal,
@@ -57,6 +59,10 @@ export const adminApi = {
   updateMembership: async (membershipId: string, body: UpdateMembership) => unwrap<void>(await client.PATCH("/admin/v1/brand-memberships/{membershipId}", { params: { path: { membershipId } }, body, headers: staffHeaders() })),
   listPlans: async (query: AdminPlanQuery = {}) => unwrap(await client.GET("/admin/v1/plans", { params: { query }, headers: staffHeaders() })),
   listAuditEvents: async (query: AdminAuditQuery = {}) => unwrap(await client.GET("/admin/v1/audit-events", { params: { query }, headers: staffHeaders() })),
+  getInfrastructureSummary: async () => unwrap(await client.GET("/admin/v1/infrastructure/summary", { headers: staffHeaders() })),
+  listControlPlaneSources: async () => unwrap(await client.GET("/admin/v1/infrastructure/sources", { headers: staffHeaders() })),
+  listInfrastructureEndpoints: async (query: AdminInfrastructureEndpointQuery = {}) => unwrap(await client.GET("/admin/v1/infrastructure/endpoints", { params: { query }, headers: staffHeaders() })),
+  listInfrastructureIncidents: async (query: AdminInfrastructureIncidentQuery = {}) => unwrap(await client.GET("/admin/v1/infrastructure/incidents", { params: { query }, headers: staffHeaders() })),
 };
 
 export const customerApi = {
