@@ -25,8 +25,16 @@ export type PlanSummary = Schemas["PlanSummary"];
 export type PlanPage = Schemas["PlanPage"];
 export type AuditEventSummary = Schemas["AuditEventSummary"];
 export type AuditEventPage = Schemas["AuditEventPage"];
+export type InfrastructureSummary = Schemas["InfrastructureSummary"];
+export type ControlPlaneSourceSummary = Schemas["ControlPlaneSourceSummary"];
+export type InfrastructureEndpointSummary = Schemas["InfrastructureEndpointSummary"];
+export type InfrastructureEndpointPage = Schemas["InfrastructureEndpointPage"];
+export type InfrastructureIncidentSummary = Schemas["InfrastructureIncidentSummary"];
+export type InfrastructureIncidentPage = Schemas["InfrastructureIncidentPage"];
 
 export type AdminSubscriptionQuery = NonNullable<operations["listAdminSubscriptions"]["parameters"]["query"]>;
 export type AdminCustomerQuery = NonNullable<operations["listAdminCustomers"]["parameters"]["query"]>;
 export type AdminPlanQuery = NonNullable<operations["listAdminPlans"]["parameters"]["query"]>;
 export type AdminAuditQuery = NonNullable<operations["listAdminAuditEvents"]["parameters"]["query"]>;
+export type AdminInfrastructureEndpointQuery = NonNullable<operations["listInfrastructureEndpoints"]["parameters"]["query"]>;
+export type AdminInfrastructureIncidentQuery = NonNullable<operations["listInfrastructureIncidents"]["parameters"]["query"]>;
