@@ -1,9 +1,9 @@
 "use client";
 
-import { useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Activity, CircleAlert, RadioTower, Server } from "lucide-react";
 import { useState } from "react";
-import { adminApi } from "@/api/client";
+import { adminApi, ApiError } from "@/api/client";
 import type { AdminInfrastructureIncidentQuery } from "@/api/types";
 import { AppShell } from "@/components/app-shell";
 import { PageHeader } from "@/components/page-header";
@@ -69,7 +69,32 @@ export default function InfrastructurePage() {
 }
 
 function SourcesCard({ query }: { query: ReturnType<typeof useQuery<Awaited<ReturnType<typeof adminApi.listControlPlaneSources>>>> }) {
-  return <Card className="mb-4"><CardHeader><CardTitle>Источники control plane</CardTitle><CardDescription>`GET /admin/v1/infrastructure/sources`</CardDescription></CardHeader><CardContent className="overflow-x-auto"><QueryMessage loading={query.isLoading} error={query.isError} empty={!query.data?.length}><table className="w-full min-w-3xl text-sm"><thead><tr className="border-b text-left"><th className="p-3">Источник</th><th className="p-3">Провайдер</th><th className="p-3">Статус</th><th className="p-3">Inventory</th><th className="p-3">Endpoints</th><th className="p-3">Unhealthy</th></tr></thead><tbody>{query.data?.map((source) => <tr className="border-b last:border-0" key={source.id}><td className="p-3 font-medium">{source.code}</td><td className="p-3">{source.providerType}</td><td className="p-3"><Badge>{source.status}</Badge></td><td className="p-3"><p>{source.lastInventoryStatus ?? "—"}</p><p className="text-xs text-muted-foreground">{formatDate(source.lastInventoryAt)}</p>{source.lastInventoryError && <p className="mt-1 text-xs text-red-600 dark:text-red-400">{source.lastInventoryError}</p>}</td><td className="p-3">{source.endpointCount}</td><td className="p-3">{source.unhealthyCount}</td></tr>)}</tbody></table></QueryMessage></CardContent></Card>;
+  const queryClient = useQueryClient();
+  const [countryCodes, setCountryCodes] = useState<Record<string, string>>({});
+  const [syncResult, setSyncResult] = useState<Record<string, string>>({});
+  const [syncingId, setSyncingId] = useState<string>();
+  const syncMutation = useMutation({
+    mutationFn: ({ id, countryCode }: { id: string; countryCode?: string }) => adminApi.syncSource(id, countryCode ? { countryCode } : {}),
+    onMutate: ({ id }) => setSyncingId(id),
+    onSuccess: async (result, { id }) => {
+      setSyncResult((value) => ({ ...value, [id]: `Найдено endpoint'ов: ${result.count}` }));
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ["admin-infrastructure-sources"] }),
+        queryClient.invalidateQueries({ queryKey: ["admin-infrastructure-endpoints"] }),
+        queryClient.invalidateQueries({ queryKey: ["admin-infrastructure-summary"] }),
+      ]);
+    },
+    onError: (error, { id }) => setSyncResult((value) => ({ ...value, [id]: error instanceof ApiError ? error.message : "Не удалось синхронизировать" })),
+    onSettled: () => setSyncingId(undefined),
+  });
+
+  return <Card className="mb-4"><CardHeader><CardTitle>Источники control plane</CardTitle><CardDescription>Панели Remnawave и 3x-ui, из которых платформа получает список серверов и их состояние</CardDescription></CardHeader><CardContent className="overflow-x-auto"><QueryMessage loading={query.isLoading} error={query.isError} empty={!query.data?.length}><table className="w-full min-w-4xl text-sm"><thead><tr className="border-b text-left"><th className="p-3">Источник</th><th className="p-3">Провайдер</th><th className="p-3">Статус</th><th className="p-3">Inventory</th><th className="p-3">Endpoints</th><th className="p-3">Unhealthy</th><th className="p-3">Синхронизация</th></tr></thead><tbody>{query.data?.map((source) => <tr className="border-b last:border-0" key={source.id}><td className="p-3 font-medium">{source.code}</td><td className="p-3">{source.providerType}</td><td className="p-3"><Badge>{source.status}</Badge></td><td className="p-3"><p>{source.lastInventoryStatus ?? "—"}</p><p className="text-xs text-muted-foreground">{formatDate(source.lastInventoryAt)}</p>{source.lastInventoryError && <p className="mt-1 text-xs text-red-600 dark:text-red-400">{source.lastInventoryError}</p>}</td><td className="p-3">{source.endpointCount}</td><td className="p-3">{source.unhealthyCount}</td><td className="p-3">
+    <div className="flex items-center gap-2">
+      {source.providerType === "THREE_X_UI" && <Input aria-label="Код страны" placeholder="Страна (DE)" className="w-20" value={countryCodes[source.id] ?? ""} onChange={(event) => setCountryCodes((value) => ({ ...value, [source.id]: event.target.value.toUpperCase() }))} />}
+      <Button size="sm" variant="outline" disabled={syncingId === source.id} onClick={() => syncMutation.mutate({ id: source.id, countryCode: countryCodes[source.id] })}>Синхронизировать с панелью</Button>
+    </div>
+    {syncResult[source.id] && <p className="mt-1 text-xs text-muted-foreground">{syncResult[source.id]}</p>}
+  </td></tr>)}</tbody></table></QueryMessage></CardContent></Card>;
 }
 
 function Pagination({ page, pages, onPrevious, onNext }: { page: number; pages: number; onPrevious: () => void; onNext: () => void }) {

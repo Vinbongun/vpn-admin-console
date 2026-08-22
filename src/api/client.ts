@@ -21,6 +21,7 @@ import type {
   SetPlanPrice,
   StaffOtpVerify,
   StaffProfile,
+  SyncSourceInventory,
   UpdateBrand,
   UpdateEndpointGroup,
   UpdateMembership,
@@ -76,6 +77,7 @@ export const adminApi = {
   listAuditEvents: async (query: AdminAuditQuery = {}) => unwrap(await client.GET("/admin/v1/audit-events", { params: { query }, headers: staffHeaders() })),
   getInfrastructureSummary: async () => unwrap(await client.GET("/admin/v1/infrastructure/summary", { headers: staffHeaders() })),
   listControlPlaneSources: async () => unwrap(await client.GET("/admin/v1/infrastructure/sources", { headers: staffHeaders() })),
+  syncSource: async (sourceId: string, body: SyncSourceInventory = {}) => unwrap(await client.POST("/admin/v1/infrastructure/sources/{id}/sync", { params: { path: { id: sourceId } }, body, headers: staffHeaders() })),
   listInfrastructureEndpoints: async (query: AdminInfrastructureEndpointQuery = {}) => unwrap(await client.GET("/admin/v1/infrastructure/endpoints", { params: { query }, headers: staffHeaders() })),
   listInfrastructureIncidents: async (query: AdminInfrastructureIncidentQuery = {}) => unwrap(await client.GET("/admin/v1/infrastructure/incidents", { params: { query }, headers: staffHeaders() })),
 };
