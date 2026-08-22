@@ -13,6 +13,12 @@ import { Input } from "@/components/ui/input";
 const selectClassName = "h-10 rounded-md border bg-background px-3 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring";
 const textareaClassName = "w-full min-h-24 rounded-md border bg-background p-3 font-mono text-xs outline-none focus-visible:ring-2 focus-visible:ring-ring";
 
+function apiErrorMessage(error: ApiError): string {
+  const details = error.details as { message?: string | string[] } | undefined;
+  const message = details?.message;
+  return (Array.isArray(message) ? message.join(", ") : message) ?? error.message;
+}
+
 export default function ReferencePage() {
   return <AppShell>
     <PageHeader title="Справочники" description="Бренды, тарифы и группы endpoint'ов" />
@@ -40,7 +46,7 @@ function BrandsCard() {
   const createMutation = useMutation({
     mutationFn: () => adminApi.createBrand(newBrand),
     onSuccess: async () => { setNewBrand({ code: "", name: "" }); setCreateError(undefined); await queryClient.invalidateQueries({ queryKey: ["admin-brands"] }); },
-    onError: (error) => setCreateError(error instanceof ApiError && error.status === 409 ? "Бренд с таким кодом уже существует." : "Не удалось создать бренд."),
+    onError: (error) => setCreateError(error instanceof ApiError ? (error.status === 409 ? "Бренд с таким кодом уже существует." : apiErrorMessage(error)) : "Не удалось создать бренд."),
   });
 
   const startEdit = (brand: NonNullable<typeof brands.data>[number]) => {
@@ -99,7 +105,7 @@ function PlansCard() {
   const createMutation = useMutation({
     mutationFn: () => adminApi.createPlan({ brandId: newPlan.brandId, code: newPlan.code, name: newPlan.name, billingModel: newPlan.billingModel, deviceLimit: Number(newPlan.deviceLimit) }),
     onSuccess: async () => { setNewPlan({ brandId: "", code: "", name: "", billingModel: "DEVICE_PLAN", deviceLimit: "1" }); setCreateError(undefined); await queryClient.invalidateQueries({ queryKey: ["admin-plans-reference"] }); },
-    onError: (error) => setCreateError(error instanceof ApiError && error.status === 409 ? "Тариф с таким кодом уже существует у этого бренда." : "Не удалось создать тариф."),
+    onError: (error) => setCreateError(error instanceof ApiError ? (error.status === 409 ? "Тариф с таким кодом уже существует у этого бренда." : apiErrorMessage(error)) : "Не удалось создать тариф."),
   });
 
   return <Card><CardHeader><CardTitle>Тарифы</CardTitle><CardDescription>Планы подписки, которые бренды предлагают клиентам — лимит устройств, модель тарификации и цена</CardDescription></CardHeader><CardContent className="overflow-x-auto">
@@ -130,9 +136,11 @@ function EndpointGroupsCard() {
   const endpoints = useQuery({ queryKey: ["admin-infrastructure-endpoints-all"], queryFn: () => adminApi.listInfrastructureEndpoints({ page: 1, pageSize: 100 }), retry: false });
   const plans = useQuery({ queryKey: ["admin-plans-all"], queryFn: () => adminApi.listPlans({ page: 1, pageSize: 100 }), retry: false });
 
+  const [createError, setCreateError] = useState<string>();
   const createMutation = useMutation({
-    mutationFn: () => adminApi.createEndpointGroup(newGroup),
-    onSuccess: async () => { setNewGroup({ code: "", name: "", routeClass: "" }); await queryClient.invalidateQueries({ queryKey: ["admin-endpoint-groups"] }); },
+    mutationFn: () => adminApi.createEndpointGroup({ code: newGroup.code, name: newGroup.name, ...(newGroup.routeClass ? { routeClass: newGroup.routeClass } : {}) }),
+    onSuccess: async () => { setNewGroup({ code: "", name: "", routeClass: "" }); setCreateError(undefined); await queryClient.invalidateQueries({ queryKey: ["admin-endpoint-groups"] }); },
+    onError: (error) => setCreateError(error instanceof ApiError ? apiErrorMessage(error) : "Не удалось создать группу."),
   });
   const membersMutation = useMutation({
     mutationFn: (endpointIds: string[]) => adminApi.replaceEndpointGroupMembers(selectedId!, { endpointIds }),
@@ -161,9 +169,10 @@ function EndpointGroupsCard() {
     <div className="mb-4 grid gap-2 sm:grid-cols-[1fr_1fr_1fr_auto]">
       <Input aria-label="Код группы" placeholder="Код (A-Z0-9_)" value={newGroup.code} onChange={(event) => setNewGroup((value) => ({ ...value, code: event.target.value.toUpperCase() }))} />
       <Input aria-label="Название группы" placeholder="Название" value={newGroup.name} onChange={(event) => setNewGroup((value) => ({ ...value, name: event.target.value }))} />
-      <Input aria-label="Route class" placeholder="Route class (опционально)" value={newGroup.routeClass} onChange={(event) => setNewGroup((value) => ({ ...value, routeClass: event.target.value.toUpperCase() }))} />
+      <Input aria-label="Класс маршрутизации" placeholder="Класс маршрутизации (опционально)" value={newGroup.routeClass} onChange={(event) => setNewGroup((value) => ({ ...value, routeClass: event.target.value.toUpperCase() }))} />
       <Button disabled={!newGroup.code || !newGroup.name || createMutation.isPending} onClick={() => createMutation.mutate()}>Создать</Button>
     </div>
+    {createError && <p className="mb-3 text-xs text-red-600 dark:text-red-400">{createError}</p>}
     <div className="grid gap-4 lg:grid-cols-[1fr_1.5fr]">
       <div className="space-y-2">
         {groups.isLoading ? <p className="text-sm text-muted-foreground">Загрузка…</p> : groups.isError ? <p className="text-sm text-red-600 dark:text-red-400">Не удалось получить группы.</p> : groups.data?.items.map((group) => <button key={group.id} onClick={() => setSelectedId(group.id)} className={`w-full rounded-lg border p-3 text-left ${selectedId === group.id ? "border-primary" : ""}`}>
