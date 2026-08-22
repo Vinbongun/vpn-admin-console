@@ -407,6 +407,38 @@ export interface paths {
         patch: operations["updateAdminBrandMembership"];
         trace?: never;
     };
+    "/admin/v1/brands": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["listAdminBrands"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/v1/brands/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch: operations["updateAdminBrand"];
+        trace?: never;
+    };
     "/admin/v1/plans": {
         parameters: {
             query?: never;
@@ -876,6 +908,21 @@ export interface components {
         };
         CustomerPage: components["schemas"]["PageMetadata"] & {
             items: components["schemas"]["CustomerSummary"][];
+        };
+        BrandDetail: {
+            /** Format: uuid */
+            id: string;
+            code: string;
+            name: string;
+            status: string;
+            /** @description Free-form; `settings.public` is what GET /customer/v1/brand-config exposes verbatim, and `settings.hostnames` is the array used to resolve a brand by domain. */
+            settings: {
+                [key: string]: unknown;
+            };
+            /** Format: date-time */
+            createdAt?: string;
+            /** Format: date-time */
+            updatedAt?: string;
         };
         PlanSummary: {
             /** Format: uuid */
@@ -1900,6 +1947,67 @@ export interface operations {
                 content?: never;
             };
             /** @description Membership not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    listAdminBrands: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Full brand directory (unpaginated - brand count is small by design) */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BrandDetail"][];
+                };
+            };
+        };
+    };
+    updateAdminBrand: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    name?: string;
+                    /** @enum {string} */
+                    status?: "ACTIVE" | "ARCHIVED";
+                    /** @description Replaces the entire settings object (not a merge) - `public.*` is exposed verbatim by GET /customer/v1/brand-config, and `hostnames` is the array used to resolve a brand by domain. */
+                    settings?: {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+        };
+        responses: {
+            /** @description Updated brand */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BrandDetail"];
+                };
+            };
+            /** @description Brand not found */
             404: {
                 headers: {
                     [name: string]: unknown;
