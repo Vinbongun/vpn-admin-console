@@ -19,6 +19,18 @@ function formatDate(value?: string | null) {
   return value ? new Date(value).toLocaleString("ru-RU", { timeZone: "Europe/Moscow" }) : "—";
 }
 
+function apiErrorMessage(error: ApiError): string {
+  const details = error.details as { message?: string | string[] } | undefined;
+  const message = details?.message;
+  return (Array.isArray(message) ? message.join(", ") : message) ?? error.message;
+}
+
+function providerLabel(providerType: string) {
+  if (providerType === "THREE_X_UI") return "3x-ui";
+  if (providerType === "REMNAWAVE") return "Remnawave";
+  return providerType;
+}
+
 function QueryMessage({ loading, error, empty, children }: { loading: boolean; error: boolean; empty: boolean; children: React.ReactNode }) {
   if (loading) return <p className="text-sm text-muted-foreground">Загрузка…</p>;
   if (error) return <p className="text-sm text-red-600 dark:text-red-400">Не удалось получить данные инфраструктуры.</p>;
@@ -84,14 +96,14 @@ function SourcesCard({ query }: { query: ReturnType<typeof useQuery<Awaited<Retu
         queryClient.invalidateQueries({ queryKey: ["admin-infrastructure-summary"] }),
       ]);
     },
-    onError: (error, { id }) => setSyncResult((value) => ({ ...value, [id]: error instanceof ApiError ? error.message : "Не удалось синхронизировать" })),
+    onError: (error, { id }) => setSyncResult((value) => ({ ...value, [id]: error instanceof ApiError ? apiErrorMessage(error) : "Не удалось синхронизировать" })),
     onSettled: () => setSyncingId(undefined),
   });
 
-  return <Card className="mb-4"><CardHeader><CardTitle>Источники control plane</CardTitle><CardDescription>Панели Remnawave и 3x-ui, из которых платформа получает список серверов и их состояние</CardDescription></CardHeader><CardContent className="overflow-x-auto"><QueryMessage loading={query.isLoading} error={query.isError} empty={!query.data?.length}><table className="w-full min-w-4xl text-sm"><thead><tr className="border-b text-left"><th className="p-3">Источник</th><th className="p-3">Провайдер</th><th className="p-3">Статус</th><th className="p-3">Последняя синхронизация</th><th className="p-3">Endpoints</th><th className="p-3">Неисправны</th><th className="p-3">Синхронизация</th></tr></thead><tbody>{query.data?.map((source) => <tr className="border-b last:border-0" key={source.id}><td className="p-3 font-medium">{source.code}</td><td className="p-3">{source.providerType}</td><td className="p-3"><Badge>{source.status}</Badge></td><td className="p-3"><p>{source.lastInventoryStatus ?? "—"}</p><p className="text-xs text-muted-foreground">{formatDate(source.lastInventoryAt)}</p>{source.lastInventoryError && <p className="mt-1 text-xs text-red-600 dark:text-red-400">{source.lastInventoryError}</p>}</td><td className="p-3">{source.endpointCount}</td><td className="p-3">{source.unhealthyCount}</td><td className="p-3">
+  return <Card className="mb-4"><CardHeader><CardTitle>Источники control plane</CardTitle><CardDescription>Панели Remnawave и 3x-ui, из которых платформа получает список серверов и их состояние</CardDescription></CardHeader><CardContent className="overflow-x-auto"><QueryMessage loading={query.isLoading} error={query.isError} empty={!query.data?.length}><table className="w-full min-w-4xl text-sm"><thead><tr className="border-b text-left"><th className="p-3">Источник</th><th className="p-3">Провайдер</th><th className="p-3">Статус</th><th className="p-3">Последняя синхронизация</th><th className="p-3">Endpoints</th><th className="p-3">Неисправны</th><th className="p-3">Синхронизация</th></tr></thead><tbody>{query.data?.map((source) => <tr className="border-b last:border-0" key={source.id}><td className="p-3 font-medium">{source.code}</td><td className="p-3">{providerLabel(source.providerType)}</td><td className="p-3"><Badge>{source.status}</Badge></td><td className="p-3"><p>{source.lastInventoryStatus ?? "—"}</p><p className="text-xs text-muted-foreground">{formatDate(source.lastInventoryAt)}</p>{source.lastInventoryError && <p className="mt-1 text-xs text-red-600 dark:text-red-400">{source.lastInventoryError}</p>}</td><td className="p-3">{source.endpointCount}</td><td className="p-3">{source.unhealthyCount}</td><td className="p-3">
     <div className="flex items-center gap-2">
       {source.providerType === "THREE_X_UI" && <Input aria-label="Код страны" placeholder="Страна (DE)" className="w-20" value={countryCodes[source.id] ?? ""} onChange={(event) => setCountryCodes((value) => ({ ...value, [source.id]: event.target.value.toUpperCase() }))} />}
-      <Button size="sm" variant="outline" disabled={syncingId === source.id} onClick={() => syncMutation.mutate({ id: source.id, countryCode: countryCodes[source.id] })}>Синхронизировать с панелью</Button>
+      <Button size="sm" variant="outline" disabled={syncingId === source.id || (source.providerType === "THREE_X_UI" && !countryCodes[source.id])} onClick={() => syncMutation.mutate({ id: source.id, countryCode: countryCodes[source.id] })}>Синхронизировать с панелью</Button>
     </div>
     {syncResult[source.id] && <p className="mt-1 text-xs text-muted-foreground">{syncResult[source.id]}</p>}
   </td></tr>)}</tbody></table></QueryMessage></CardContent></Card>;
