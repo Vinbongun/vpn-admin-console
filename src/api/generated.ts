@@ -416,7 +416,7 @@ export interface paths {
         };
         get: operations["listAdminBrands"];
         put?: never;
-        post?: never;
+        post: operations["createAdminBrand"];
         delete?: never;
         options?: never;
         head?: never;
@@ -448,7 +448,7 @@ export interface paths {
         };
         get: operations["listAdminPlans"];
         put?: never;
-        post?: never;
+        post: operations["createAdminPlan"];
         delete?: never;
         options?: never;
         head?: never;
@@ -626,6 +626,22 @@ export interface paths {
         get: operations["listControlPlaneSources"];
         put?: never;
         post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/v1/infrastructure/sources/{id}/sync": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["syncControlPlaneSource"];
         delete?: never;
         options?: never;
         head?: never;
@@ -1975,6 +1991,40 @@ export interface operations {
             };
         };
     };
+    createAdminBrand: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    code: string;
+                    name: string;
+                };
+            };
+        };
+        responses: {
+            /** @description Created brand (status ACTIVE, empty settings) */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BrandDetail"];
+                };
+            };
+            /** @description Brand code already exists */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
     updateAdminBrand: {
         parameters: {
             query?: never;
@@ -2038,6 +2088,52 @@ export interface operations {
                 content: {
                     "application/json": components["schemas"]["PlanPage"];
                 };
+            };
+        };
+    };
+    createAdminPlan: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    /** Format: uuid */
+                    brandId: string;
+                    code: string;
+                    name: string;
+                    /** @enum {string} */
+                    billingModel: "DEVICE_PLAN" | "ACCOUNT_PLAN" | "FAMILY_PLAN";
+                    deviceLimit: number;
+                };
+            };
+        };
+        responses: {
+            /** @description Created plan (status ACTIVE, no price set yet) */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PlanSummary"];
+                };
+            };
+            /** @description Brand not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Plan code already exists for this brand */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
         };
     };
@@ -2374,6 +2470,51 @@ export interface operations {
                 content: {
                     "application/json": components["schemas"]["ControlPlaneSourceSummary"][];
                 };
+            };
+        };
+    };
+    syncControlPlaneSource: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": {
+                    /** @description Required for THREE_X_UI sources - 3x-ui's own API has no concept of which country a panel is in. Not needed for REMNAWAVE sources. */
+                    countryCode?: string;
+                };
+            };
+        };
+        responses: {
+            /** @description Pulls the current inbound/user list from the live panel and upserts it into `endpoints` - this is what makes a newly-added inbound actually selectable in an endpoint group, instead of requiring a manual database insert. */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        count?: number;
+                    };
+                };
+            };
+            /** @description Unknown provider type */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Control plane source not found or inactive */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
         };
     };
