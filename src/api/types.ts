@@ -52,3 +52,4 @@ export type UpdateBrand = NonNullable<operations["updateAdminBrand"]["requestBod
 export type CreateBrand = NonNullable<operations["createAdminBrand"]["requestBody"]>["content"]["application/json"];
 export type SetPlanPrice = NonNullable<operations["setPlanPrice"]["requestBody"]>["content"]["application/json"];
 export type CreatePlan = NonNullable<operations["createAdminPlan"]["requestBody"]>["content"]["application/json"];
+export type SyncSourceInventory = NonNullable<operations["syncControlPlaneSource"]["requestBody"]>["content"]["application/json"];
