@@ -73,7 +73,7 @@ function BrandsCard() {
           <Input aria-label="Название бренда" value={form.name} onChange={(event) => setForm((value) => ({ ...value, name: event.target.value }))} />
           <select aria-label="Статус бренда" className={selectClassName} value={form.status} onChange={(event) => setForm((value) => ({ ...value, status: event.target.value === "ARCHIVED" ? "ARCHIVED" : "ACTIVE" }))}><option value="ACTIVE">ACTIVE</option><option value="ARCHIVED">ARCHIVED</option></select>
           <textarea aria-label="Settings JSON" className={textareaClassName} value={form.settings} onChange={(event) => setForm((value) => ({ ...value, settings: event.target.value }))} />
-          <p className="text-xs text-muted-foreground">`settings.public` уходит клиентскому сайту как есть (`GET /customer/v1/brand-config`); `settings.hostnames` — массив доменов для определения бренда.</p>
+          <p className="text-xs text-muted-foreground">`settings.public` уходит клиентскому сайту как есть (публичная white-label конфигурация); `settings.hostnames` — массив доменов для определения бренда.</p>
           {formError && <p className="text-xs text-red-600 dark:text-red-400">{formError}</p>}
           <div className="flex gap-2"><Button size="sm" disabled={mutation.isPending} onClick={save}>Сохранить</Button><Button size="sm" variant="outline" onClick={() => setEditingId(undefined)}>Отмена</Button></div>
         </div>}
@@ -157,7 +157,7 @@ function EndpointGroupsCard() {
     plansMutation.mutate([...next]);
   };
 
-  return <Card><CardHeader><CardTitle>Группы endpoint&#39;ов</CardTitle><CardDescription>`GET/POST /admin/v1/infrastructure/endpoint-groups` — какие серверы доступны каждому тарифу</CardDescription></CardHeader><CardContent>
+  return <Card><CardHeader><CardTitle>Группы endpoint&#39;ов</CardTitle><CardDescription>Наборы серверов, объединённые для выдачи доступа — каждой группе назначаются тарифы, которые её получают</CardDescription></CardHeader><CardContent>
     <div className="mb-4 grid gap-2 sm:grid-cols-[1fr_1fr_1fr_auto]">
       <Input aria-label="Код группы" placeholder="Код (A-Z0-9_)" value={newGroup.code} onChange={(event) => setNewGroup((value) => ({ ...value, code: event.target.value.toUpperCase() }))} />
       <Input aria-label="Название группы" placeholder="Название" value={newGroup.name} onChange={(event) => setNewGroup((value) => ({ ...value, name: event.target.value }))} />
