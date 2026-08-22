@@ -8,11 +8,7 @@ import type {
   AdminInfrastructureIncidentQuery,
   AdminPlanQuery,
   AdminSubscriptionQuery,
-  AuthPrincipal,
   CreateSubscription,
-  CustomerOtpRequest,
-  CustomerOtpVerify,
-  CustomerPasswordLogin,
   IssuedSubscriptionToken,
   PasswordLogin,
   RotateSubscriptionToken,
@@ -41,7 +37,6 @@ async function unwrap<T>({ data, error, response }: Result<T>): Promise<T> {
 
 const bearer = (token: string | null) => token ? { Authorization: `Bearer ${token}` } : {};
 const staffHeaders = () => bearer(sessionTokens.getStaff());
-const customerHeaders = () => bearer(sessionTokens.getCustomer());
 
 export const adminApi = {
   passwordLogin: async (body: PasswordLogin) => unwrap<void>(await client.POST("/admin/v1/auth/password/login", { body })),
@@ -57,20 +52,11 @@ export const adminApi = {
   listCustomers: async (query: AdminCustomerQuery = {}) => unwrap(await client.GET("/admin/v1/customers", { params: { query }, headers: staffHeaders() })),
   getCustomer: async (customerId: string) => unwrap(await client.GET("/admin/v1/customers/{customerId}", { params: { path: { customerId } }, headers: staffHeaders() })),
   updateMembership: async (membershipId: string, body: UpdateMembership) => unwrap<void>(await client.PATCH("/admin/v1/brand-memberships/{membershipId}", { params: { path: { membershipId } }, body, headers: staffHeaders() })),
+  updateCustomerStatus: async (customerId: string, body: UpdateMembership) => unwrap<void>(await client.PATCH("/admin/v1/customers/{customerId}/status", { params: { path: { customerId } }, body, headers: staffHeaders() })),
   listPlans: async (query: AdminPlanQuery = {}) => unwrap(await client.GET("/admin/v1/plans", { params: { query }, headers: staffHeaders() })),
   listAuditEvents: async (query: AdminAuditQuery = {}) => unwrap(await client.GET("/admin/v1/audit-events", { params: { query }, headers: staffHeaders() })),
   getInfrastructureSummary: async () => unwrap(await client.GET("/admin/v1/infrastructure/summary", { headers: staffHeaders() })),
   listControlPlaneSources: async () => unwrap(await client.GET("/admin/v1/infrastructure/sources", { headers: staffHeaders() })),
   listInfrastructureEndpoints: async (query: AdminInfrastructureEndpointQuery = {}) => unwrap(await client.GET("/admin/v1/infrastructure/endpoints", { params: { query }, headers: staffHeaders() })),
   listInfrastructureIncidents: async (query: AdminInfrastructureIncidentQuery = {}) => unwrap(await client.GET("/admin/v1/infrastructure/incidents", { params: { query }, headers: staffHeaders() })),
-};
-
-export const customerApi = {
-  passwordLogin: async (body: CustomerPasswordLogin) => unwrap<SessionToken>(await client.POST("/customer/v1/auth/password/login", { body })),
-  requestOtp: async (body: CustomerOtpRequest) => unwrap<void>(await client.POST("/customer/v1/auth/otp/request", { body })),
-  verifyOtp: async (body: CustomerOtpVerify) => unwrap<SessionToken>(await client.POST("/customer/v1/auth/otp/verify", { body })),
-  getSession: async () => unwrap<AuthPrincipal>(await client.GET("/customer/v1/auth/me", { headers: customerHeaders() })),
-  logout: async () => unwrap<void>(await client.POST("/customer/v1/auth/logout", { headers: customerHeaders() })),
-  setPassword: async (password: string) => unwrap<void>(await client.POST("/customer/v1/auth/password/set", { body: { password }, headers: customerHeaders() })),
-  listSubscriptions: async () => unwrap(await client.GET("/customer/v1/subscriptions", { headers: customerHeaders() })),
 };

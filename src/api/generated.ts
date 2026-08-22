@@ -116,6 +116,38 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/customer/v1/auth/register/otp/request": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["requestCustomerRegistrationOtp"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/customer/v1/auth/register/otp/verify": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["verifyCustomerRegistrationOtp"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/customer/v1/auth/me": {
         parameters: {
             query?: never;
@@ -125,7 +157,7 @@ export interface paths {
         };
         get: operations["getCustomerSession"];
         put?: never;
-        post?: never;
+        post: operations["updateCustomerProfile"];
         delete?: never;
         options?: never;
         head?: never;
@@ -172,6 +204,22 @@ export interface paths {
             cookie?: never;
         };
         get: operations["listCustomerSubscriptions"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/customer/v1/brand-config": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["getPublicBrandConfig"];
         put?: never;
         post?: never;
         delete?: never;
@@ -327,6 +375,22 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/admin/v1/customers/{customerId}/status": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch: operations["updateAdminCustomerStatus"];
+        trace?: never;
+    };
     "/admin/v1/brand-memberships/{membershipId}": {
         parameters: {
             query?: never;
@@ -353,6 +417,22 @@ export interface paths {
         get: operations["listAdminPlans"];
         put?: never;
         post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/v1/plans/{id}/prices": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["setPlanPrice"];
         delete?: never;
         options?: never;
         head?: never;
@@ -471,6 +551,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/internal/v1/provisioning/run-next": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** @description Claims and processes one pending provisioning job (PROVISION or REVOKE), if any. Intended to be called repeatedly by an external worker/cron; retries and backoff are tracked in provisioning_jobs and do not need external scheduling logic. */
+        post: operations["runNextProvisioningJob"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/admin/v1/infrastructure/summary": {
         parameters: {
             query?: never;
@@ -535,6 +632,70 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/admin/v1/infrastructure/endpoint-groups": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["listEndpointGroups"];
+        put?: never;
+        post: operations["createEndpointGroup"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/v1/infrastructure/endpoint-groups/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["getEndpointGroup"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch: operations["updateEndpointGroup"];
+        trace?: never;
+    };
+    "/admin/v1/infrastructure/endpoint-groups/{id}/members": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put: operations["replaceEndpointGroupMembers"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/v1/infrastructure/endpoint-groups/{id}/plans": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put: operations["replaceEndpointGroupPlans"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -588,6 +749,33 @@ export interface components {
             roles: string[];
             permissions: string[];
         };
+        CustomerProfile: {
+            /** Format: uuid */
+            id: string;
+            /** Format: email */
+            email: string;
+            displayName: string;
+            memberships: {
+                brandCode: string;
+                brandName: string;
+                status: string;
+            }[];
+        };
+        UpdateCustomerProfile: {
+            displayName: string;
+        };
+        PublicBrandConfig: {
+            code: string;
+            name: string;
+        } & {
+            [key: string]: unknown;
+        };
+        CustomerPlan: {
+            name: string;
+            /** @enum {string} */
+            billingModel: "DEVICE_PLAN" | "ACCOUNT_PLAN" | "FAMILY_PLAN";
+            deviceLimit: number;
+        };
         SubscriptionSummary: {
             /** Format: uuid */
             id: string;
@@ -603,6 +791,12 @@ export interface components {
             revision: string;
             /** @description Non-secret display prefix; never the subscription token or its hash */
             tokenPrefix?: string | null;
+            /**
+             * Format: uri
+             * @description Secret URL returned only to the authenticated customer and authorized staff.
+             */
+            subscriptionUrl?: string | null;
+            plan?: components["schemas"]["CustomerPlan"] | null;
             /** Format: email */
             customerEmail?: string;
         };
@@ -659,6 +853,27 @@ export interface components {
             createdAt: string;
             memberships: components["schemas"]["BrandMembershipSummary"][];
         };
+        CustomerSubscriptionSummary: {
+            /** Format: uuid */
+            id: string;
+            brandCode: string;
+            planCode: string | null;
+            planName: string | null;
+            status: string;
+            /** Format: date-time */
+            startsAt: string;
+            /** Format: date-time */
+            expiresAt: string;
+            endpointGroups: {
+                /** Format: uuid */
+                id?: string;
+                code?: string;
+                name?: string;
+            }[];
+        };
+        CustomerDetail: components["schemas"]["CustomerSummary"] & {
+            subscriptions: components["schemas"]["CustomerSubscriptionSummary"][];
+        };
         CustomerPage: components["schemas"]["PageMetadata"] & {
             items: components["schemas"]["CustomerSummary"][];
         };
@@ -674,6 +889,10 @@ export interface components {
             billingModel: "DEVICE_PLAN" | "ACCOUNT_PLAN" | "FAMILY_PLAN";
             deviceLimit: number;
             status: string;
+            price?: {
+                amount?: number;
+                currency?: string;
+            } | null;
         };
         PlanPage: components["schemas"]["PageMetadata"] & {
             items: components["schemas"]["PlanSummary"][];
@@ -712,9 +931,11 @@ export interface components {
             expiresAt?: string;
         };
         IssuedSubscriptionToken: {
-            /** @description Plaintext token returned once and never persisted */
+            /** @description Plaintext token returned once; only its hash and authenticated ciphertext are persisted. */
             token: string;
             tokenPrefix: string;
+            /** Format: uri */
+            subscriptionUrl: string;
             /** Format: date-time */
             expiresAt?: string | null;
         };
@@ -748,6 +969,14 @@ export interface components {
             profileUri: string;
             /** Format: date-time */
             expiresAt?: string;
+        };
+        ProvisioningRunResult: {
+            /** @description Whether a pending job was found and attempted */
+            processed: boolean;
+            /** Format: uuid */
+            jobId?: string;
+            /** @enum {string} */
+            status?: "SUCCEEDED" | "PENDING_RETRY" | "FAILED";
         };
         InfrastructureSummary: {
             sources: number;
@@ -810,6 +1039,72 @@ export interface components {
         InfrastructureIncidentPage: components["schemas"]["PageMetadata"] & {
             items: components["schemas"]["InfrastructureIncidentSummary"][];
         };
+        EndpointGroupSummary: {
+            /** Format: uuid */
+            id: string;
+            code: string;
+            name: string;
+            routeClass: string;
+            /** @enum {string} */
+            status: "ACTIVE" | "ARCHIVED";
+            /** Format: date-time */
+            createdAt?: string;
+            /** Format: date-time */
+            updatedAt?: string;
+        };
+        EndpointGroupListItem: components["schemas"]["EndpointGroupSummary"] & {
+            memberCount: number;
+            planCount: number;
+        };
+        EndpointGroupPage: components["schemas"]["PageMetadata"] & {
+            items: components["schemas"]["EndpointGroupListItem"][];
+        };
+        EndpointGroupMemberEndpoint: {
+            /** Format: uuid */
+            id: string;
+            name: string;
+            countryCode: string;
+            protocol: string;
+            healthStatus: string;
+        };
+        EndpointGroupPlanRef: {
+            /** Format: uuid */
+            id: string;
+            brandCode: string;
+            code: string;
+            name: string;
+        };
+        EndpointGroupDetail: components["schemas"]["EndpointGroupSummary"] & {
+            endpoints: components["schemas"]["EndpointGroupMemberEndpoint"][];
+            plans: components["schemas"]["EndpointGroupPlanRef"][];
+        };
+        CreateEndpointGroup: {
+            code: string;
+            name: string;
+            routeClass?: string;
+        };
+        UpdateEndpointGroup: {
+            name?: string;
+            routeClass?: string;
+            /** @enum {string} */
+            status?: "ACTIVE" | "ARCHIVED";
+        };
+        ReplaceEndpointGroupMembers: {
+            endpointIds: string[];
+        };
+        EndpointGroupMembership: {
+            /** Format: uuid */
+            id: string;
+            endpointIds: string[];
+        };
+        ReplaceEndpointGroupPlans: {
+            planIds: string[];
+        };
+        EndpointGroupPlanAccess: {
+            /** Format: uuid */
+            id: string;
+            planIds: string[];
+        };
     };
     responses: never;
     parameters: never;
@@ -822,7 +1117,7 @@ export interface operations {
     renderSubscription: {
         parameters: {
             query?: {
-                format?: "plain" | "base64";
+                format?: "plain" | "base64" | "sing-box" | "xray" | "mihomo";
             };
             header?: never;
             path: {
@@ -832,13 +1127,16 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            /** @description Health-filtered non-cacheable subscription body */
+            /** @description Health-filtered non-cacheable subscription body. `sing-box` and `xray` return a JSON document `{ "outbounds": [...] }`; `mihomo` returns a YAML document `{ proxies: [...] }` - one entry per eligible endpoint, in each format's own schema. Endpoints using a transport the selected format does not support (XHTTP for all three structured formats currently) or a protocol the renderer does not yet cover are silently omitted rather than emitted as a broken entry. When `format` is omitted and the request's User-Agent looks like an ordinary browser (not a recognized VPN client), an HTML status page is returned instead of a subscription body, showing status/expiry/server count, a copyable subscription link, and each eligible server's own direct decrypted link - mirroring how panels like 3x-ui present their own subscription links to a browser versus a client app. */
             200: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
                     "text/plain": string;
+                    "application/json": Record<string, never>;
+                    "application/yaml": string;
+                    "text/html": string;
                 };
             };
             /** @description Unsupported format */
@@ -995,6 +1293,52 @@ export interface operations {
             };
         };
     };
+    requestCustomerRegistrationOtp: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CustomerOtpRequest"];
+            };
+        };
+        responses: {
+            /** @description Registration request accepted without account disclosure */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    verifyCustomerRegistrationOtp: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CustomerOtpVerify"];
+            };
+        };
+        responses: {
+            /** @description Customer account, brand membership and session */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SessionToken"];
+                };
+            };
+        };
+    };
     getCustomerSession: {
         parameters: {
             query?: never;
@@ -1010,7 +1354,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["AuthPrincipal"];
+                    "application/json": components["schemas"]["CustomerProfile"];
                 };
             };
             /** @description Invalid customer session */
@@ -1019,6 +1363,30 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content?: never;
+            };
+        };
+    };
+    updateCustomerProfile: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UpdateCustomerProfile"];
+            };
+        };
+        responses: {
+            /** @description Updated customer profile */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CustomerProfile"];
+                };
             };
         };
     };
@@ -1092,6 +1460,43 @@ export interface operations {
             };
             /** @description Invalid customer session */
             401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    getPublicBrandConfig: {
+        parameters: {
+            query?: {
+                brandCode?: string;
+                hostname?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Public white-label brand configuration */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PublicBrandConfig"];
+                };
+            };
+            /** @description brandCode or hostname is required */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Brand not found */
+            404: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -1423,14 +1828,45 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            /** @description Customer detail with brand memberships */
+            /** @description Customer detail with brand memberships and subscriptions across all brands */
             200: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["CustomerSummary"];
+                    "application/json": components["schemas"]["CustomerDetail"];
                 };
+            };
+            /** @description Customer not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    updateAdminCustomerStatus: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                customerId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UpdateMembership"];
+            };
+        };
+        responses: {
+            /** @description Customer status updated and audited. Unlike PATCH /admin/v1/brand-memberships/ {membershipId}, which blocks one specific brand, this blocks (or restores) the customer everywhere at once - existing sessions in every brand are rejected on their next request, not just future logins. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
             /** @description Customer not found */
             404: {
@@ -1494,6 +1930,47 @@ export interface operations {
                 content: {
                     "application/json": components["schemas"]["PlanPage"];
                 };
+            };
+        };
+    };
+    setPlanPrice: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    amount: number;
+                    currency: string;
+                };
+            };
+        };
+        responses: {
+            /** @description New price version recorded, effective immediately. Subscriptions created before this call keep referencing the price that was current when they were issued - this only ever adds a new row, it never rewrites history. */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /** Format: uuid */
+                        planId?: string;
+                        amount?: number;
+                        currency?: string;
+                    };
+                };
+            };
+            /** @description Plan not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
         };
     };
@@ -1711,6 +2188,33 @@ export interface operations {
             };
         };
     };
+    runNextProvisioningJob: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Queue state after attempting to process one job */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProvisioningRunResult"];
+                };
+            };
+            /** @description Invalid internal credential */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
     getInfrastructureSummary: {
         parameters: {
             query?: never;
@@ -1814,6 +2318,287 @@ export interface operations {
                 content: {
                     "application/json": components["schemas"]["InfrastructureIncidentPage"];
                 };
+            };
+        };
+    };
+    listEndpointGroups: {
+        parameters: {
+            query?: {
+                page?: number;
+                pageSize?: number;
+                status?: "ACTIVE" | "ARCHIVED";
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Endpoint groups with member and plan counts */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EndpointGroupPage"];
+                };
+            };
+            /** @description Staff authentication required */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description infrastructure.read permission required */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    createEndpointGroup: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CreateEndpointGroup"];
+            };
+        };
+        responses: {
+            /** @description Endpoint group created */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EndpointGroupDetail"];
+                };
+            };
+            /** @description Invalid endpoint group payload */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Staff authentication required */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description infrastructure.write permission required */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Endpoint group code already exists */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    getEndpointGroup: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Endpoint group detail with member endpoints and attached plans */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EndpointGroupDetail"];
+                };
+            };
+            /** @description Staff authentication required */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Endpoint group not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    updateEndpointGroup: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UpdateEndpointGroup"];
+            };
+        };
+        responses: {
+            /** @description Endpoint group updated */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EndpointGroupSummary"];
+                };
+            };
+            /** @description Staff authentication required */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description infrastructure.write permission required */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Endpoint group not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    replaceEndpointGroupMembers: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ReplaceEndpointGroupMembers"];
+            };
+        };
+        responses: {
+            /** @description Endpoint group membership replaced with the given endpoint set */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EndpointGroupMembership"];
+                };
+            };
+            /** @description Unknown endpoint id in payload */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Staff authentication required */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description infrastructure.write permission required */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Endpoint group not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    replaceEndpointGroupPlans: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ReplaceEndpointGroupPlans"];
+            };
+        };
+        responses: {
+            /** @description Plans allowed to use this endpoint group, fully replaced */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EndpointGroupPlanAccess"];
+                };
+            };
+            /** @description Unknown plan id in payload */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Staff authentication required */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description infrastructure.write permission required */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Endpoint group not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
         };
     };
