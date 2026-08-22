@@ -5,6 +5,7 @@ import routerProvider from "@refinedev/nextjs-router";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { Suspense, useState } from "react";
 import { ThemeProvider } from "@/components/theme-provider";
+import { Toaster } from "@/components/ui/sonner";
 import { adminApi, ApiError } from "@/api/client";
 import { sessionTokens } from "@/api/session";
 
@@ -27,5 +28,5 @@ const authProvider = {
 
 export function Providers({ children }: { children: React.ReactNode }) {
   const [queryClient] = useState(() => new QueryClient());
-  return <ThemeProvider><QueryClientProvider client={queryClient}><Suspense fallback={null}><Refine routerProvider={routerProvider} authProvider={authProvider} resources={[]}>{children}</Refine></Suspense></QueryClientProvider></ThemeProvider>;
+  return <ThemeProvider><QueryClientProvider client={queryClient}><Suspense fallback={null}><Refine routerProvider={routerProvider} authProvider={authProvider} resources={[]}>{children}</Refine></Suspense><Toaster /></QueryClientProvider></ThemeProvider>;
 }

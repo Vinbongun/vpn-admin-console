@@ -35,6 +35,7 @@ export type InfrastructureIncidentSummary = Schemas["InfrastructureIncidentSumma
 export type InfrastructureIncidentPage = Schemas["InfrastructureIncidentPage"];
 export type BrandDetail = Schemas["BrandDetail"];
 export type EndpointGroupSummary = Schemas["EndpointGroupSummary"];
+export type EndpointGroupListItem = Schemas["EndpointGroupListItem"];
 export type EndpointGroupPage = Schemas["EndpointGroupPage"];
 export type EndpointGroupDetail = Schemas["EndpointGroupDetail"];
 export type CreateEndpointGroup = Schemas["CreateEndpointGroup"];
