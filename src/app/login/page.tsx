@@ -17,36 +17,39 @@ import { Input } from "@/components/ui/input";
 import { InputOTP, InputOTPGroup, InputOTPSlot } from "@/components/ui/input-otp";
 import { Spinner } from "@/components/ui/spinner";
 
-const loginSchema = z.object({
+const passwordSchema = z.object({
   email: z.email("Введите корректный email"),
   password: z.string().min(10, "Минимум 10 символов"),
-  code: z.string().regex(/^[0-9]{6}$/, "Введите шестизначный код").optional().or(z.literal("")),
 });
+type PasswordValues = z.infer<typeof passwordSchema>;
 
-type LoginValues = z.infer<typeof loginSchema>;
+const otpSchema = z.object({
+  code: z.string().regex(/^[0-9]{6}$/, "Введите шестизначный код"),
+});
+type OtpValues = z.infer<typeof otpSchema>;
 
 export default function LoginPage() {
   const router = useRouter();
   const [step, setStep] = useState<"password" | "otp">("password");
+  const [email, setEmail] = useState("");
   const [requestError, setRequestError] = useState<string>();
-  const form = useForm<LoginValues>({
-    resolver: zodResolver(loginSchema),
-    defaultValues: { email: "", password: "", code: "" },
-  });
 
-  const submitPassword = form.handleSubmit(async ({ email, password }) => {
+  const passwordForm = useForm<PasswordValues>({ resolver: zodResolver(passwordSchema), defaultValues: { email: "", password: "" } });
+  const otpForm = useForm<OtpValues>({ resolver: zodResolver(otpSchema), defaultValues: { code: "" } });
+
+  const submitPassword = passwordForm.handleSubmit(async ({ email: enteredEmail, password }) => {
     setRequestError(undefined);
     try {
-      await adminApi.passwordLogin({ email, password });
-      form.setValue("password", "");
+      await adminApi.passwordLogin({ email: enteredEmail, password });
+      setEmail(enteredEmail);
+      passwordForm.reset();
       setStep("otp");
     } catch (error) {
       setRequestError(error instanceof ApiError ? error.message : "Не удалось связаться с admin API");
     }
   });
 
-  const submitOtp = form.handleSubmit(async ({ email, code }) => {
-    if (!code) return;
+  const submitOtp = otpForm.handleSubmit(async ({ code }) => {
     setRequestError(undefined);
     try {
       const session = await adminApi.verifyOtp({ email, code });
@@ -57,6 +60,12 @@ export default function LoginPage() {
       setRequestError(error instanceof ApiError ? error.message : "Не удалось подтвердить код");
     }
   });
+
+  const backToPassword = () => {
+    otpForm.reset();
+    setRequestError(undefined);
+    setStep("password");
+  };
 
   return (
     <main className="relative grid min-h-screen place-items-center bg-muted/40 p-4">
@@ -69,46 +78,56 @@ export default function LoginPage() {
             <ShieldCheck />
           </div>
           <CardTitle className="text-2xl">{step === "password" ? "VPN Platform" : "Подтвердите вход"}</CardTitle>
-          <CardDescription>
-            {step === "password" ? "Вход сотрудника платформы" : `Введите шестизначный код, отправленный на ${form.getValues("email")}`}
-          </CardDescription>
+          <CardDescription>{step === "password" ? "Вход сотрудника платформы" : `Введите шестизначный код, отправленный на ${email}`}</CardDescription>
         </CardHeader>
         <CardContent>
-          <Form {...form}>
-            <form className="space-y-4" onSubmit={step === "password" ? submitPassword : submitOtp}>
-              {step === "password" && (
-                <>
-                  <FormField
-                    control={form.control}
-                    name="email"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Рабочий email</FormLabel>
-                        <FormControl>
-                          <Input type="email" autoComplete="username" {...field} />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                  <FormField
-                    control={form.control}
-                    name="password"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Пароль</FormLabel>
-                        <FormControl>
-                          <Input type="password" autoComplete="current-password" {...field} />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                </>
-              )}
-              {step === "otp" && (
+          {step === "password" ? (
+            <Form {...passwordForm}>
+              <form className="space-y-4" onSubmit={submitPassword}>
                 <FormField
-                  control={form.control}
+                  control={passwordForm.control}
+                  name="email"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Рабочий email</FormLabel>
+                      <FormControl>
+                        <Input type="email" autoComplete="username" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={passwordForm.control}
+                  name="password"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Пароль</FormLabel>
+                      <FormControl>
+                        <Input type="password" autoComplete="current-password" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                {requestError && (
+                  <Alert variant="destructive">
+                    <CircleAlert />
+                    <AlertDescription>{requestError}</AlertDescription>
+                  </Alert>
+                )}
+                <Button className="w-full" disabled={passwordForm.formState.isSubmitting} type="submit">
+                  {passwordForm.formState.isSubmitting && <Spinner />}
+                  Продолжить
+                </Button>
+                <p className="text-center text-xs text-muted-foreground">Сессия и права доступа проверяются на сервере.</p>
+              </form>
+            </Form>
+          ) : (
+            <Form {...otpForm}>
+              <form className="space-y-4" onSubmit={submitOtp}>
+                <FormField
+                  control={otpForm.control}
                   name="code"
                   render={({ field }) => (
                     <FormItem className="items-center text-center">
@@ -129,25 +148,23 @@ export default function LoginPage() {
                     </FormItem>
                   )}
                 />
-              )}
-              {requestError && (
-                <Alert variant="destructive">
-                  <CircleAlert />
-                  <AlertDescription>{requestError}</AlertDescription>
-                </Alert>
-              )}
-              <Button className="w-full" disabled={form.formState.isSubmitting} type="submit">
-                {form.formState.isSubmitting && <Spinner />}
-                {step === "password" ? "Продолжить" : "Подтвердить вход"}
-              </Button>
-              {step === "otp" && (
-                <Button className="w-full" type="button" variant="ghost" onClick={() => setStep("password")}>
+                {requestError && (
+                  <Alert variant="destructive">
+                    <CircleAlert />
+                    <AlertDescription>{requestError}</AlertDescription>
+                  </Alert>
+                )}
+                <Button className="w-full" disabled={otpForm.formState.isSubmitting} type="submit">
+                  {otpForm.formState.isSubmitting && <Spinner />}
+                  Подтвердить вход
+                </Button>
+                <Button className="w-full" type="button" variant="ghost" onClick={backToPassword}>
                   Вернуться к email и паролю
                 </Button>
-              )}
-              <p className="text-center text-xs text-muted-foreground">Сессия и права доступа проверяются на сервере.</p>
-            </form>
-          </Form>
+                <p className="text-center text-xs text-muted-foreground">Сессия и права доступа проверяются на сервере.</p>
+              </form>
+            </Form>
+          )}
         </CardContent>
       </Card>
     </main>
