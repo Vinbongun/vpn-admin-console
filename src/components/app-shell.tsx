@@ -58,7 +58,14 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   };
 
   return (
-    <SidebarProvider>
+    <SidebarProvider
+      style={
+        {
+          "--sidebar-width": "calc(var(--spacing) * 72)",
+          "--header-height": "calc(var(--spacing) * 12)",
+        } as React.CSSProperties
+      }
+    >
       <Sidebar collapsible="icon">
         <SidebarHeader>
           <SidebarMenu>
@@ -128,10 +135,10 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         </SidebarFooter>
       </Sidebar>
       <SidebarInset>
-        <header className="flex h-14 shrink-0 items-center justify-between gap-2 border-b px-4">
-          <div className="flex items-center gap-2">
-            <SidebarTrigger />
-            <Separator orientation="vertical" className="mr-2 h-4" />
+        <header className="flex h-(--header-height) shrink-0 items-center justify-between gap-2 border-b">
+          <div className="flex w-full items-center gap-1 px-4 lg:gap-2 lg:px-6">
+            <SidebarTrigger className="-ml-1" />
+            <Separator orientation="vertical" className="mx-2 h-4 data-vertical:self-auto" />
             <Breadcrumb>
               <BreadcrumbList>
                 <BreadcrumbItem>
@@ -139,10 +146,14 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                 </BreadcrumbItem>
               </BreadcrumbList>
             </Breadcrumb>
+            <div className="ml-auto">
+              <ThemeToggle />
+            </div>
           </div>
-          <ThemeToggle />
         </header>
-        <main className="flex flex-1 flex-col gap-4 p-4 md:p-6">{children}</main>
+        <div className="@container/main flex flex-1 flex-col gap-2">
+          <div className="flex flex-col gap-4 px-4 py-4 md:gap-6 md:px-6 md:py-6">{children}</div>
+        </div>
       </SidebarInset>
     </SidebarProvider>
   );

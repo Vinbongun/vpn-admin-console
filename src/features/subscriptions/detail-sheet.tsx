@@ -27,7 +27,7 @@ export function SubscriptionDetailSheet({ subscriptionId, onOpenChange, staff }:
 
   return (
     <Sheet open={Boolean(subscriptionId)} onOpenChange={onOpenChange}>
-      <SheetContent className="w-full gap-0 overflow-y-auto p-0 sm:max-w-lg">
+      <SheetContent className="w-full gap-0 overflow-y-auto p-0 data-[side=right]:sm:max-w-lg data-[side=left]:sm:max-w-lg">
         {detail.isLoading ? (
           <div className="space-y-3 p-4">
             <Skeleton className="h-6 w-48" />

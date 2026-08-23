@@ -10,6 +10,7 @@ import type { AdminInfrastructureIncidentQuery, ControlPlaneSourceSummary, Infra
 import { AppShell } from "@/components/app-shell";
 import { DataTable, DataTablePagination } from "@/components/data-table";
 import { PageHeader } from "@/components/page-header";
+import { StatCard } from "@/components/stat-card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -113,17 +114,9 @@ export default function InfrastructurePage() {
     <AppShell>
       <PageHeader title="Инфраструктура" description="Список серверов (endpoint'ов), их состояние здоровья и открытые инциденты — данные доступны только для просмотра" />
 
-      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-5">
+      <div className="grid grid-cols-1 gap-4 @xl/main:grid-cols-2 @5xl/main:grid-cols-5">
         {counters.map(({ label, value, icon: Icon }) => (
-          <Card key={label}>
-            <CardContent className="flex items-center justify-between pt-6">
-              <div>
-                <p className="text-sm text-muted-foreground">{label}</p>
-                <p className="mt-1 text-2xl font-semibold">{summary.isLoading ? "…" : summary.isError ? "—" : value ?? 0}</p>
-              </div>
-              <Icon className="size-5 text-muted-foreground" />
-            </CardContent>
-          </Card>
+          <StatCard key={label} label={label} icon={Icon} value={summary.isLoading ? "…" : summary.isError ? "—" : (value ?? 0)} />
         ))}
       </div>
 

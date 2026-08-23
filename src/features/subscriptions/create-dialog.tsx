@@ -63,8 +63,8 @@ export function CreateSubscriptionDialog() {
                   <FieldLabel htmlFor="brandMembershipId">Привязка к бренду</FieldLabel>
                   <Select
                     items={customers.data?.items.flatMap((customer) => customer.memberships.map((membership) => ({ value: membership.id, label: `${customer.email} · ${membership.brandCode}` }))) ?? []}
-                    value={field.value || undefined}
-                    onValueChange={field.onChange}
+                    value={field.value || null}
+                    onValueChange={(value) => field.onChange(value ?? "")}
                   >
                     <SelectTrigger id="brandMembershipId" className="w-full">
                       <SelectValue placeholder="Выберите привязку к бренду" />
