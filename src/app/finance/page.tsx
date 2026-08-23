@@ -126,9 +126,10 @@ export default function FinancePage() {
         </CardHeader>
         <CardContent className="grid gap-3 md:grid-cols-2">
           <Select
+            items={[{ value: "all", label: "Все бренды" }, ...(brands.data?.map((brand) => ({ value: brand.code, label: brand.name })) ?? [])]}
             value={brandCode}
             onValueChange={(value) => {
-              setBrandCode(value);
+              setBrandCode(value ?? "all");
               setPage(1);
             }}
           >
@@ -145,9 +146,10 @@ export default function FinancePage() {
             </SelectContent>
           </Select>
           <Select
+            items={[{ value: "all", label: "Все статусы" }, ...orderStatuses.map((value) => ({ value, label: value }))]}
             value={status}
             onValueChange={(value) => {
-              setStatus(value);
+              setStatus(value ?? "all");
               setPage(1);
             }}
           >

@@ -136,7 +136,11 @@ export default function InfrastructurePage() {
         </CardHeader>
         <CardContent>
           <div className="mb-4 grid gap-3 md:grid-cols-2 xl:grid-cols-4">
-            <Select value={sourceCode} onValueChange={(value) => { setSourceCode(value); setEndpointPage(1); }}>
+            <Select
+              items={[{ value: "all", label: "Все источники" }, ...(sources.data?.map((source) => ({ value: source.code, label: source.code })) ?? [])]}
+              value={sourceCode}
+              onValueChange={(value) => { setSourceCode(value ?? "all"); setEndpointPage(1); }}
+            >
               <SelectTrigger aria-label="Источник">
                 <SelectValue />
               </SelectTrigger>
@@ -172,7 +176,16 @@ export default function InfrastructurePage() {
         </CardHeader>
         <CardContent>
           <div className="mb-4 grid gap-3 md:grid-cols-2">
-            <Select value={incidentStatus} onValueChange={(value) => { setIncidentStatus(value as typeof incidentStatus); setIncidentPage(1); }}>
+            <Select
+              items={[
+                { value: "all", label: "Все статусы" },
+                { value: "OPEN", label: "OPEN" },
+                { value: "ACKNOWLEDGED", label: "ACKNOWLEDGED" },
+                { value: "RESOLVED", label: "RESOLVED" },
+              ]}
+              value={incidentStatus}
+              onValueChange={(value) => { setIncidentStatus(value as typeof incidentStatus); setIncidentPage(1); }}
+            >
               <SelectTrigger aria-label="Статус инцидента">
                 <SelectValue />
               </SelectTrigger>
@@ -183,7 +196,16 @@ export default function InfrastructurePage() {
                 <SelectItem value="RESOLVED">RESOLVED</SelectItem>
               </SelectContent>
             </Select>
-            <Select value={severity} onValueChange={(value) => { setSeverity(value as typeof severity); setIncidentPage(1); }}>
+            <Select
+              items={[
+                { value: "all", label: "Любая критичность" },
+                { value: "INFO", label: "INFO" },
+                { value: "WARNING", label: "WARNING" },
+                { value: "CRITICAL", label: "CRITICAL" },
+              ]}
+              value={severity}
+              onValueChange={(value) => { setSeverity(value as typeof severity); setIncidentPage(1); }}
+            >
               <SelectTrigger aria-label="Критичность">
                 <SelectValue />
               </SelectTrigger>

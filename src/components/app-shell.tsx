@@ -1,7 +1,7 @@
 "use client";
 
 import { useQuery } from "@tanstack/react-query";
-import { LogOut, ShieldCheck } from "lucide-react";
+import { LogOutIcon, ShieldCheckIcon } from "lucide-react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
@@ -63,16 +63,14 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         <SidebarHeader>
           <SidebarMenu>
             <SidebarMenuItem>
-              <SidebarMenuButton size="lg" asChild>
-                <Link href="/">
-                  <div className="flex aspect-square size-8 items-center justify-center rounded-lg bg-primary text-primary-foreground">
-                    <ShieldCheck className="size-4" />
-                  </div>
-                  <div className="grid flex-1 text-left text-sm leading-tight">
-                    <span className="truncate font-semibold">VPN Platform</span>
-                    <span className="truncate text-xs text-muted-foreground">Admin Console</span>
-                  </div>
-                </Link>
+              <SidebarMenuButton size="lg" render={<Link href="/" />}>
+                <div className="flex aspect-square size-7 items-center justify-center rounded-md bg-primary text-primary-foreground">
+                  <ShieldCheckIcon className="size-4" />
+                </div>
+                <div className="grid flex-1 text-left text-sm leading-tight">
+                  <span className="truncate font-medium">VPN Platform</span>
+                  <span className="truncate text-xs text-muted-foreground">Admin Console</span>
+                </div>
               </SidebarMenuButton>
             </SidebarMenuItem>
           </SidebarMenu>
@@ -83,11 +81,9 @@ export function AppShell({ children }: { children: React.ReactNode }) {
               <SidebarMenu>
                 {items.map(({ href, label, icon: Icon }) => (
                   <SidebarMenuItem key={href}>
-                    <SidebarMenuButton asChild isActive={pathname === href} tooltip={label}>
-                      <Link href={href}>
-                        <Icon />
-                        <span>{label}</span>
-                      </Link>
+                    <SidebarMenuButton render={<Link href={href} />} isActive={pathname === href} tooltip={label}>
+                      <Icon />
+                      <span>{label}</span>
                     </SidebarMenuButton>
                   </SidebarMenuItem>
                 ))}
@@ -99,17 +95,19 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           <SidebarMenu>
             <SidebarMenuItem>
               <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <SidebarMenuButton size="lg">
-                    <Avatar className="size-8 rounded-lg">
-                      <AvatarFallback className="rounded-lg">{initials}</AvatarFallback>
-                    </Avatar>
-                    <div className="grid flex-1 text-left text-sm leading-tight">
-                      <span className="truncate font-medium">{staff?.displayName ?? "Загрузка…"}</span>
-                      <span className="truncate text-xs text-muted-foreground">{staff?.email}</span>
-                    </div>
-                  </SidebarMenuButton>
-                </DropdownMenuTrigger>
+                <DropdownMenuTrigger
+                  render={
+                    <SidebarMenuButton size="lg">
+                      <Avatar className="size-7">
+                        <AvatarFallback className="text-xs">{initials}</AvatarFallback>
+                      </Avatar>
+                      <div className="grid flex-1 text-left text-sm leading-tight">
+                        <span className="truncate font-medium">{staff?.displayName ?? "Загрузка…"}</span>
+                        <span className="truncate text-xs text-muted-foreground">{staff?.email}</span>
+                      </div>
+                    </SidebarMenuButton>
+                  }
+                />
                 <DropdownMenuContent side="right" align="end" className="w-64">
                   <DropdownMenuLabel className="font-normal">
                     <div className="flex flex-col gap-1">
@@ -120,7 +118,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                   </DropdownMenuLabel>
                   <DropdownMenuSeparator />
                   <DropdownMenuItem disabled={isLoggingOut} onClick={logout}>
-                    {isLoggingOut ? <Spinner /> : <LogOut />}
+                    {isLoggingOut ? <Spinner /> : <LogOutIcon />}
                     {isLoggingOut ? "Выходим…" : "Выйти"}
                   </DropdownMenuItem>
                 </DropdownMenuContent>
@@ -130,9 +128,9 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         </SidebarFooter>
       </Sidebar>
       <SidebarInset>
-        <header className="flex h-16 shrink-0 items-center justify-between gap-2 border-b px-4">
+        <header className="flex h-14 shrink-0 items-center justify-between gap-2 border-b px-4">
           <div className="flex items-center gap-2">
-            <SidebarTrigger className="-ml-1" />
+            <SidebarTrigger />
             <Separator orientation="vertical" className="mr-2 h-4" />
             <Breadcrumb>
               <BreadcrumbList>
@@ -144,7 +142,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           </div>
           <ThemeToggle />
         </header>
-        <main className="flex flex-1 flex-col gap-4 p-4 md:p-8">{children}</main>
+        <main className="flex flex-1 flex-col gap-4 p-4 md:p-6">{children}</main>
       </SidebarInset>
     </SidebarProvider>
   );

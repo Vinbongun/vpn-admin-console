@@ -171,7 +171,11 @@ export default function CustomersPage() {
                             {needsSubscription && issuingMembershipId === membership.id && (
                               <div className="mt-3 space-y-2 rounded-lg border border-dashed p-3">
                                 <p className="text-xs text-muted-foreground">У клиента нет активной подписки на этот бренд — выберите тариф и период.</p>
-                                <Select value={issueForm.planId} onValueChange={(value) => setIssueForm((value_) => ({ ...value_, planId: value }))}>
+                                <Select
+                                  items={brandPlans.map((plan) => ({ value: plan.id, label: plan.name }))}
+                                  value={issueForm.planId}
+                                  onValueChange={(value) => setIssueForm((value_) => ({ ...value_, planId: value ?? "" }))}
+                                >
                                   <SelectTrigger aria-label="Тариф" className="w-full">
                                     <SelectValue placeholder="Без тарифа" />
                                   </SelectTrigger>
