@@ -212,6 +212,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/customer/v1/orders": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** @description Pays for a plan through the mock payment provider synchronously (there is no real gateway yet) and activates or renews the subscription in the same request. Renewal vs. new subscription is decided by the backend: any non-REVOKED subscription already on this membership+plan is renewed (expiry extended from whichever is later, now or its current expiry - early renewal never loses paid time); otherwise a new subscription is created starting now. */
+        post: operations["createOrder"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/customer/v1/brand-config": {
         parameters: {
             query?: never;
@@ -471,6 +488,38 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/admin/v1/orders": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["listAdminOrders"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/v1/finance/summary": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["getFinanceSummary"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/admin/v1/audit-events": {
         parameters: {
             query?: never;
@@ -594,6 +643,23 @@ export interface paths {
         put?: never;
         /** @description Claims and processes one pending provisioning job (PROVISION or REVOKE), if any. Intended to be called repeatedly by an external worker/cron; retries and backoff are tracked in provisioning_jobs and do not need external scheduling logic. */
         post: operations["runNextProvisioningJob"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/internal/v1/reconciliation/run": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** @description Compares every active control-plane source's live user list against what profile_bindings says should currently have access, and reflects any drift as infrastructure_incidents rows (RECONCILIATION_MISSING, RECONCILIATION_DISABLED, RECONCILIATION_ORPHANED) rather than auto-repairing anything. Previously-open reconciliation incidents that no longer reproduce are marked RESOLVED. Intended to be called on an interval by an external worker/cron, much less frequently than run-next since it scans full user lists per source. */
+        post: operations["runReconciliation"];
         delete?: never;
         options?: never;
         head?: never;
@@ -812,9 +878,16 @@ export interface components {
         UpdateCustomerProfile: {
             displayName: string;
         };
+        /** @description `code` and `name` come from the brand row itself; every other property is whatever the brand's `settings.public` jsonb happens to contain, spread verbatim - `theme` and `logoUrl` are documented conventions the customer site can rely on, but neither is guaranteed present (a brand with no `settings.public.theme` has no visual identity configured yet, and the site should fall back to a default theme/wordmark). */
         PublicBrandConfig: {
             code: string;
             name: string;
+            theme?: {
+                /** @description e.g. "#4F46E5" */
+                primaryColor?: string;
+            };
+            /** Format: uri */
+            logoUrl?: string;
         } & {
             [key: string]: unknown;
         };
@@ -955,7 +1028,58 @@ export interface components {
             price?: {
                 amount?: number;
                 currency?: string;
+                periodDays?: number;
             } | null;
+        };
+        OrderResult: {
+            /** Format: uuid */
+            orderId: string;
+            /** Format: uuid */
+            subscriptionId: string;
+            /** @enum {string} */
+            kind: "NEW" | "RENEWAL";
+            amount: number;
+            currency: string;
+            subscriptionStatus: string;
+            /** Format: date-time */
+            startsAt: string;
+            /** Format: date-time */
+            expiresAt: string;
+        };
+        OrderSummary: {
+            /** Format: uuid */
+            id: string;
+            brandCode: string;
+            customerEmail: string;
+            planCode: string;
+            planName: string;
+            /** @enum {string} */
+            kind: "NEW" | "RENEWAL";
+            /** @enum {string} */
+            status: "PENDING" | "PAID" | "FAILED" | "CANCELLED" | "REFUNDED";
+            amount: number;
+            currency: string;
+            /** Format: date-time */
+            createdAt: string;
+        };
+        OrderPage: {
+            items: components["schemas"]["OrderSummary"][];
+            page: number;
+            pageSize: number;
+            total: number;
+        };
+        FinanceSummary: {
+            revenueByBrand: {
+                brandCode: string;
+                currency: string;
+                amount: number;
+            }[];
+            paidOrdersByKind: {
+                [key: string]: number;
+            };
+            ordersByStatus: {
+                [key: string]: number;
+            };
         };
         PlanPage: components["schemas"]["PageMetadata"] & {
             items: components["schemas"]["PlanSummary"][];
@@ -1010,6 +1134,9 @@ export interface components {
             protocol: string;
             transport?: string | null;
             healthStatus: string;
+            /** @description Reachability target only - enough to open a TCP/TLS connection, never a working VPN credential. Null until inventory sync has resolved a real address; probe agents should skip such targets rather than treat them as down. */
+            probeHost: string | null;
+            probePort: number | null;
         };
         EndpointProbeResultInput: {
             probeId: string;
@@ -1040,6 +1167,13 @@ export interface components {
             jobId?: string;
             /** @enum {string} */
             status?: "SUCCEEDED" | "PENDING_RETRY" | "FAILED";
+        };
+        ReconciliationRunResult: {
+            sourcesChecked: number;
+            /** @description New mismatch incidents created this pass */
+            opened: number;
+            /** @description Previously-open incidents that no longer reproduce and were closed */
+            resolved: number;
         };
         InfrastructureSummary: {
             sources: number;
@@ -1520,6 +1654,49 @@ export interface operations {
                 content: {
                     "application/json": components["schemas"]["SubscriptionSummary"][];
                 };
+            };
+            /** @description Invalid customer session */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    createOrder: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    /** Format: uuid */
+                    brandMembershipId: string;
+                    /** Format: uuid */
+                    planId: string;
+                };
+            };
+        };
+        responses: {
+            /** @description Paid order and the resulting subscription state */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["OrderResult"];
+                };
+            };
+            /** @description Membership/plan/brand mismatch */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
             /** @description Invalid customer session */
             401: {
@@ -2151,6 +2328,11 @@ export interface operations {
                 "application/json": {
                     amount: number;
                     currency: string;
+                    /**
+                     * @description Subscription length a purchase/renewal of this plan grants.
+                     * @default 30
+                     */
+                    periodDays?: number;
                 };
             };
         };
@@ -2166,6 +2348,7 @@ export interface operations {
                         planId?: string;
                         amount?: number;
                         currency?: string;
+                        periodDays?: number;
                     };
                 };
             };
@@ -2175,6 +2358,51 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content?: never;
+            };
+        };
+    };
+    listAdminOrders: {
+        parameters: {
+            query?: {
+                page?: number;
+                pageSize?: number;
+                brandCode?: string;
+                status?: "PENDING" | "PAID" | "FAILED" | "CANCELLED" | "REFUNDED";
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Paginated orders across all brands */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["OrderPage"];
+                };
+            };
+        };
+    };
+    getFinanceSummary: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Revenue by brand/currency and order counts by kind/status, all-time */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["FinanceSummary"];
+                };
             };
         };
     };
@@ -2408,6 +2636,33 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["ProvisioningRunResult"];
+                };
+            };
+            /** @description Invalid internal credential */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    runReconciliation: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Summary of this reconciliation pass */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ReconciliationRunResult"];
                 };
             };
             /** @description Invalid internal credential */
