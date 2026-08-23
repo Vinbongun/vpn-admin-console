@@ -212,6 +212,128 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/customer/v1/subscriptions/{subscriptionId}/devices": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                subscriptionId: string;
+            };
+            cookie?: never;
+        };
+        get: operations["listCustomerDevices"];
+        put?: never;
+        /** @description Registering an already-active hwid is a heartbeat (bumps lastSeenAt); a new hwid only succeeds while the plan's device_limit still has room, otherwise 409. */
+        post: operations["registerCustomerDevice"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/customer/v1/subscriptions/{subscriptionId}/devices/{deviceId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                subscriptionId: string;
+                deviceId: string;
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete: operations["removeCustomerDevice"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/customer/v1/orders": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** @description Pays for a plan through the mock payment provider synchronously (there is no real gateway yet) and activates or renews the subscription in the same request. Renewal vs. new subscription is decided by the backend: any non-REVOKED subscription already on this membership+plan is renewed (expiry extended from whichever is later, now or its current expiry - early renewal never loses paid time); otherwise a new subscription is created starting now. */
+        post: operations["createOrder"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/customer/v1/referrals/me": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description Creates the customer's referral code on first call (against the brand's DEFAULT program) and returns it alongside every referral they've earned so far. */
+        get: operations["getOwnReferralCode"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/v1/referral-programs": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["listReferralPrograms"];
+        put?: never;
+        /** @description Creates or updates the program for a brand+campaignCode (default campaignCode is "DEFAULT"). */
+        post: operations["upsertReferralProgram"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/v1/referrals": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["listAdminReferrals"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/internal/v1/referrals/confirm-due": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** @description Confirms PENDING referrals whose first order's subscription has reached EXPIRED (its paid period fully elapsed) while the order is still PAID, and credits the referrer's ledger with a REFERRAL_CREDIT entry. Intended to be called on an interval by an external worker/cron, alongside subscriptions/expire-due. */
+        post: operations["confirmDueReferrals"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/customer/v1/brand-config": {
         parameters: {
             query?: never;
@@ -343,6 +465,44 @@ export interface paths {
         patch: operations["updateAdminSubscription"];
         trace?: never;
     };
+    "/admin/v1/subscriptions/{subscriptionId}/devices": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                subscriptionId: string;
+            };
+            cookie?: never;
+        };
+        get: operations["listAdminDevices"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/v1/subscriptions/{subscriptionId}/devices/{deviceId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                subscriptionId: string;
+                deviceId: string;
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /** @description Support-driven removal, e.g. freeing a slot after a customer replaced a device. */
+        delete: operations["removeAdminDevice"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/admin/v1/customers": {
         parameters: {
             query?: never;
@@ -465,6 +625,55 @@ export interface paths {
         get?: never;
         put?: never;
         post: operations["setPlanPrice"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/v1/orders": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["listAdminOrders"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/v1/finance/summary": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["getFinanceSummary"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/v1/retention/summary": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description Two churn/retention cohorts: customers who bought a subscription but show no observed control-plane traffic since it started (past a grace period, to allow for delayed first connection), and customers whose most recent subscription expired without a renewal. "Bought but inactive" only reflects control-plane sources whose adapter reports traffic counters (3x-ui today); sources without one never contribute usage signal. */
+        get: operations["getRetentionSummary"];
+        put?: never;
+        post?: never;
         delete?: never;
         options?: never;
         head?: never;
@@ -594,6 +803,40 @@ export interface paths {
         put?: never;
         /** @description Claims and processes one pending provisioning job (PROVISION or REVOKE), if any. Intended to be called repeatedly by an external worker/cron; retries and backoff are tracked in provisioning_jobs and do not need external scheduling logic. */
         post: operations["runNextProvisioningJob"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/internal/v1/reconciliation/run": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** @description Compares every active control-plane source's live user list against what profile_bindings says should currently have access, and reflects any drift as infrastructure_incidents rows (RECONCILIATION_MISSING, RECONCILIATION_DISABLED, RECONCILIATION_ORPHANED) rather than auto-repairing anything. Previously-open reconciliation incidents that no longer reproduce are marked RESOLVED. Intended to be called on an interval by an external worker/cron, much less frequently than run-next since it scans full user lists per source. */
+        post: operations["runReconciliation"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/internal/v1/subscriptions/expire-due": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** @description Transitions every ACTIVE/TRIAL subscription whose expires_at has passed to EXPIRED, revokes its active subscription tokens, and enqueues a REVOKE provisioning job so the underlying control-plane account is actually removed (the subscription-edge renderer already refuses to serve a lapsed subscription on its own, but nothing else previously told the panel to drop the account). Intended to be called on an interval by an external worker/cron. */
+        post: operations["expireDueSubscriptions"];
         delete?: never;
         options?: never;
         head?: never;
@@ -812,9 +1055,16 @@ export interface components {
         UpdateCustomerProfile: {
             displayName: string;
         };
+        /** @description `code` and `name` come from the brand row itself; every other property is whatever the brand's `settings.public` jsonb happens to contain, spread verbatim - `theme` and `logoUrl` are documented conventions the customer site can rely on, but neither is guaranteed present (a brand with no `settings.public.theme` has no visual identity configured yet, and the site should fall back to a default theme/wordmark). */
         PublicBrandConfig: {
             code: string;
             name: string;
+            theme?: {
+                /** @description e.g. "#4F46E5" */
+                primaryColor?: string;
+            };
+            /** Format: uri */
+            logoUrl?: string;
         } & {
             [key: string]: unknown;
         };
@@ -823,6 +1073,20 @@ export interface components {
             /** @enum {string} */
             billingModel: "DEVICE_PLAN" | "ACCOUNT_PLAN" | "FAMILY_PLAN";
             deviceLimit: number;
+        };
+        DeviceSummary: {
+            /** Format: uuid */
+            id: string;
+            /** Format: uuid */
+            subscriptionId: string;
+            hwid: string;
+            label?: string | null;
+            /** @enum {string} */
+            status: "ACTIVE" | "REVOKED";
+            /** Format: date-time */
+            firstSeenAt: string;
+            /** Format: date-time */
+            lastSeenAt: string;
         };
         SubscriptionSummary: {
             /** Format: uuid */
@@ -955,7 +1219,102 @@ export interface components {
             price?: {
                 amount?: number;
                 currency?: string;
+                periodDays?: number;
             } | null;
+        };
+        OrderResult: {
+            /** Format: uuid */
+            orderId: string;
+            /** Format: uuid */
+            subscriptionId: string;
+            /** @enum {string} */
+            kind: "NEW" | "RENEWAL";
+            amount: number;
+            currency: string;
+            subscriptionStatus: string;
+            /** Format: date-time */
+            startsAt: string;
+            /** Format: date-time */
+            expiresAt: string;
+        };
+        OrderSummary: {
+            /** Format: uuid */
+            id: string;
+            brandCode: string;
+            customerEmail: string;
+            planCode: string;
+            planName: string;
+            /** @enum {string} */
+            kind: "NEW" | "RENEWAL";
+            /** @enum {string} */
+            status: "PENDING" | "PAID" | "FAILED" | "CANCELLED" | "REFUNDED";
+            amount: number;
+            currency: string;
+            /** Format: date-time */
+            createdAt: string;
+        };
+        OrderPage: {
+            items: components["schemas"]["OrderSummary"][];
+            page: number;
+            pageSize: number;
+            total: number;
+        };
+        FinanceSummary: {
+            revenueByBrand: {
+                brandCode: string;
+                currency: string;
+                amount: number;
+            }[];
+            paidOrdersByKind: {
+                [key: string]: number;
+            };
+            ordersByStatus: {
+                [key: string]: number;
+            };
+        };
+        RetentionSummary: {
+            graceDays: number;
+            /** @description ACTIVE/TRIAL subscriptions past the grace period with no observed traffic */
+            purchasedInactive: number;
+            /** @description Customers whose most recent subscription expired without a renewal */
+            expiredNoRenewal: number;
+        };
+        ReferralProgram: {
+            /** Format: uuid */
+            id: string;
+            /** Format: uuid */
+            brandId: string;
+            campaignCode: string;
+            rewardPercent: number;
+            /** @enum {string} */
+            status: "ACTIVE" | "INACTIVE";
+            /** Format: date-time */
+            createdAt: string;
+            /** Format: date-time */
+            updatedAt: string;
+        };
+        ReferralSummary: {
+            /** Format: uuid */
+            id: string;
+            /** @enum {string} */
+            status: "PENDING" | "CONFIRMED" | "CANCELLED";
+            rewardAmount: number;
+            rewardCurrency: string;
+            /** Format: date-time */
+            createdAt: string;
+            /** Format: date-time */
+            confirmedAt?: string | null;
+        };
+        ReferralMe: {
+            code: string;
+            rewardPercent: number;
+            referrals: components["schemas"]["ReferralSummary"][];
+        };
+        ReferralPage: {
+            items: components["schemas"]["ReferralSummary"][];
+            page: number;
+            pageSize: number;
+            total: number;
         };
         PlanPage: components["schemas"]["PageMetadata"] & {
             items: components["schemas"]["PlanSummary"][];
@@ -1010,6 +1369,9 @@ export interface components {
             protocol: string;
             transport?: string | null;
             healthStatus: string;
+            /** @description Reachability target only - enough to open a TCP/TLS connection, never a working VPN credential. Null until inventory sync has resolved a real address; probe agents should skip such targets rather than treat them as down. */
+            probeHost: string | null;
+            probePort: number | null;
         };
         EndpointProbeResultInput: {
             probeId: string;
@@ -1040,6 +1402,17 @@ export interface components {
             jobId?: string;
             /** @enum {string} */
             status?: "SUCCEEDED" | "PENDING_RETRY" | "FAILED";
+        };
+        ReconciliationRunResult: {
+            sourcesChecked: number;
+            /** @description New mismatch incidents created this pass */
+            opened: number;
+            /** @description Previously-open incidents that no longer reproduce and were closed */
+            resolved: number;
+        };
+        ExpireDueResult: {
+            /** @description Subscriptions transitioned from ACTIVE/TRIAL to EXPIRED in this pass */
+            count: number;
         };
         InfrastructureSummary: {
             sources: number;
@@ -1530,6 +1903,310 @@ export interface operations {
             };
         };
     };
+    listCustomerDevices: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                subscriptionId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Devices registered against this subscription */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DeviceSummary"][];
+                };
+            };
+            /** @description Subscription not found or not owned by this customer */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    registerCustomerDevice: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                subscriptionId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    hwid: string;
+                    label?: string;
+                };
+            };
+        };
+        responses: {
+            /** @description Device registered or its heartbeat updated */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DeviceSummary"];
+                };
+            };
+            /** @description Subscription not found or not owned by this customer */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Device limit reached for this subscription */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    removeCustomerDevice: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                subscriptionId: string;
+                deviceId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Device removed */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Subscription or device not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    createOrder: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    /** Format: uuid */
+                    brandMembershipId: string;
+                    /** Format: uuid */
+                    planId: string;
+                    /** @description Best-effort: only applied on a NEW (not renewal) order; an invalid, unknown, or self-referral code is silently ignored rather than failing the purchase. */
+                    referralCode?: string;
+                };
+            };
+        };
+        responses: {
+            /** @description Paid order and the resulting subscription state */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["OrderResult"];
+                };
+            };
+            /** @description Membership/plan/brand mismatch */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Invalid customer session */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    getOwnReferralCode: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The customer's referral code and referral history */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ReferralMe"];
+                };
+            };
+            /** @description A brand session is required */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Brand membership not found, or no referral program configured for this brand */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    listReferralPrograms: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description All referral programs across brands; requires finance.read */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ReferralProgram"][];
+                };
+            };
+            /** @description Missing finance.read permission */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    upsertReferralProgram: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    /** Format: uuid */
+                    brandId: string;
+                    /** @default DEFAULT */
+                    campaignCode?: string;
+                    /** @default 10 */
+                    rewardPercent?: number;
+                    /** @enum {string} */
+                    status?: "ACTIVE" | "INACTIVE";
+                };
+            };
+        };
+        responses: {
+            /** @description Program created or updated; requires finance.write */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ReferralProgram"];
+                };
+            };
+            /** @description Missing finance.write permission */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    listAdminReferrals: {
+        parameters: {
+            query?: {
+                page?: number;
+                pageSize?: number;
+                status?: "PENDING" | "CONFIRMED" | "CANCELLED";
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Paginated referrals across all brands; requires finance.read */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ReferralPage"];
+                };
+            };
+            /** @description Missing finance.read permission */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    confirmDueReferrals: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Number of referrals confirmed and credited in this pass */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ExpireDueResult"];
+                };
+            };
+            /** @description Invalid internal credential */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
     getPublicBrandConfig: {
         parameters: {
             query?: {
@@ -1854,6 +2531,77 @@ export interface operations {
             };
         };
     };
+    listAdminDevices: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                subscriptionId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Devices registered against this subscription; requires subscriptions.read */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DeviceSummary"][];
+                };
+            };
+            /** @description Missing subscriptions.read permission */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Subscription not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    removeAdminDevice: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                subscriptionId: string;
+                deviceId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Device removed; requires subscriptions.write */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Missing subscriptions.write permission */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Subscription or device not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
     listAdminCustomers: {
         parameters: {
             query?: {
@@ -2151,6 +2899,11 @@ export interface operations {
                 "application/json": {
                     amount: number;
                     currency: string;
+                    /**
+                     * @description Subscription length a purchase/renewal of this plan grants.
+                     * @default 30
+                     */
+                    periodDays?: number;
                 };
             };
         };
@@ -2166,11 +2919,93 @@ export interface operations {
                         planId?: string;
                         amount?: number;
                         currency?: string;
+                        periodDays?: number;
                     };
                 };
             };
             /** @description Plan not found */
             404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    listAdminOrders: {
+        parameters: {
+            query?: {
+                page?: number;
+                pageSize?: number;
+                brandCode?: string;
+                status?: "PENDING" | "PAID" | "FAILED" | "CANCELLED" | "REFUNDED";
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Paginated orders across all brands */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["OrderPage"];
+                };
+            };
+        };
+    };
+    getFinanceSummary: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Revenue by brand/currency and order counts by kind/status, all-time */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["FinanceSummary"];
+                };
+            };
+        };
+    };
+    getRetentionSummary: {
+        parameters: {
+            query?: {
+                graceDays?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Retention cohort counts */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RetentionSummary"];
+                };
+            };
+            /** @description Staff authentication required */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description subscriptions.read permission required */
+            403: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -2408,6 +3243,60 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["ProvisioningRunResult"];
+                };
+            };
+            /** @description Invalid internal credential */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    runReconciliation: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Summary of this reconciliation pass */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ReconciliationRunResult"];
+                };
+            };
+            /** @description Invalid internal credential */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    expireDueSubscriptions: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Number of subscriptions transitioned to EXPIRED in this pass */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ExpireDueResult"];
                 };
             };
             /** @description Invalid internal credential */

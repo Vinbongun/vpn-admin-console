@@ -6,6 +6,7 @@ import type {
   AdminCustomerQuery,
   AdminInfrastructureEndpointQuery,
   AdminInfrastructureIncidentQuery,
+  AdminOrderQuery,
   AdminPlanQuery,
   AdminSubscriptionQuery,
   CreateBrand,
@@ -80,4 +81,6 @@ export const adminApi = {
   syncSource: async (sourceId: string, body: SyncSourceInventory = {}) => unwrap(await client.POST("/admin/v1/infrastructure/sources/{id}/sync", { params: { path: { id: sourceId } }, body, headers: staffHeaders() })),
   listInfrastructureEndpoints: async (query: AdminInfrastructureEndpointQuery = {}) => unwrap(await client.GET("/admin/v1/infrastructure/endpoints", { params: { query }, headers: staffHeaders() })),
   listInfrastructureIncidents: async (query: AdminInfrastructureIncidentQuery = {}) => unwrap(await client.GET("/admin/v1/infrastructure/incidents", { params: { query }, headers: staffHeaders() })),
+  listOrders: async (query: AdminOrderQuery = {}) => unwrap(await client.GET("/admin/v1/orders", { params: { query }, headers: staffHeaders() })),
+  getFinanceSummary: async () => unwrap(await client.GET("/admin/v1/finance/summary", { headers: staffHeaders() })),
 };
