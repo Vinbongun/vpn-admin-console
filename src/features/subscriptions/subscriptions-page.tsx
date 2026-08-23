@@ -12,7 +12,7 @@ import { PageToolbar, ToolbarSearch } from "@/components/page-toolbar";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { subscriptionColumns } from "@/features/subscriptions/columns";
 import { CreateSubscriptionDialog } from "@/features/subscriptions/create-dialog";
-import { SubscriptionDetailSheet } from "@/features/subscriptions/detail-sheet";
+import { SubscriptionDetailDialog } from "@/features/subscriptions/detail-dialog";
 import { useSubscriptions } from "@/features/subscriptions/queries";
 import { subscriptionStatuses } from "@/features/subscriptions/schema";
 import { can } from "@/lib/access-control";
@@ -100,7 +100,7 @@ export function SubscriptionsPage() {
       />
       <DataTablePagination page={page} pageCount={totalPages} onPageChange={setPage} />
 
-      <SubscriptionDetailSheet subscriptionId={selectedId} onOpenChange={(open) => !open && setSelectedId(undefined)} staff={staff.data} />
+      <SubscriptionDetailDialog subscriptionId={selectedId} onOpenChange={(open) => !open && setSelectedId(undefined)} staff={staff.data} />
     </AppShell>
   );
 }

@@ -250,6 +250,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/customer/v1/plans": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description ACTIVE plans with a current price for the authenticated customer's brand session - exactly what POST /customer/v1/orders can be called with. A plan mid-setup (no price yet) or retired is not listed here. */
+        get: operations["listCustomerPlans"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/customer/v1/orders": {
         parameters: {
             query?: never;
@@ -328,6 +345,23 @@ export interface paths {
         put?: never;
         /** @description Confirms PENDING referrals whose first order's subscription has reached EXPIRED (its paid period fully elapsed) while the order is still PAID, and credits the referrer's ledger with a REFERRAL_CREDIT entry. Intended to be called on an interval by an external worker/cron, alongside subscriptions/expire-due. */
         post: operations["confirmDueReferrals"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/internal/v1/alerts/telegram/notify-due": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** @description Sends a Telegram message for every infrastructure_incidents row not yet notified (newly opened, one-time), and a follow-up message for any previously-notified incident that has since become RESOLVED. Requires TELEGRAM_BOT_TOKEN and TELEGRAM_ALERT_CHAT_ID to be configured; without them this silently no-ops rather than failing. Intended to be called on an interval by an external worker/cron, alongside reconciliation/run. */
+        post: operations["notifyDueTelegramAlerts"];
         delete?: never;
         options?: never;
         head?: never;
@@ -1047,6 +1081,8 @@ export interface components {
             email: string;
             displayName: string;
             memberships: {
+                /** Format: uuid */
+                id: string;
                 brandCode: string;
                 brandName: string;
                 status: string;
@@ -1237,6 +1273,18 @@ export interface components {
             /** Format: date-time */
             expiresAt: string;
         };
+        CustomerPurchasablePlan: {
+            /** Format: uuid */
+            id: string;
+            code: string;
+            name: string;
+            /** @enum {string} */
+            billingModel: "DEVICE_PLAN" | "ACCOUNT_PLAN" | "FAMILY_PLAN";
+            deviceLimit: number;
+            amount: number;
+            currency: string;
+            periodDays: number;
+        };
         OrderSummary: {
             /** Format: uuid */
             id: string;
@@ -1413,6 +1461,12 @@ export interface components {
         ExpireDueResult: {
             /** @description Subscriptions transitioned from ACTIVE/TRIAL to EXPIRED in this pass */
             count: number;
+        };
+        TelegramAlertsResult: {
+            /** @description Newly-opened incidents alerted this pass */
+            opened: number;
+            /** @description Previously-alerted incidents whose resolution was alerted this pass */
+            resolved: number;
         };
         InfrastructureSummary: {
             sources: number;
@@ -2003,6 +2057,33 @@ export interface operations {
             };
         };
     };
+    listCustomerPlans: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Purchasable plans for this brand */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CustomerPurchasablePlan"][];
+                };
+            };
+            /** @description Invalid customer session */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
     createOrder: {
         parameters: {
             query?: never;
@@ -2196,6 +2277,33 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["ExpireDueResult"];
+                };
+            };
+            /** @description Invalid internal credential */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    notifyDueTelegramAlerts: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Number of open-incident and resolved-incident alerts sent in this pass */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TelegramAlertsResult"];
                 };
             };
             /** @description Invalid internal credential */

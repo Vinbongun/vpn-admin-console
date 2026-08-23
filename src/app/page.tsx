@@ -10,6 +10,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
+import { RetentionSection } from "@/features/retention/retention-section";
 
 export default function DashboardPage() {
   const { data: staff, isLoading } = useQuery({ queryKey: ["staff-session"], queryFn: adminApi.getSession, retry: false });
@@ -65,6 +66,7 @@ export default function DashboardPage() {
           </CardContent>
         </Card>
       </div>
+      <RetentionSection staff={staff} />
     </AppShell>
   );
 }

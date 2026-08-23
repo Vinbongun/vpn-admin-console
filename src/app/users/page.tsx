@@ -12,11 +12,11 @@ import { PageHeader } from "@/components/page-header";
 import { PageToolbar, ToolbarSearch } from "@/components/page-toolbar";
 import { StatusBadge } from "@/components/status-badge";
 import { Button } from "@/components/ui/button";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Field, FieldGroup, FieldLabel } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Separator } from "@/components/ui/separator";
-import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Spinner } from "@/components/ui/spinner";
 import { ErrorState } from "@/components/error-state";
@@ -159,22 +159,22 @@ export default function CustomersPage() {
       />
       <DataTablePagination page={page} pageCount={totalPages} onPageChange={setPage} />
 
-      <Sheet open={Boolean(selectedId)} onOpenChange={(open) => !open && setSelectedId(undefined)}>
-        <SheetContent className="w-full overflow-y-auto data-[side=right]:sm:max-w-xl data-[side=left]:sm:max-w-xl">
+      <Dialog open={Boolean(selectedId)} onOpenChange={(open) => !open && setSelectedId(undefined)}>
+        <DialogContent className="flex max-h-[85vh] flex-col gap-0 overflow-hidden p-0 sm:max-w-lg">
           {detail.isLoading ? (
-            <div className="space-y-3 p-4">
+            <div className="space-y-3 p-6">
               <Skeleton className="h-6 w-48" />
               <Skeleton className="h-4 w-64" />
             </div>
           ) : detail.isError ? (
-            <ErrorState className="p-4" description="Не удалось получить карточку клиента." />
+            <ErrorState className="p-6" description="Не удалось получить карточку клиента." />
           ) : detail.data ? (
             <>
-              <SheetHeader>
-                <SheetTitle>{detail.data.email}</SheetTitle>
-                <SheetDescription>{detail.data.id}</SheetDescription>
-              </SheetHeader>
-              <div className="flex flex-col gap-6 overflow-y-auto p-4">
+              <DialogHeader className="border-b p-6 pb-4">
+                <DialogTitle>{detail.data.email}</DialogTitle>
+                <DialogDescription>{detail.data.id}</DialogDescription>
+              </DialogHeader>
+              <div className="flex flex-col gap-6 overflow-y-auto p-6">
                 <div className="flex flex-wrap items-center justify-between gap-2">
                   <StatusBadge status={detail.data.status} />
                   <div className="flex gap-2">
@@ -305,8 +305,8 @@ export default function CustomersPage() {
               </div>
             </>
           ) : null}
-        </SheetContent>
-      </Sheet>
+        </DialogContent>
+      </Dialog>
     </AppShell>
   );
 }

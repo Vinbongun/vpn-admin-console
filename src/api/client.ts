@@ -8,6 +8,7 @@ import type {
   AdminInfrastructureIncidentQuery,
   AdminOrderQuery,
   AdminPlanQuery,
+  AdminReferralQuery,
   AdminSubscriptionQuery,
   CreateBrand,
   CreateEndpointGroup,
@@ -27,6 +28,7 @@ import type {
   UpdateEndpointGroup,
   UpdateMembership,
   UpdateSubscription,
+  UpsertReferralProgram,
 } from "@/api/types";
 
 const API_URL = (process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:3000").replace(/\/$/, "");
@@ -83,4 +85,10 @@ export const adminApi = {
   listInfrastructureIncidents: async (query: AdminInfrastructureIncidentQuery = {}) => unwrap(await client.GET("/admin/v1/infrastructure/incidents", { params: { query }, headers: staffHeaders() })),
   listOrders: async (query: AdminOrderQuery = {}) => unwrap(await client.GET("/admin/v1/orders", { params: { query }, headers: staffHeaders() })),
   getFinanceSummary: async () => unwrap(await client.GET("/admin/v1/finance/summary", { headers: staffHeaders() })),
+  getRetentionSummary: async (graceDays?: number) => unwrap(await client.GET("/admin/v1/retention/summary", { params: { query: { ...(graceDays !== undefined ? { graceDays } : {}) } }, headers: staffHeaders() })),
+  listDevices: async (subscriptionId: string) => unwrap(await client.GET("/admin/v1/subscriptions/{subscriptionId}/devices", { params: { path: { subscriptionId } }, headers: staffHeaders() })),
+  removeDevice: async (subscriptionId: string, deviceId: string) => unwrap<void>(await client.DELETE("/admin/v1/subscriptions/{subscriptionId}/devices/{deviceId}", { params: { path: { subscriptionId, deviceId } }, headers: staffHeaders() })),
+  listReferralPrograms: async () => unwrap(await client.GET("/admin/v1/referral-programs", { headers: staffHeaders() })),
+  upsertReferralProgram: async (body: UpsertReferralProgram) => unwrap(await client.POST("/admin/v1/referral-programs", { body, headers: staffHeaders() })),
+  listReferrals: async (query: AdminReferralQuery = {}) => unwrap(await client.GET("/admin/v1/referrals", { params: { query }, headers: staffHeaders() })),
 };

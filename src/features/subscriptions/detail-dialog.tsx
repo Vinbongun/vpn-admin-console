@@ -6,13 +6,15 @@ import { adminApi } from "@/api/client";
 import type { IssuedSubscriptionToken, PlanSummary, SubscriptionDetail, SubscriptionSummary } from "@/api/types";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Field, FieldGroup, FieldLabel } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "@/components/ui/sheet";
+import { Separator } from "@/components/ui/separator";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Spinner } from "@/components/ui/spinner";
 import { ConfirmDialog } from "@/components/confirm-dialog";
+import { DevicesSection } from "@/features/subscriptions/devices-section";
 import { ErrorState } from "@/components/error-state";
 import { subscriptionStatuses } from "@/features/subscriptions/schema";
 import { useRevokeSubscriptionMutation, useRotateSubscriptionTokenMutation, useSubscription, useUpdateSubscriptionMutation } from "@/features/subscriptions/queries";
@@ -20,26 +22,26 @@ import { can } from "@/lib/access-control";
 
 type Status = SubscriptionSummary["status"];
 
-export function SubscriptionDetailSheet({ subscriptionId, onOpenChange, staff }: { subscriptionId: string | undefined; onOpenChange: (open: boolean) => void; staff: { permissions: string[] } | undefined }) {
+export function SubscriptionDetailDialog({ subscriptionId, onOpenChange, staff }: { subscriptionId: string | undefined; onOpenChange: (open: boolean) => void; staff: { permissions: string[] } | undefined }) {
   const detail = useSubscription(subscriptionId);
   const plans = useQuery({ queryKey: ["admin-plans", "subscription-detail"], queryFn: () => adminApi.listPlans({ page: 1, pageSize: 100, status: "ACTIVE" }), retry: false });
   const mayWrite = can(staff, "subscriptions.write");
 
   return (
-    <Sheet open={Boolean(subscriptionId)} onOpenChange={onOpenChange}>
-      <SheetContent className="w-full gap-0 overflow-y-auto p-0 data-[side=right]:sm:max-w-lg data-[side=left]:sm:max-w-lg">
+    <Dialog open={Boolean(subscriptionId)} onOpenChange={onOpenChange}>
+      <DialogContent className="flex max-h-[85vh] flex-col gap-0 overflow-hidden p-0 sm:max-w-lg">
         {detail.isLoading ? (
-          <div className="space-y-3 p-4">
+          <div className="space-y-3 p-6">
             <Skeleton className="h-6 w-48" />
             <Skeleton className="h-4 w-64" />
           </div>
         ) : detail.isError ? (
-          <ErrorState className="p-4" description="Не удалось получить детали подписки." />
+          <ErrorState className="p-6" description="Не удалось получить детали подписки." />
         ) : detail.data ? (
           <SubscriptionDetailBody key={detail.data.id} subscription={detail.data} plans={plans.data?.items ?? []} mayWrite={mayWrite} onClose={() => onOpenChange(false)} />
         ) : null}
-      </SheetContent>
-    </Sheet>
+      </DialogContent>
+    </Dialog>
   );
 }
 
@@ -65,11 +67,11 @@ function SubscriptionDetailBody({
 
   return (
     <>
-      <SheetHeader>
-        <SheetTitle>{subscription.customerEmail}</SheetTitle>
-        <SheetDescription>{subscription.id}</SheetDescription>
-      </SheetHeader>
-      <div className="flex flex-col gap-6 overflow-y-auto p-4">
+      <DialogHeader className="border-b p-6 pb-4">
+        <DialogTitle>{subscription.customerEmail}</DialogTitle>
+        <DialogDescription>{subscription.id}</DialogDescription>
+      </DialogHeader>
+      <div className="flex flex-col gap-6 overflow-y-auto p-6">
         <dl className="grid grid-cols-2 gap-y-2 text-sm">
           <dt className="text-muted-foreground">Привязка к бренду</dt>
           <dd className="truncate">{subscription.brandMembershipId ?? "—"}</dd>
@@ -78,6 +80,10 @@ function SubscriptionDetailBody({
           <dt className="text-muted-foreground">Версия записи</dt>
           <dd>{subscription.revision}</dd>
         </dl>
+
+        <Separator />
+
+        <DevicesSection subscriptionId={subscription.id} deviceLimit={subscription.plan?.deviceLimit} mayWrite={mayWrite} />
 
         {issuedToken && (
           <Alert className="border-amber-500/50">
