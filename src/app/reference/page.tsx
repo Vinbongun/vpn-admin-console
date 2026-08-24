@@ -5,7 +5,7 @@ import type { ColumnDef } from "@tanstack/react-table";
 import { useState } from "react";
 import { toast } from "sonner";
 import { adminApi, ApiError } from "@/api/client";
-import type { BrandDetail, EndpointGroupListItem, PlanSummary } from "@/api/types";
+import type { EndpointGroupListItem, PlanSummary } from "@/api/types";
 import { AppShell } from "@/components/app-shell";
 import { DataTable } from "@/components/data-table";
 import { EndpointName } from "@/components/endpoint-name";
@@ -14,7 +14,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Dialog, DialogClose, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Dialog, DialogClose, DialogContent, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -34,147 +34,10 @@ function apiErrorMessage(error: ApiError): string {
 export default function ReferencePage() {
   return (
     <AppShell>
-      <PageHeader title="Справочники" description="Бренды, тарифы и серверные пакеты" />
-      <BrandsCard />
+      <PageHeader title="Справочники" description="Тарифы и серверные пакеты" />
       <PlansCard />
       <EndpointGroupsCard />
     </AppShell>
-  );
-}
-
-function BrandsCard() {
-  const queryClient = useQueryClient();
-  const [createOpen, setCreateOpen] = useState(false);
-  const [newBrand, setNewBrand] = useState({ code: "", name: "" });
-  const [editingBrand, setEditingBrand] = useState<BrandDetail>();
-  const [form, setForm] = useState<{ name: string; status: "ACTIVE" | "ARCHIVED" }>({ name: "", status: "ACTIVE" });
-  const brands = useQuery({ queryKey: ["admin-brands"], queryFn: adminApi.listBrands, retry: false });
-
-  const createMutation = useMutation({
-    mutationFn: () => adminApi.createBrand(newBrand),
-    onSuccess: async () => {
-      setNewBrand({ code: "", name: "" });
-      setCreateOpen(false);
-      toast.success("Бренд создан.");
-      await queryClient.invalidateQueries({ queryKey: ["admin-brands"] });
-    },
-    onError: (error) => toast.error(error instanceof ApiError ? (error.status === 409 ? "Бренд с таким кодом уже существует." : apiErrorMessage(error)) : "Не удалось создать бренд."),
-  });
-  const updateMutation = useMutation({
-    mutationFn: (input: { id: string; name: string; status: "ACTIVE" | "ARCHIVED" }) =>
-      adminApi.updateBrand(input.id, { name: input.name, status: input.status }),
-    onSuccess: async () => {
-      setEditingBrand(undefined);
-      toast.success("Бренд обновлён.");
-      await queryClient.invalidateQueries({ queryKey: ["admin-brands"] });
-    },
-    onError: () => toast.error("Не удалось обновить бренд."),
-  });
-
-  const startEdit = (brand: BrandDetail) => {
-    setEditingBrand(brand);
-    setForm({ name: brand.name, status: brand.status === "ARCHIVED" ? "ARCHIVED" : "ACTIVE" });
-  };
-
-  const save = () => {
-    updateMutation.mutate({ id: editingBrand!.id, name: form.name, status: form.status });
-  };
-
-  const columns: ColumnDef<BrandDetail>[] = [
-    { id: "name", header: "Бренд", cell: ({ row }) => (
-      <div>
-        <p className="font-medium">{row.original.name}</p>
-        <p className="text-xs text-muted-foreground">{row.original.code}</p>
-      </div>
-    ) },
-    { id: "status", header: "Статус", cell: ({ row }) => <Badge>{row.original.status}</Badge> },
-    { id: "actions", header: "", cell: ({ row }) => (
-      <div className="text-right">
-        <Button size="sm" variant="outline" onClick={() => startEdit(row.original)}>
-          Редактировать
-        </Button>
-      </div>
-    ) },
-  ];
-
-  return (
-    <Card id="brands" className="scroll-mt-(--header-height)">
-      <CardHeader className="flex flex-row items-start justify-between gap-4 space-y-0">
-        <div>
-          <CardTitle>Бренды</CardTitle>
-          <CardDescription>Отдельные white-label сайты платформы — домены, статус и публичные настройки, которые видит клиентский сайт</CardDescription>
-        </div>
-        <Dialog open={createOpen} onOpenChange={setCreateOpen}>
-          <DialogTrigger render={<Button size="sm">Создать бренд</Button>} />
-          <DialogContent>
-            <DialogHeader>
-              <DialogTitle>Создать бренд</DialogTitle>
-            </DialogHeader>
-            <div className="space-y-3">
-              <div className="space-y-2">
-                <Label>Код бренда</Label>
-                <Input placeholder="Код (a-z0-9_-)" value={newBrand.code} onChange={(event) => setNewBrand((value) => ({ ...value, code: event.target.value.toLowerCase() }))} />
-              </div>
-              <div className="space-y-2">
-                <Label>Название бренда</Label>
-                <Input placeholder="Название" value={newBrand.name} onChange={(event) => setNewBrand((value) => ({ ...value, name: event.target.value }))} />
-              </div>
-            </div>
-            <DialogFooter>
-              <DialogClose render={<Button type="button" variant="outline" />}>Отмена</DialogClose>
-              <Button disabled={!newBrand.code || !newBrand.name || createMutation.isPending} onClick={() => createMutation.mutate()}>
-                {createMutation.isPending && <Spinner />}
-                Создать
-              </Button>
-            </DialogFooter>
-          </DialogContent>
-        </Dialog>
-      </CardHeader>
-      <CardContent>
-        <DataTable columns={columns} data={brands.data ?? []} isLoading={brands.isLoading} isError={brands.isError} errorMessage="Не удалось получить бренды." emptyMessage="Бренды не найдены." />
-      </CardContent>
-
-      <Dialog open={Boolean(editingBrand)} onOpenChange={(open) => !open && setEditingBrand(undefined)}>
-        <DialogContent className="sm:max-w-lg">
-          <DialogHeader>
-            <DialogTitle>{editingBrand?.name}</DialogTitle>
-            <DialogDescription>{editingBrand?.code}</DialogDescription>
-          </DialogHeader>
-          <div className="space-y-3">
-            <div className="space-y-2">
-              <Label>Название бренда</Label>
-              <Input value={form.name} onChange={(event) => setForm((value) => ({ ...value, name: event.target.value }))} />
-            </div>
-            <div className="space-y-2">
-              <Label>Статус бренда</Label>
-              <Select
-                items={[
-                  { value: "ACTIVE", label: "ACTIVE" },
-                  { value: "ARCHIVED", label: "ARCHIVED" },
-                ]}
-                value={form.status}
-                onValueChange={(value) => setForm((prev) => ({ ...prev, status: value === "ARCHIVED" ? "ARCHIVED" : "ACTIVE" }))}
-              >
-                <SelectTrigger className="w-full">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="ACTIVE">ACTIVE</SelectItem>
-                  <SelectItem value="ARCHIVED">ARCHIVED</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
-          <DialogFooter>
-            <DialogClose render={<Button type="button" variant="outline" />}>Отмена</DialogClose>
-            <Button disabled={updateMutation.isPending} onClick={save}>
-              {updateMutation.isPending && <Spinner />}
-              Сохранить
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-    </Card>
   );
 }
 

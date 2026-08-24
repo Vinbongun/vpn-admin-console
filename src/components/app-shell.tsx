@@ -116,7 +116,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             <SidebarGroupContent>
               <SidebarMenu>
                 {items.map(({ href, label, icon: Icon, items: subItems }) => {
-                  const isCurrent = pathname === href;
+                  const isCurrent = pathname === href || (subItems?.some((subItem) => subItem.href.split("#")[0] === pathname) ?? false);
                   if (!subItems) {
                     return (
                       <SidebarMenuItem key={href}>
@@ -138,8 +138,10 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                         <CollapsibleContent>
                           <SidebarMenuSub>
                             {subItems.map((subItem) => (
-                              <SidebarMenuSubItem key={subItem.hash}>
-                                <SidebarMenuSubButton render={<Link href={`${href}#${subItem.hash}`} />}>{subItem.label}</SidebarMenuSubButton>
+                              <SidebarMenuSubItem key={subItem.href}>
+                                <SidebarMenuSubButton isActive={pathname === subItem.href.split("#")[0]} render={<Link href={subItem.href} />}>
+                                  {subItem.label}
+                                </SidebarMenuSubButton>
                               </SidebarMenuSubItem>
                             ))}
                           </SidebarMenuSub>
