@@ -2,9 +2,9 @@
 
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { PlusIcon, TriangleAlertIcon } from "lucide-react";
+import { InfoIcon, PlusIcon } from "lucide-react";
 import { useState } from "react";
-import { Controller, useForm } from "react-hook-form";
+import { Controller, useForm, useWatch } from "react-hook-form";
 import { toast } from "sonner";
 import { adminApi, ApiError } from "@/api/client";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
@@ -27,25 +27,35 @@ export function CreateSourceDialog() {
   const [open, setOpen] = useState(false);
   const queryClient = useQueryClient();
 
-  const form = useForm<CreateSourceValues>({
-    resolver: zodResolver(createSourceSchema),
-    defaultValues: { code: "", providerType: undefined, status: "ACTIVE" },
-  });
+  const defaultValues = { code: "", providerType: undefined, status: "ACTIVE" as const, baseUrl: "", apiToken: "" };
+  const form = useForm<CreateSourceValues>({ resolver: zodResolver(createSourceSchema), defaultValues });
+  const baseUrl = useWatch({ control: form.control, name: "baseUrl" });
+  const apiToken = useWatch({ control: form.control, name: "apiToken" });
+  const noCredentials = !baseUrl && !apiToken;
 
   const mutation = useMutation({
     mutationFn: adminApi.createControlPlaneSource,
     onSuccess: async () => {
       toast.success("Источник добавлен.");
+      form.reset(defaultValues);
       setOpen(false);
       await queryClient.invalidateQueries({ queryKey: ["admin-infrastructure-sources"] });
     },
     onError: (error) => toast.error(error instanceof ApiError ? apiErrorMessage(error) : "Не удалось добавить источник."),
   });
 
-  const submit = form.handleSubmit((values) => mutation.mutate(values));
+  const submit = form.handleSubmit((values) =>
+    mutation.mutate({
+      code: values.code,
+      providerType: values.providerType,
+      status: values.status,
+      ...(values.baseUrl ? { baseUrl: values.baseUrl } : {}),
+      ...(values.apiToken ? { apiToken: values.apiToken } : {}),
+    }),
+  );
 
   const onOpenChange = (next: boolean) => {
-    if (!next) form.reset({ code: "", providerType: undefined, status: "ACTIVE" });
+    if (!next) form.reset(defaultValues);
     setOpen(next);
   };
 
@@ -62,19 +72,10 @@ export function CreateSourceDialog() {
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
           <DialogTitle>Добавить источник</DialogTitle>
-          <DialogDescription>Регистрирует строку источника control plane. Учётные данные панели в UI не задаются.</DialogDescription>
+          <DialogDescription>Регистрирует строку источника control plane. Base URL и API-токен необязательны — если заданы, источник заработает сразу.</DialogDescription>
         </DialogHeader>
         <form className="contents" onSubmit={submit}>
           <FieldGroup>
-            <Alert variant="destructive">
-              <TriangleAlertIcon />
-              <AlertTitle>Источник не заработает сразу</AlertTitle>
-              <AlertDescription>
-                После создания строки на бэкенде нужно отдельно (вне UI) задать переменные окружения{" "}
-                <code className="font-mono">{"{CODE}_BASE_URL"}</code> и <code className="font-mono">{"{CODE}_API_TOKEN"}</code> и перезапустить сервис — иначе
-                синхронизация будет падать с ошибкой &laquo;Missing credentials&raquo;.
-              </AlertDescription>
-            </Alert>
             <Field data-invalid={Boolean(form.formState.errors.code)}>
               <FieldLabel htmlFor="source-code">Код источника</FieldLabel>
               <Input id="source-code" placeholder="Например DE_PANEL_1" {...form.register("code")} />
@@ -123,6 +124,27 @@ export function CreateSourceDialog() {
                 </Field>
               )}
             />
+            <Field data-invalid={Boolean(form.formState.errors.baseUrl)}>
+              <FieldLabel htmlFor="source-base-url">Base URL панели (необязательно)</FieldLabel>
+              <Input id="source-base-url" placeholder="https://panel.example.com" {...form.register("baseUrl")} />
+              <FieldError errors={[form.formState.errors.baseUrl]} />
+            </Field>
+            <Field data-invalid={Boolean(form.formState.errors.apiToken)}>
+              <FieldLabel htmlFor="source-api-token">API-токен панели (необязательно)</FieldLabel>
+              <Input id="source-api-token" type="password" autoComplete="off" placeholder="Токен доступа" {...form.register("apiToken")} />
+              <FieldError errors={[form.formState.errors.apiToken]} />
+            </Field>
+            {noCredentials && (
+              <Alert>
+                <InfoIcon />
+                <AlertTitle>Данные панели не заданы</AlertTitle>
+                <AlertDescription>
+                  Источник будет создан без учётных данных. Чтобы синхронизация заработала, на бэкенде отдельно (вне UI) нужно задать переменные окружения{" "}
+                  <code className="font-mono">{"{CODE}_BASE_URL"}</code> и <code className="font-mono">{"{CODE}_API_TOKEN"}</code> и перезапустить сервис — иначе
+                  синхронизация будет падать с ошибкой &laquo;Missing credentials&raquo;. Заполните оба поля выше, чтобы источник заработал сразу.
+                </AlertDescription>
+              </Alert>
+            )}
           </FieldGroup>
           <DialogFooter>
             <DialogClose render={<Button type="button" variant="outline" />}>Отмена</DialogClose>

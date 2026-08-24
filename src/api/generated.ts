@@ -902,8 +902,25 @@ export interface paths {
         };
         get: operations["listControlPlaneSources"];
         put?: never;
-        /** @description Only registers the source row - credentials are never stored in the database. Set `{CODE}_BASE_URL`/`{CODE}_API_TOKEN` (or `{PROVIDER_TYPE}_...` as a fallback) in the backend's own environment and restart it before this source can actually sync. */
+        /** @description baseUrl/apiToken are optional but must be given together; when provided they are encrypted (AES-256-GCM) and stored on the source row - the source can sync immediately, no restart needed. Omit both to fall back to env vars instead: `{CODE}_BASE_URL`/`{CODE}_API_TOKEN` (or `{PROVIDER_TYPE}_...`), which still requires a backend restart to pick up. Credentials are never returned by this or any other endpoint once stored. */
         post: operations["createControlPlaneSource"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/v1/infrastructure/sources/{id}/credentials": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /** @description Rotates a source's credentials in place (replaces whatever was stored before, or adds DB-stored credentials to a source that was relying on env vars). No restart needed. */
+        put: operations["setControlPlaneSourceCredentials"];
+        post?: never;
         delete?: never;
         options?: never;
         head?: never;
@@ -3489,6 +3506,10 @@ export interface operations {
                      * @enum {string}
                      */
                     status?: "ACTIVE" | "INACTIVE";
+                    /** @description Required together with apiToken. */
+                    baseUrl?: string;
+                    /** @description Required together with baseUrl. */
+                    apiToken?: string;
                 };
             };
         };
@@ -3502,6 +3523,13 @@ export interface operations {
                     "application/json": components["schemas"]["ControlPlaneSourceSummary"];
                 };
             };
+            /** @description baseUrl and apiToken must be provided together */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
             /** @description Missing infrastructure.write permission */
             403: {
                 headers: {
@@ -3511,6 +3539,53 @@ export interface operations {
             };
             /** @description A source with this code already exists */
             409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    setControlPlaneSourceCredentials: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    baseUrl: string;
+                    apiToken: string;
+                };
+            };
+        };
+        responses: {
+            /** @description Credentials rotated; requires infrastructure.write */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /** Format: uuid */
+                        id: string;
+                        credentialsStored: boolean;
+                    };
+                };
+            };
+            /** @description Missing infrastructure.write permission */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Control plane source not found */
+            404: {
                 headers: {
                     [name: string]: unknown;
                 };
