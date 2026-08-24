@@ -1,6 +1,7 @@
 import {
   Activity,
   BookOpen,
+  Building2,
   CircleDollarSign,
   FileClock,
   Gauge,
@@ -14,7 +15,7 @@ type NavItem = {
   href: string;
   icon: typeof Gauge;
   permission?: string;
-  items?: { label: string; hash: string }[];
+  items?: { label: string; href: string }[];
 };
 
 export const navigation = [
@@ -27,23 +28,34 @@ export const navigation = [
     icon: BookOpen,
     permission: "brands.read",
     items: [
-      { label: "Бренды", hash: "brands" },
-      { label: "Тарифы", hash: "plans" },
-      { label: "Группы endpoint'ов", hash: "endpoint-groups" },
+      { label: "Тарифы", href: "/reference#plans" },
+      { label: "Группы endpoint'ов", href: "/reference#endpoint-groups" },
     ],
   },
+  { label: "Бренды", href: "/brands", icon: Building2, permission: "brands.read" },
   {
     label: "Инфраструктура",
     href: "/infrastructure",
     icon: Network,
     permission: "infrastructure.read",
     items: [
-      { label: "Источники", hash: "sources" },
-      { label: "Endpoints", hash: "endpoints" },
-      { label: "Инциденты", hash: "incidents" },
+      { label: "Источники", href: "/infrastructure#sources" },
+      { label: "Endpoints", href: "/infrastructure#endpoints" },
+      { label: "Инциденты", href: "/infrastructure#incidents" },
     ],
   },
-  { label: "Финансы", href: "/finance", icon: CircleDollarSign, permission: "finance.read" },
+  {
+    label: "Финансы",
+    href: "/finance",
+    icon: CircleDollarSign,
+    permission: "finance.read",
+    items: [
+      { label: "Обзор", href: "/finance" },
+      { label: "Платежи", href: "/finance/payments" },
+      { label: "Логи платежей", href: "/finance/payment-logs" },
+      { label: "Настройки", href: "/finance/payment-gateways" },
+    ],
+  },
   { label: "Рефералы", href: "/referrals", icon: Gift, permission: "finance.read" },
   { label: "Аудит", href: "/audit", icon: FileClock, permission: "audit.read" },
 ] satisfies NavItem[];

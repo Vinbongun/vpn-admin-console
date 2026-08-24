@@ -5,7 +5,7 @@ import type { ColumnDef } from "@tanstack/react-table";
 import { useState } from "react";
 import { toast } from "sonner";
 import { adminApi, ApiError } from "@/api/client";
-import type { BrandDetail, EndpointGroupListItem, PlanSummary } from "@/api/types";
+import type { EndpointGroupListItem, PlanSummary } from "@/api/types";
 import { AppShell } from "@/components/app-shell";
 import { DataTable } from "@/components/data-table";
 import { PageHeader } from "@/components/page-header";
@@ -13,7 +13,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Dialog, DialogClose, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Dialog, DialogClose, DialogContent, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -21,7 +21,6 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Spinner } from "@/components/ui/spinner";
-import { Textarea } from "@/components/ui/textarea";
 
 function apiErrorMessage(error: ApiError): string {
   const details = error.details as { message?: string | string[] } | undefined;
@@ -32,161 +31,10 @@ function apiErrorMessage(error: ApiError): string {
 export default function ReferencePage() {
   return (
     <AppShell>
-      <PageHeader title="Справочники" description="Бренды, тарифы и группы endpoint'ов" />
-      <BrandsCard />
+      <PageHeader title="Справочники" description="Тарифы и группы endpoint'ов" />
       <PlansCard />
       <EndpointGroupsCard />
     </AppShell>
-  );
-}
-
-function BrandsCard() {
-  const queryClient = useQueryClient();
-  const [createOpen, setCreateOpen] = useState(false);
-  const [newBrand, setNewBrand] = useState({ code: "", name: "" });
-  const [editingBrand, setEditingBrand] = useState<BrandDetail>();
-  const [form, setForm] = useState<{ name: string; status: "ACTIVE" | "ARCHIVED"; settings: string }>({ name: "", status: "ACTIVE", settings: "{}" });
-  const [formError, setFormError] = useState<string>();
-  const brands = useQuery({ queryKey: ["admin-brands"], queryFn: adminApi.listBrands, retry: false });
-
-  const createMutation = useMutation({
-    mutationFn: () => adminApi.createBrand(newBrand),
-    onSuccess: async () => {
-      setNewBrand({ code: "", name: "" });
-      setCreateOpen(false);
-      toast.success("Бренд создан.");
-      await queryClient.invalidateQueries({ queryKey: ["admin-brands"] });
-    },
-    onError: (error) => toast.error(error instanceof ApiError ? (error.status === 409 ? "Бренд с таким кодом уже существует." : apiErrorMessage(error)) : "Не удалось создать бренд."),
-  });
-  const updateMutation = useMutation({
-    mutationFn: (input: { id: string; name: string; status: "ACTIVE" | "ARCHIVED"; settings: Record<string, unknown> }) =>
-      adminApi.updateBrand(input.id, { name: input.name, status: input.status, settings: input.settings }),
-    onSuccess: async () => {
-      setEditingBrand(undefined);
-      toast.success("Бренд обновлён.");
-      await queryClient.invalidateQueries({ queryKey: ["admin-brands"] });
-    },
-    onError: () => toast.error("Не удалось обновить бренд."),
-  });
-
-  const startEdit = (brand: BrandDetail) => {
-    setEditingBrand(brand);
-    setForm({ name: brand.name, status: brand.status === "ARCHIVED" ? "ARCHIVED" : "ACTIVE", settings: JSON.stringify(brand.settings, null, 2) });
-    setFormError(undefined);
-  };
-
-  const save = () => {
-    try {
-      const settings = JSON.parse(form.settings) as Record<string, unknown>;
-      setFormError(undefined);
-      updateMutation.mutate({ id: editingBrand!.id, name: form.name, status: form.status, settings });
-    } catch {
-      setFormError("Settings должны быть валидным JSON.");
-    }
-  };
-
-  const columns: ColumnDef<BrandDetail>[] = [
-    { id: "name", header: "Бренд", cell: ({ row }) => (
-      <div>
-        <p className="font-medium">{row.original.name}</p>
-        <p className="text-xs text-muted-foreground">{row.original.code}</p>
-      </div>
-    ) },
-    { id: "status", header: "Статус", cell: ({ row }) => <Badge>{row.original.status}</Badge> },
-    { id: "actions", header: "", cell: ({ row }) => (
-      <div className="text-right">
-        <Button size="sm" variant="outline" onClick={() => startEdit(row.original)}>
-          Редактировать
-        </Button>
-      </div>
-    ) },
-  ];
-
-  return (
-    <Card id="brands" className="scroll-mt-(--header-height)">
-      <CardHeader className="flex flex-row items-start justify-between gap-4 space-y-0">
-        <div>
-          <CardTitle>Бренды</CardTitle>
-          <CardDescription>Отдельные white-label сайты платформы — домены, статус и публичные настройки, которые видит клиентский сайт</CardDescription>
-        </div>
-        <Dialog open={createOpen} onOpenChange={setCreateOpen}>
-          <DialogTrigger render={<Button size="sm">Создать бренд</Button>} />
-          <DialogContent>
-            <DialogHeader>
-              <DialogTitle>Создать бренд</DialogTitle>
-            </DialogHeader>
-            <div className="space-y-3">
-              <div className="space-y-2">
-                <Label>Код бренда</Label>
-                <Input placeholder="Код (a-z0-9_-)" value={newBrand.code} onChange={(event) => setNewBrand((value) => ({ ...value, code: event.target.value.toLowerCase() }))} />
-              </div>
-              <div className="space-y-2">
-                <Label>Название бренда</Label>
-                <Input placeholder="Название" value={newBrand.name} onChange={(event) => setNewBrand((value) => ({ ...value, name: event.target.value }))} />
-              </div>
-            </div>
-            <DialogFooter>
-              <DialogClose render={<Button type="button" variant="outline" />}>Отмена</DialogClose>
-              <Button disabled={!newBrand.code || !newBrand.name || createMutation.isPending} onClick={() => createMutation.mutate()}>
-                {createMutation.isPending && <Spinner />}
-                Создать
-              </Button>
-            </DialogFooter>
-          </DialogContent>
-        </Dialog>
-      </CardHeader>
-      <CardContent>
-        <DataTable columns={columns} data={brands.data ?? []} isLoading={brands.isLoading} isError={brands.isError} errorMessage="Не удалось получить бренды." emptyMessage="Бренды не найдены." />
-      </CardContent>
-
-      <Dialog open={Boolean(editingBrand)} onOpenChange={(open) => !open && setEditingBrand(undefined)}>
-        <DialogContent className="sm:max-w-lg">
-          <DialogHeader>
-            <DialogTitle>{editingBrand?.name}</DialogTitle>
-            <DialogDescription>{editingBrand?.code}</DialogDescription>
-          </DialogHeader>
-          <div className="space-y-3">
-            <div className="space-y-2">
-              <Label>Название бренда</Label>
-              <Input value={form.name} onChange={(event) => setForm((value) => ({ ...value, name: event.target.value }))} />
-            </div>
-            <div className="space-y-2">
-              <Label>Статус бренда</Label>
-              <Select
-                items={[
-                  { value: "ACTIVE", label: "ACTIVE" },
-                  { value: "ARCHIVED", label: "ARCHIVED" },
-                ]}
-                value={form.status}
-                onValueChange={(value) => setForm((prev) => ({ ...prev, status: value === "ARCHIVED" ? "ARCHIVED" : "ACTIVE" }))}
-              >
-                <SelectTrigger className="w-full">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="ACTIVE">ACTIVE</SelectItem>
-                  <SelectItem value="ARCHIVED">ARCHIVED</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="space-y-2">
-              <Label>Settings JSON</Label>
-              <Textarea className="min-h-32 font-mono text-xs" value={form.settings} onChange={(event) => setForm((value) => ({ ...value, settings: event.target.value }))} />
-              <p className="text-xs text-muted-foreground">`settings.public` уходит клиентскому сайту как есть (публичная white-label конфигурация); `settings.hostnames` — массив доменов для определения бренда.</p>
-              {formError && <p className="text-xs text-destructive">{formError}</p>}
-            </div>
-          </div>
-          <DialogFooter>
-            <DialogClose render={<Button type="button" variant="outline" />}>Отмена</DialogClose>
-            <Button disabled={updateMutation.isPending} onClick={save}>
-              {updateMutation.isPending && <Spinner />}
-              Сохранить
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-    </Card>
   );
 }
 
