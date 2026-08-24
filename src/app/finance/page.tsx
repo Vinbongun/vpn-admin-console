@@ -9,6 +9,7 @@ import type { OrderSummary } from "@/api/types";
 import { AppShell } from "@/components/app-shell";
 import { DataTable, DataTablePagination } from "@/components/data-table";
 import { PageHeader } from "@/components/page-header";
+import { StatCard } from "@/components/stat-card";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -63,46 +64,22 @@ export default function FinancePage() {
     <AppShell>
       <PageHeader title="Финансы" description="Оплаченные заказы, продления и выручка по брендам" />
 
-      <div className="grid gap-4 sm:grid-cols-3">
-        <Card>
-          <CardContent className="flex items-center justify-between pt-6">
-            <div>
-              <p className="text-sm text-muted-foreground">Выручка всего</p>
-              <p className="mt-1 text-2xl font-semibold">
-                {summary.isLoading
-                  ? "…"
-                  : summary.isError || !totalRevenue || Object.keys(totalRevenue).length === 0
-                    ? "—"
-                    : Object.entries(totalRevenue)
-                        .map(([currency, amount]) => `${amount.toFixed(2)} ${currency}`)
-                        .join(", ")}
-              </p>
-            </div>
-            <CircleDollarSign className="size-5 text-muted-foreground" />
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="flex items-center justify-between pt-6">
-            <div>
-              <p className="text-sm text-muted-foreground">Новые подписки</p>
-              <p className="mt-1 text-2xl font-semibold">
-                {summary.isLoading ? "…" : (summary.data?.paidOrdersByKind.NEW ?? 0)}
-              </p>
-            </div>
-            <ShoppingCart className="size-5 text-muted-foreground" />
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="flex items-center justify-between pt-6">
-            <div>
-              <p className="text-sm text-muted-foreground">Продления</p>
-              <p className="mt-1 text-2xl font-semibold">
-                {summary.isLoading ? "…" : (summary.data?.paidOrdersByKind.RENEWAL ?? 0)}
-              </p>
-            </div>
-            <Repeat className="size-5 text-muted-foreground" />
-          </CardContent>
-        </Card>
+      <div className="grid grid-cols-1 gap-4 @xl/main:grid-cols-3">
+        <StatCard
+          label="Выручка всего"
+          icon={CircleDollarSign}
+          value={
+            summary.isLoading
+              ? "…"
+              : summary.isError || !totalRevenue || Object.keys(totalRevenue).length === 0
+                ? "—"
+                : Object.entries(totalRevenue)
+                    .map(([currency, amount]) => `${amount.toFixed(2)} ${currency}`)
+                    .join(", ")
+          }
+        />
+        <StatCard label="Новые подписки" icon={ShoppingCart} value={summary.isLoading ? "…" : (summary.data?.paidOrdersByKind.NEW ?? 0)} />
+        <StatCard label="Продления" icon={Repeat} value={summary.isLoading ? "…" : (summary.data?.paidOrdersByKind.RENEWAL ?? 0)} />
       </div>
 
       {summary.data && summary.data.revenueByBrand.length > 0 && (
@@ -126,9 +103,10 @@ export default function FinancePage() {
         </CardHeader>
         <CardContent className="grid gap-3 md:grid-cols-2">
           <Select
+            items={[{ value: "all", label: "Все бренды" }, ...(brands.data?.map((brand) => ({ value: brand.code, label: brand.name })) ?? [])]}
             value={brandCode}
             onValueChange={(value) => {
-              setBrandCode(value);
+              setBrandCode(value ?? "all");
               setPage(1);
             }}
           >
@@ -145,9 +123,10 @@ export default function FinancePage() {
             </SelectContent>
           </Select>
           <Select
+            items={[{ value: "all", label: "Все статусы" }, ...orderStatuses.map((value) => ({ value, label: value }))]}
             value={status}
             onValueChange={(value) => {
-              setStatus(value);
+              setStatus(value ?? "all");
               setPage(1);
             }}
           >

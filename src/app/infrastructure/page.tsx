@@ -10,12 +10,16 @@ import type { AdminInfrastructureIncidentQuery, ControlPlaneSourceSummary, Infra
 import { AppShell } from "@/components/app-shell";
 import { DataTable, DataTablePagination } from "@/components/data-table";
 import { PageHeader } from "@/components/page-header";
+import { StatCard } from "@/components/stat-card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardAction, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Spinner } from "@/components/ui/spinner";
+import { CreateSourceDialog } from "@/features/infrastructure/create-source-dialog";
+import { RotateCredentialsDialog } from "@/features/infrastructure/rotate-credentials-dialog";
+import { can } from "@/lib/access-control";
 
 const pageSize = 25;
 
@@ -30,7 +34,7 @@ function apiErrorMessage(error: ApiError): string {
 }
 
 function providerLabel(providerType: string) {
-  if (providerType === "THREE_X_UI") return "3x-ui";
+  if (providerType === "3X_UI") return "3x-ui";
   if (providerType === "REMNAWAVE") return "Remnawave";
   return providerType;
 }
@@ -72,6 +76,8 @@ export default function InfrastructurePage() {
   const [incidentStatus, setIncidentStatus] = useState<AdminInfrastructureIncidentQuery["status"] | "all">("all");
   const [severity, setSeverity] = useState<AdminInfrastructureIncidentQuery["severity"] | "all">("all");
 
+  const staff = useQuery({ queryKey: ["staff-session"], queryFn: adminApi.getSession, retry: false });
+  const mayWrite = can(staff.data, "infrastructure.write");
   const summary = useQuery({ queryKey: ["admin-infrastructure-summary"], queryFn: adminApi.getInfrastructureSummary, retry: false });
   const sources = useQuery({ queryKey: ["admin-infrastructure-sources"], queryFn: adminApi.listControlPlaneSources, retry: false });
   const endpoints = useQuery({
@@ -113,30 +119,26 @@ export default function InfrastructurePage() {
     <AppShell>
       <PageHeader title="Инфраструктура" description="Список серверов (endpoint'ов), их состояние здоровья и открытые инциденты — данные доступны только для просмотра" />
 
-      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-5">
+      <div className="grid grid-cols-1 gap-4 @xl/main:grid-cols-2 @5xl/main:grid-cols-5">
         {counters.map(({ label, value, icon: Icon }) => (
-          <Card key={label}>
-            <CardContent className="flex items-center justify-between pt-6">
-              <div>
-                <p className="text-sm text-muted-foreground">{label}</p>
-                <p className="mt-1 text-2xl font-semibold">{summary.isLoading ? "…" : summary.isError ? "—" : value ?? 0}</p>
-              </div>
-              <Icon className="size-5 text-muted-foreground" />
-            </CardContent>
-          </Card>
+          <StatCard key={label} label={label} icon={Icon} value={summary.isLoading ? "…" : summary.isError ? "—" : (value ?? 0)} />
         ))}
       </div>
 
-      <SourcesCard sources={sources} />
+      <SourcesCard sources={sources} mayWrite={mayWrite} />
 
-      <Card>
+      <Card id="endpoints" className="scroll-mt-(--header-height)">
         <CardHeader>
           <CardTitle>Endpoints</CardTitle>
           <CardDescription>Серверы платформы во всех источниках — страна, протокол и состояние здоровья</CardDescription>
         </CardHeader>
         <CardContent>
           <div className="mb-4 grid gap-3 md:grid-cols-2 xl:grid-cols-4">
-            <Select value={sourceCode} onValueChange={(value) => { setSourceCode(value); setEndpointPage(1); }}>
+            <Select
+              items={[{ value: "all", label: "Все источники" }, ...(sources.data?.map((source) => ({ value: source.code, label: source.code })) ?? [])]}
+              value={sourceCode}
+              onValueChange={(value) => { setSourceCode(value ?? "all"); setEndpointPage(1); }}
+            >
               <SelectTrigger aria-label="Источник">
                 <SelectValue />
               </SelectTrigger>
@@ -165,14 +167,23 @@ export default function InfrastructurePage() {
         </CardContent>
       </Card>
 
-      <Card>
+      <Card id="incidents" className="scroll-mt-(--header-height)">
         <CardHeader>
           <CardTitle>Инциденты</CardTitle>
           <CardDescription>История проблем с endpoint&#39;ами — от временной деградации до полной недоступности</CardDescription>
         </CardHeader>
         <CardContent>
           <div className="mb-4 grid gap-3 md:grid-cols-2">
-            <Select value={incidentStatus} onValueChange={(value) => { setIncidentStatus(value as typeof incidentStatus); setIncidentPage(1); }}>
+            <Select
+              items={[
+                { value: "all", label: "Все статусы" },
+                { value: "OPEN", label: "OPEN" },
+                { value: "ACKNOWLEDGED", label: "ACKNOWLEDGED" },
+                { value: "RESOLVED", label: "RESOLVED" },
+              ]}
+              value={incidentStatus}
+              onValueChange={(value) => { setIncidentStatus(value as typeof incidentStatus); setIncidentPage(1); }}
+            >
               <SelectTrigger aria-label="Статус инцидента">
                 <SelectValue />
               </SelectTrigger>
@@ -183,7 +194,16 @@ export default function InfrastructurePage() {
                 <SelectItem value="RESOLVED">RESOLVED</SelectItem>
               </SelectContent>
             </Select>
-            <Select value={severity} onValueChange={(value) => { setSeverity(value as typeof severity); setIncidentPage(1); }}>
+            <Select
+              items={[
+                { value: "all", label: "Любая критичность" },
+                { value: "INFO", label: "INFO" },
+                { value: "WARNING", label: "WARNING" },
+                { value: "CRITICAL", label: "CRITICAL" },
+              ]}
+              value={severity}
+              onValueChange={(value) => { setSeverity(value as typeof severity); setIncidentPage(1); }}
+            >
               <SelectTrigger aria-label="Критичность">
                 <SelectValue />
               </SelectTrigger>
@@ -210,7 +230,7 @@ export default function InfrastructurePage() {
   );
 }
 
-function SourcesCard({ sources }: { sources: ReturnType<typeof useQuery<Awaited<ReturnType<typeof adminApi.listControlPlaneSources>>>> }) {
+function SourcesCard({ sources, mayWrite }: { sources: ReturnType<typeof useQuery<Awaited<ReturnType<typeof adminApi.listControlPlaneSources>>>>; mayWrite: boolean }) {
   const queryClient = useQueryClient();
   const [countryCodes, setCountryCodes] = useState<Record<string, string>>({});
   const [syncingId, setSyncingId] = useState<string>();
@@ -254,7 +274,7 @@ function SourcesCard({ sources }: { sources: ReturnType<typeof useQuery<Awaited<
           const source = row.original;
           return (
             <div className="flex items-center gap-2">
-              {source.providerType === "THREE_X_UI" && (
+              {source.providerType === "3X_UI" && (
                 <Input
                   aria-label="Код страны"
                   placeholder="Страна (DE)"
@@ -266,26 +286,32 @@ function SourcesCard({ sources }: { sources: ReturnType<typeof useQuery<Awaited<
               <Button
                 size="sm"
                 variant="outline"
-                disabled={syncingId === source.id || (source.providerType === "THREE_X_UI" && !countryCodes[source.id])}
+                disabled={syncingId === source.id || (source.providerType === "3X_UI" && !countryCodes[source.id])}
                 onClick={() => syncMutation.mutate({ id: source.id, countryCode: countryCodes[source.id] })}
               >
                 {syncingId === source.id && <Spinner />}
                 Синхронизировать с панелью
               </Button>
+              {mayWrite && <RotateCredentialsDialog sourceId={source.id} sourceCode={source.code} canAutoSync={source.providerType !== "3X_UI"} />}
             </div>
           );
         },
       },
     ],
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [countryCodes, syncingId],
+    [countryCodes, syncingId, mayWrite],
   );
 
   return (
-    <Card>
+    <Card id="sources" className="scroll-mt-(--header-height)">
       <CardHeader>
         <CardTitle>Источники control plane</CardTitle>
         <CardDescription>Панели Remnawave и 3x-ui, из которых платформа получает список серверов и их состояние</CardDescription>
+        {mayWrite && (
+          <CardAction>
+            <CreateSourceDialog />
+          </CardAction>
+        )}
       </CardHeader>
       <CardContent>
         <DataTable

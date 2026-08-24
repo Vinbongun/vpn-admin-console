@@ -8,8 +8,10 @@ import type {
   AdminInfrastructureIncidentQuery,
   AdminOrderQuery,
   AdminPlanQuery,
+  AdminReferralQuery,
   AdminSubscriptionQuery,
   CreateBrand,
+  CreateControlPlaneSource,
   CreateEndpointGroup,
   CreatePlan,
   CreateSubscription,
@@ -19,6 +21,7 @@ import type {
   ReplaceEndpointGroupPlans,
   RotateSubscriptionToken,
   SessionToken,
+  SetControlPlaneSourceCredentials,
   SetPlanPrice,
   StaffOtpVerify,
   StaffProfile,
@@ -27,9 +30,10 @@ import type {
   UpdateEndpointGroup,
   UpdateMembership,
   UpdateSubscription,
+  UpsertReferralProgram,
 } from "@/api/types";
 
-const API_URL = (process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:3000").replace(/\/$/, "");
+export const API_URL = (process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:3000").replace(/\/$/, "");
 const client = createClient<paths>({ baseUrl: API_URL, fetch: (input) => globalThis.fetch(input) });
 
 export class ApiError extends Error {
@@ -78,9 +82,18 @@ export const adminApi = {
   listAuditEvents: async (query: AdminAuditQuery = {}) => unwrap(await client.GET("/admin/v1/audit-events", { params: { query }, headers: staffHeaders() })),
   getInfrastructureSummary: async () => unwrap(await client.GET("/admin/v1/infrastructure/summary", { headers: staffHeaders() })),
   listControlPlaneSources: async () => unwrap(await client.GET("/admin/v1/infrastructure/sources", { headers: staffHeaders() })),
+  createControlPlaneSource: async (body: CreateControlPlaneSource) => unwrap(await client.POST("/admin/v1/infrastructure/sources", { body, headers: staffHeaders() })),
+  setControlPlaneSourceCredentials: async (sourceId: string, body: SetControlPlaneSourceCredentials) =>
+    unwrap(await client.PUT("/admin/v1/infrastructure/sources/{id}/credentials", { params: { path: { id: sourceId } }, body, headers: staffHeaders() })),
   syncSource: async (sourceId: string, body: SyncSourceInventory = {}) => unwrap(await client.POST("/admin/v1/infrastructure/sources/{id}/sync", { params: { path: { id: sourceId } }, body, headers: staffHeaders() })),
   listInfrastructureEndpoints: async (query: AdminInfrastructureEndpointQuery = {}) => unwrap(await client.GET("/admin/v1/infrastructure/endpoints", { params: { query }, headers: staffHeaders() })),
   listInfrastructureIncidents: async (query: AdminInfrastructureIncidentQuery = {}) => unwrap(await client.GET("/admin/v1/infrastructure/incidents", { params: { query }, headers: staffHeaders() })),
   listOrders: async (query: AdminOrderQuery = {}) => unwrap(await client.GET("/admin/v1/orders", { params: { query }, headers: staffHeaders() })),
   getFinanceSummary: async () => unwrap(await client.GET("/admin/v1/finance/summary", { headers: staffHeaders() })),
+  getRetentionSummary: async (graceDays?: number) => unwrap(await client.GET("/admin/v1/retention/summary", { params: { query: { ...(graceDays !== undefined ? { graceDays } : {}) } }, headers: staffHeaders() })),
+  listDevices: async (subscriptionId: string) => unwrap(await client.GET("/admin/v1/subscriptions/{subscriptionId}/devices", { params: { path: { subscriptionId } }, headers: staffHeaders() })),
+  removeDevice: async (subscriptionId: string, deviceId: string) => unwrap<void>(await client.DELETE("/admin/v1/subscriptions/{subscriptionId}/devices/{deviceId}", { params: { path: { subscriptionId, deviceId } }, headers: staffHeaders() })),
+  listReferralPrograms: async () => unwrap(await client.GET("/admin/v1/referral-programs", { headers: staffHeaders() })),
+  upsertReferralProgram: async (body: UpsertReferralProgram) => unwrap(await client.POST("/admin/v1/referral-programs", { body, headers: staffHeaders() })),
+  listReferrals: async (query: AdminReferralQuery = {}) => unwrap(await client.GET("/admin/v1/referrals", { params: { query }, headers: staffHeaders() })),
 };

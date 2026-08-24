@@ -10,6 +10,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
+import { RetentionSection } from "@/features/retention/retention-section";
 
 export default function DashboardPage() {
   const { data: staff, isLoading } = useQuery({ queryKey: ["staff-session"], queryFn: adminApi.getSession, retry: false });
@@ -58,15 +59,14 @@ export default function DashboardPage() {
             <p>Бренды: домены, статус, публичные настройки</p>
             <p>Тарифы: биллинг-модель, лимит устройств, цена</p>
             <p>Группы endpoint&#39;ов: какие серверы доступны каждому тарифу</p>
-            <Button asChild className="mt-2 px-0" variant="link">
-              <Link href="/reference">
-                Открыть справочники
-                <ArrowRight />
-              </Link>
+            <Button render={<Link href="/reference" />} nativeButton={false} className="mt-2 px-0" variant="link">
+              Открыть справочники
+              <ArrowRight />
             </Button>
           </CardContent>
         </Card>
       </div>
+      <RetentionSection staff={staff} />
     </AppShell>
   );
 }

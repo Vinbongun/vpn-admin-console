@@ -104,16 +104,14 @@ function BrandsCard() {
   ];
 
   return (
-    <Card>
+    <Card id="brands" className="scroll-mt-(--header-height)">
       <CardHeader className="flex flex-row items-start justify-between gap-4 space-y-0">
         <div>
           <CardTitle>Бренды</CardTitle>
           <CardDescription>Отдельные white-label сайты платформы — домены, статус и публичные настройки, которые видит клиентский сайт</CardDescription>
         </div>
         <Dialog open={createOpen} onOpenChange={setCreateOpen}>
-          <DialogTrigger asChild>
-            <Button size="sm">Создать бренд</Button>
-          </DialogTrigger>
+          <DialogTrigger render={<Button size="sm">Создать бренд</Button>} />
           <DialogContent>
             <DialogHeader>
               <DialogTitle>Создать бренд</DialogTitle>
@@ -129,11 +127,7 @@ function BrandsCard() {
               </div>
             </div>
             <DialogFooter>
-              <DialogClose asChild>
-                <Button type="button" variant="outline">
-                  Отмена
-                </Button>
-              </DialogClose>
+              <DialogClose render={<Button type="button" variant="outline" />}>Отмена</DialogClose>
               <Button disabled={!newBrand.code || !newBrand.name || createMutation.isPending} onClick={() => createMutation.mutate()}>
                 {createMutation.isPending && <Spinner />}
                 Создать
@@ -159,7 +153,14 @@ function BrandsCard() {
             </div>
             <div className="space-y-2">
               <Label>Статус бренда</Label>
-              <Select value={form.status} onValueChange={(value) => setForm((prev) => ({ ...prev, status: value === "ARCHIVED" ? "ARCHIVED" : "ACTIVE" }))}>
+              <Select
+                items={[
+                  { value: "ACTIVE", label: "ACTIVE" },
+                  { value: "ARCHIVED", label: "ARCHIVED" },
+                ]}
+                value={form.status}
+                onValueChange={(value) => setForm((prev) => ({ ...prev, status: value === "ARCHIVED" ? "ARCHIVED" : "ACTIVE" }))}
+              >
                 <SelectTrigger className="w-full">
                   <SelectValue />
                 </SelectTrigger>
@@ -177,11 +178,7 @@ function BrandsCard() {
             </div>
           </div>
           <DialogFooter>
-            <DialogClose asChild>
-              <Button type="button" variant="outline">
-                Отмена
-              </Button>
-            </DialogClose>
+            <DialogClose render={<Button type="button" variant="outline" />}>Отмена</DialogClose>
             <Button disabled={updateMutation.isPending} onClick={save}>
               {updateMutation.isPending && <Spinner />}
               Сохранить
@@ -277,16 +274,14 @@ function PlansCard() {
   ];
 
   return (
-    <Card>
+    <Card id="plans" className="scroll-mt-(--header-height)">
       <CardHeader className="flex flex-row items-start justify-between gap-4 space-y-0">
         <div>
           <CardTitle>Тарифы</CardTitle>
           <CardDescription>Планы подписки, которые бренды предлагают клиентам — лимит устройств, модель тарификации и цена</CardDescription>
         </div>
         <Dialog open={createOpen} onOpenChange={setCreateOpen}>
-          <DialogTrigger asChild>
-            <Button size="sm">Создать тариф</Button>
-          </DialogTrigger>
+          <DialogTrigger render={<Button size="sm">Создать тариф</Button>} />
           <DialogContent className="sm:max-w-lg">
             <DialogHeader>
               <DialogTitle>Создать тариф</DialogTitle>
@@ -294,7 +289,11 @@ function PlansCard() {
             <div className="grid gap-3 sm:grid-cols-2">
               <div className="space-y-2 sm:col-span-2">
                 <Label>Бренд</Label>
-                <Select value={newPlan.brandId} onValueChange={(value) => setNewPlan((prev) => ({ ...prev, brandId: value }))}>
+                <Select
+                  items={brands.data?.map((brand) => ({ value: brand.id, label: brand.name })) ?? []}
+                  value={newPlan.brandId}
+                  onValueChange={(value) => setNewPlan((prev) => ({ ...prev, brandId: value ?? "" }))}
+                >
                   <SelectTrigger className="w-full">
                     <SelectValue placeholder="Бренд…" />
                   </SelectTrigger>
@@ -317,7 +316,11 @@ function PlansCard() {
               </div>
               <div className="space-y-2">
                 <Label>Модель тарификации</Label>
-                <Select value={newPlan.billingModel} onValueChange={(value) => setNewPlan((prev) => ({ ...prev, billingModel: value as (typeof billingModels)[number] }))}>
+                <Select
+                  items={billingModels.map((value) => ({ value, label: value }))}
+                  value={newPlan.billingModel}
+                  onValueChange={(value) => setNewPlan((prev) => ({ ...prev, billingModel: value as (typeof billingModels)[number] }))}
+                >
                   <SelectTrigger className="w-full">
                     <SelectValue />
                   </SelectTrigger>
@@ -336,11 +339,7 @@ function PlansCard() {
               </div>
             </div>
             <DialogFooter>
-              <DialogClose asChild>
-                <Button type="button" variant="outline">
-                  Отмена
-                </Button>
-              </DialogClose>
+              <DialogClose render={<Button type="button" variant="outline" />}>Отмена</DialogClose>
               <Button disabled={!newPlan.brandId || !newPlan.code || !newPlan.name || createMutation.isPending} onClick={() => createMutation.mutate()}>
                 {createMutation.isPending && <Spinner />}
                 Создать
@@ -422,16 +421,14 @@ function EndpointGroupsCard() {
   ];
 
   return (
-    <Card>
+    <Card id="endpoint-groups" className="scroll-mt-(--header-height)">
       <CardHeader className="flex flex-row items-start justify-between gap-4 space-y-0">
         <div>
           <CardTitle>Группы endpoint&#39;ов</CardTitle>
           <CardDescription>Наборы серверов, объединённые для выдачи доступа — каждой группе назначаются тарифы, которые её получают</CardDescription>
         </div>
         <Dialog open={createOpen} onOpenChange={setCreateOpen}>
-          <DialogTrigger asChild>
-            <Button size="sm">Создать группу</Button>
-          </DialogTrigger>
+          <DialogTrigger render={<Button size="sm">Создать группу</Button>} />
           <DialogContent>
             <DialogHeader>
               <DialogTitle>Создать группу endpoint&#39;ов</DialogTitle>
@@ -451,11 +448,7 @@ function EndpointGroupsCard() {
               </div>
             </div>
             <DialogFooter>
-              <DialogClose asChild>
-                <Button type="button" variant="outline">
-                  Отмена
-                </Button>
-              </DialogClose>
+              <DialogClose render={<Button type="button" variant="outline" />}>Отмена</DialogClose>
               <Button disabled={!newGroup.code || !newGroup.name || createMutation.isPending} onClick={() => createMutation.mutate()}>
                 {createMutation.isPending && <Spinner />}
                 Создать
