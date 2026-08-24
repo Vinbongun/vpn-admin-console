@@ -6,6 +6,7 @@ import { Controller, useForm, useWatch } from "react-hook-form";
 import { toast } from "sonner";
 import { adminApi, ApiError } from "@/api/client";
 import type { ControlPlaneSourceSummary } from "@/api/types";
+import { CountryFlag } from "@/components/country-flag";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogClose, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Field, FieldError, FieldGroup, FieldLabel } from "@/components/ui/field";
@@ -14,7 +15,6 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Spinner } from "@/components/ui/spinner";
 import { Textarea } from "@/components/ui/textarea";
 import { sourceStatuses, updateSourceSchema, type UpdateSourceValues } from "@/features/infrastructure/schema";
-import { flagEmoji } from "@/lib/flag-emoji";
 
 function providerLabel(providerType: string) {
   if (providerType === "3X_UI") return "3x-ui";
@@ -75,7 +75,6 @@ function SourceEditBody({ source, mayWrite, onClose }: { source: ControlPlaneSou
   });
 
   const submit = form.handleSubmit((values) => mutation.mutate(values));
-  const flag = flagEmoji(countryCode);
 
   return (
     <>
@@ -113,7 +112,7 @@ function SourceEditBody({ source, mayWrite, onClose }: { source: ControlPlaneSou
           />
           <Field data-invalid={Boolean(form.formState.errors.countryCode)}>
             <FieldLabel htmlFor="source-edit-country">
-              Страна панели {flag && <span className="ml-1">{flag}</span>}
+              Страна панели {countryCode && <CountryFlag code={countryCode} className="ml-1" />}
             </FieldLabel>
             <Input id="source-edit-country" disabled={!mayWrite} placeholder="Например DE" maxLength={2} {...form.register("countryCode")} />
             <FieldError errors={[form.formState.errors.countryCode]} />

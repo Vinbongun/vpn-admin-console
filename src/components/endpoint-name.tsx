@@ -1,10 +1,11 @@
-import { splitLeadingCountryFlag } from "@/lib/flag-emoji";
+import { CountryFlag } from "@/components/country-flag";
+import { parseLeadingCountryCode } from "@/lib/country-code";
 
 export function EndpointName({ name }: { name: string }) {
-  const { flag, label } = splitLeadingCountryFlag(name);
+  const { code, label } = parseLeadingCountryCode(name);
   return (
     <>
-      {flag && <span className="mr-1">{flag}</span>}
+      {code && <CountryFlag code={code} className="mr-1" />}
       {label}
     </>
   );

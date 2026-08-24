@@ -7,6 +7,7 @@ import { Controller, useForm } from "react-hook-form";
 import { toast } from "sonner";
 import { adminApi, ApiError } from "@/api/client";
 import type { InfrastructureEndpointSummary } from "@/api/types";
+import { CountryFlag } from "@/components/country-flag";
 import { EndpointName } from "@/components/endpoint-name";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
@@ -16,7 +17,6 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Spinner } from "@/components/ui/spinner";
 import { Textarea } from "@/components/ui/textarea";
 import { healthStatuses, updateEndpointSchema, type UpdateEndpointValues } from "@/features/infrastructure/schema";
-import { flagEmoji } from "@/lib/flag-emoji";
 
 function formatDate(value?: string | null) {
   return value ? new Date(value).toLocaleString("ru-RU", { timeZone: "Europe/Moscow" }) : "—";
@@ -68,7 +68,6 @@ function EndpointEditBody({ endpoint, mayWrite, onClose }: { endpoint: Infrastru
   });
 
   const submit = form.handleSubmit((values) => mutation.mutate(values));
-  const flag = flagEmoji(endpoint.countryCode);
 
   return (
     <>
@@ -83,7 +82,7 @@ function EndpointEditBody({ endpoint, mayWrite, onClose }: { endpoint: Infrastru
           <dl className="grid grid-cols-2 gap-y-2 text-sm">
             <dt className="text-muted-foreground">Локация</dt>
             <dd>
-              {flag && <span className="mr-1">{flag}</span>}
+              {endpoint.countryCode && <CountryFlag code={endpoint.countryCode} className="mr-1" />}
               {[endpoint.countryCode, endpoint.city].filter(Boolean).join(" · ") || "—"}
             </dd>
             <dt className="text-muted-foreground">Протокол</dt>

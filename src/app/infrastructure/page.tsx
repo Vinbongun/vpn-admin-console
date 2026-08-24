@@ -8,6 +8,7 @@ import { toast } from "sonner";
 import { adminApi, ApiError } from "@/api/client";
 import type { AdminInfrastructureIncidentQuery, ControlPlaneSourceSummary, InfrastructureEndpointSummary, InfrastructureIncidentSummary } from "@/api/types";
 import { AppShell } from "@/components/app-shell";
+import { CountryFlag } from "@/components/country-flag";
 import { DataTable, DataTablePagination } from "@/components/data-table";
 import { EndpointName } from "@/components/endpoint-name";
 import { PageHeader } from "@/components/page-header";
@@ -23,7 +24,6 @@ import { EndpointEditDialog } from "@/features/infrastructure/endpoint-edit-dial
 import { RotateCredentialsDialog } from "@/features/infrastructure/rotate-credentials-dialog";
 import { SourceEditDialog } from "@/features/infrastructure/source-edit-dialog";
 import { can } from "@/lib/access-control";
-import { flagEmoji } from "@/lib/flag-emoji";
 
 const pageSize = 25;
 
@@ -178,7 +178,7 @@ export default function InfrastructurePage() {
                 <SelectItem value="all">Все страны</SelectItem>
                 {endpointCountries.map((code) => (
                   <SelectItem key={code} value={code}>
-                    {flagEmoji(code) && <span className="mr-1">{flagEmoji(code)}</span>}
+                    <CountryFlag code={code} className="mr-1" />
                     {code}
                   </SelectItem>
                 ))}
@@ -317,13 +317,17 @@ function SourcesCard({ sources, mayWrite }: { sources: ReturnType<typeof useQuer
           return (
             <div className="flex items-center gap-2" onClick={(event) => event.stopPropagation()}>
               {source.providerType === "3X_UI" && (
-                <Input
-                  aria-label="Код страны"
-                  placeholder="Страна (DE)"
-                  className="w-20"
-                  value={countryCodes[source.id] ?? ""}
-                  onChange={(event) => setCountryCodes((value) => ({ ...value, [source.id]: event.target.value.toUpperCase() }))}
-                />
+                <div className="flex items-center gap-1.5" title="3x-ui не сообщает страну панели сама — код нужно указывать перед каждой синхронизацией">
+                  <span className="whitespace-nowrap text-xs text-muted-foreground">Страна:</span>
+                  <Input
+                    aria-label="Код страны для синхронизации"
+                    placeholder="DE"
+                    maxLength={2}
+                    className="w-14"
+                    value={countryCodes[source.id] ?? ""}
+                    onChange={(event) => setCountryCodes((value) => ({ ...value, [source.id]: event.target.value.toUpperCase() }))}
+                  />
+                </div>
               )}
               <Button
                 size="sm"
@@ -373,7 +377,7 @@ function SourcesCard({ sources, mayWrite }: { sources: ReturnType<typeof useQuer
                 <SelectItem value="all">Все страны</SelectItem>
                 {sourceCountries.map((code) => (
                   <SelectItem key={code} value={code}>
-                    {flagEmoji(code) && <span className="mr-1">{flagEmoji(code)}</span>}
+                    <CountryFlag code={code} className="mr-1" />
                     {code}
                   </SelectItem>
                 ))}
