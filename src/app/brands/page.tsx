@@ -5,7 +5,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import type { ColumnDef } from "@tanstack/react-table";
 import { PlusIcon } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useState, useTransition } from "react";
 import { useForm } from "react-hook-form";
 import { toast } from "sonner";
 import { adminApi, ApiError } from "@/api/client";
@@ -47,6 +47,7 @@ const columns: ColumnDef<BrandDetail>[] = [
 export default function BrandsPage() {
   const router = useRouter();
   const [open, setOpen] = useState(false);
+  const [isNavigating, startNavigation] = useTransition();
   const queryClient = useQueryClient();
   const staff = useQuery({ queryKey: ["staff-session"], queryFn: adminApi.getSession, retry: false });
   const mayWrite = can(staff.data, "brands.write");
@@ -114,15 +115,22 @@ export default function BrandsPage() {
           )
         }
       />
-      <DataTable
-        columns={columns}
-        data={brands.data ?? []}
-        isLoading={brands.isLoading}
-        isError={brands.isError}
-        errorMessage="Не удалось получить бренды."
-        emptyMessage="Бренды не найдены."
-        onRowClick={(brand) => router.push(`/brands/${brand.id}`)}
-      />
+      <div className="relative">
+        <DataTable
+          columns={columns}
+          data={brands.data ?? []}
+          isLoading={brands.isLoading}
+          isError={brands.isError}
+          errorMessage="Не удалось получить бренды."
+          emptyMessage="Бренды не найдены."
+          onRowClick={(brand) => startNavigation(() => router.push(`/brands/${brand.id}`))}
+        />
+        {isNavigating && (
+          <div className="absolute inset-0 flex items-center justify-center rounded-md bg-background/60">
+            <Spinner className="size-5" />
+          </div>
+        )}
+      </div>
     </AppShell>
   );
 }

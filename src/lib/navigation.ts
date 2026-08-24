@@ -28,7 +28,6 @@ export const navigation = [
     icon: BookOpen,
     permission: "brands.read",
     items: [
-      { label: "Бренды", href: "/reference#brands" },
       { label: "Тарифы", href: "/reference#plans" },
       { label: "Группы endpoint'ов", href: "/reference#endpoint-groups" },
     ],

@@ -2,11 +2,10 @@
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import type { ColumnDef } from "@tanstack/react-table";
-import Link from "next/link";
 import { useState } from "react";
 import { toast } from "sonner";
 import { adminApi, ApiError } from "@/api/client";
-import type { BrandDetail, EndpointGroupListItem, PlanSummary } from "@/api/types";
+import type { EndpointGroupListItem, PlanSummary } from "@/api/types";
 import { AppShell } from "@/components/app-shell";
 import { DataTable } from "@/components/data-table";
 import { PageHeader } from "@/components/page-header";
@@ -32,91 +31,10 @@ function apiErrorMessage(error: ApiError): string {
 export default function ReferencePage() {
   return (
     <AppShell>
-      <PageHeader title="Справочники" description="Бренды, тарифы и группы endpoint'ов" />
-      <BrandsCard />
+      <PageHeader title="Справочники" description="Тарифы и группы endpoint'ов" />
       <PlansCard />
       <EndpointGroupsCard />
     </AppShell>
-  );
-}
-
-function BrandsCard() {
-  const queryClient = useQueryClient();
-  const [createOpen, setCreateOpen] = useState(false);
-  const [newBrand, setNewBrand] = useState({ code: "", name: "" });
-  const brands = useQuery({ queryKey: ["admin-brands"], queryFn: adminApi.listBrands, retry: false });
-
-  const createMutation = useMutation({
-    mutationFn: () => adminApi.createBrand(newBrand),
-    onSuccess: async () => {
-      setNewBrand({ code: "", name: "" });
-      setCreateOpen(false);
-      toast.success("Бренд создан.");
-      await queryClient.invalidateQueries({ queryKey: ["admin-brands"] });
-    },
-    onError: (error) => toast.error(error instanceof ApiError ? (error.status === 409 ? "Бренд с таким кодом уже существует." : apiErrorMessage(error)) : "Не удалось создать бренд."),
-  });
-
-  const columns: ColumnDef<BrandDetail>[] = [
-    { id: "name", header: "Бренд", cell: ({ row }) => (
-      <div>
-        <p className="font-medium">{row.original.name}</p>
-        <p className="text-xs text-muted-foreground">{row.original.code}</p>
-      </div>
-    ) },
-    { id: "status", header: "Статус", cell: ({ row }) => <Badge>{row.original.status}</Badge> },
-    { id: "actions", header: "", cell: ({ row }) => (
-      <div className="text-right">
-        <Button size="sm" variant="outline" render={<Link href={`/brands/${row.original.id}`} />} nativeButton={false}>
-          Настроить
-        </Button>
-      </div>
-    ) },
-  ];
-
-  return (
-    <Card id="brands" className="scroll-mt-(--header-height)">
-      <CardHeader className="flex flex-row items-start justify-between gap-4 space-y-0">
-        <div>
-          <CardTitle>Бренды</CardTitle>
-          <CardDescription>
-            Отдельные white-label сайты платформы. Полная настройка (домены, ссылки, публичная конфигурация, способы оплаты) — в разделе{" "}
-            <Link href="/brands" className="underline underline-offset-2">
-              Бренды
-            </Link>
-            .
-          </CardDescription>
-        </div>
-        <Dialog open={createOpen} onOpenChange={setCreateOpen}>
-          <DialogTrigger render={<Button size="sm">Создать бренд</Button>} />
-          <DialogContent>
-            <DialogHeader>
-              <DialogTitle>Создать бренд</DialogTitle>
-            </DialogHeader>
-            <div className="space-y-3">
-              <div className="space-y-2">
-                <Label>Код бренда</Label>
-                <Input placeholder="Код (a-z0-9_-)" value={newBrand.code} onChange={(event) => setNewBrand((value) => ({ ...value, code: event.target.value.toLowerCase() }))} />
-              </div>
-              <div className="space-y-2">
-                <Label>Название бренда</Label>
-                <Input placeholder="Название" value={newBrand.name} onChange={(event) => setNewBrand((value) => ({ ...value, name: event.target.value }))} />
-              </div>
-            </div>
-            <DialogFooter>
-              <DialogClose render={<Button type="button" variant="outline" />}>Отмена</DialogClose>
-              <Button disabled={!newBrand.code || !newBrand.name || createMutation.isPending} onClick={() => createMutation.mutate()}>
-                {createMutation.isPending && <Spinner />}
-                Создать
-              </Button>
-            </DialogFooter>
-          </DialogContent>
-        </Dialog>
-      </CardHeader>
-      <CardContent>
-        <DataTable columns={columns} data={brands.data ?? []} isLoading={brands.isLoading} isError={brands.isError} errorMessage="Не удалось получить бренды." emptyMessage="Бренды не найдены." />
-      </CardContent>
-    </Card>
   );
 }
 
