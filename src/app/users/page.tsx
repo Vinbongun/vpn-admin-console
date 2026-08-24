@@ -48,20 +48,17 @@ const columns: ColumnDef<CustomerSummary>[] = [
 
 function SelectedCustomerFromQuery({ onSelect }: { onSelect: (customerId: string) => void }) {
   const searchParams = useSearchParams();
-  const router = useRouter();
   const customerId = searchParams.get("customerId");
 
   useEffect(() => {
-    if (customerId) {
-      onSelect(customerId);
-      router.replace("/users");
-    }
-  }, [customerId, onSelect, router]);
+    if (customerId) onSelect(customerId);
+  }, [customerId, onSelect]);
 
   return null;
 }
 
 export default function CustomersPage() {
+  const router = useRouter();
   const queryClient = useQueryClient();
   const [page, setPage] = useState(1);
   const [search, setSearch] = useState("");
@@ -120,6 +117,15 @@ export default function CustomersPage() {
   const hasLiveSubscription = (subscriptions: CustomerDetail["subscriptions"], brandCode: string) =>
     subscriptions.some((subscription) => subscription.brandCode === brandCode && liveStatuses.has(subscription.status));
 
+  const selectCustomer = (customerId: string) => {
+    setSelectedId(customerId);
+    router.replace(`/users?customerId=${customerId}`);
+  };
+  const closeCustomer = () => {
+    setSelectedId(undefined);
+    router.replace("/users");
+  };
+
   return (
     <AppShell>
       <Suspense fallback={null}>
@@ -173,12 +179,12 @@ export default function CustomersPage() {
         isError={customers.isError}
         errorMessage="Не удалось получить клиентов."
         emptyMessage="Клиенты не найдены."
-        onRowClick={(customer) => setSelectedId(customer.id)}
+        onRowClick={(customer) => selectCustomer(customer.id)}
         isRowActive={(customer) => customer.id === selectedId}
       />
       <DataTablePagination page={page} pageCount={totalPages} onPageChange={setPage} />
 
-      <Dialog open={Boolean(selectedId)} onOpenChange={(open) => !open && setSelectedId(undefined)}>
+      <Dialog open={Boolean(selectedId)} onOpenChange={(open) => !open && closeCustomer()}>
         <DialogContent className="flex max-h-[85vh] flex-col gap-0 overflow-hidden p-0 sm:max-w-lg">
           {detail.isLoading ? (
             <div className="space-y-3 p-6">
