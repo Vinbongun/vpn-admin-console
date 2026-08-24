@@ -9,6 +9,7 @@ import { adminApi, ApiError } from "@/api/client";
 import type { AdminInfrastructureIncidentQuery, ControlPlaneSourceSummary, InfrastructureEndpointSummary, InfrastructureIncidentSummary } from "@/api/types";
 import { AppShell } from "@/components/app-shell";
 import { DataTable, DataTablePagination } from "@/components/data-table";
+import { EndpointName } from "@/components/endpoint-name";
 import { PageHeader } from "@/components/page-header";
 import { StatCard } from "@/components/stat-card";
 import { Badge } from "@/components/ui/badge";
@@ -22,6 +23,7 @@ import { EndpointEditDialog } from "@/features/infrastructure/endpoint-edit-dial
 import { RotateCredentialsDialog } from "@/features/infrastructure/rotate-credentials-dialog";
 import { SourceEditDialog } from "@/features/infrastructure/source-edit-dialog";
 import { can } from "@/lib/access-control";
+import { flagEmoji } from "@/lib/flag-emoji";
 
 const pageSize = 25;
 
@@ -42,8 +44,16 @@ function providerLabel(providerType: string) {
 }
 
 const endpointColumns: ColumnDef<InfrastructureEndpointSummary>[] = [
-  { accessorKey: "name", header: "Endpoint", cell: ({ row }) => <span className="font-medium">{row.original.name}</span> },
-  { accessorKey: "sourceCode", header: "Источник" },
+  {
+    accessorKey: "name",
+    header: "Endpoint",
+    cell: ({ row }) => (
+      <span className="font-medium">
+        <EndpointName name={row.original.name} />
+      </span>
+    ),
+  },
+  { accessorKey: "sourceCode", header: "Панель" },
   { id: "location", header: "Локация", cell: ({ row }) => [row.original.countryCode, row.original.city].filter(Boolean).join(" · ") || "—" },
   { id: "protocol", header: "Протокол", cell: ({ row }) => row.original.protocol + (row.original.transport ? ` · ${row.original.transport}` : "") },
   { id: "healthStatus", header: "Здоровье", cell: ({ row }) => <Badge>{row.original.healthStatus}</Badge> },
@@ -55,7 +65,7 @@ const incidentColumns: ColumnDef<InfrastructureIncidentSummary>[] = [
   { id: "severity", header: "Критичность", cell: ({ row }) => <Badge>{row.original.severity}</Badge> },
   { id: "status", header: "Статус", cell: ({ row }) => <Badge>{row.original.status}</Badge> },
   { accessorKey: "kind", header: "Тип" },
-  { id: "endpointName", header: "Endpoint", cell: ({ row }) => row.original.endpointName ?? "—" },
+  { id: "endpointName", header: "Endpoint", cell: ({ row }) => (row.original.endpointName ? <EndpointName name={row.original.endpointName} /> : "—") },
   {
     id: "summary",
     header: "Описание",
@@ -83,6 +93,8 @@ export default function InfrastructurePage() {
   const mayWrite = can(staff.data, "infrastructure.write");
   const summary = useQuery({ queryKey: ["admin-infrastructure-summary"], queryFn: adminApi.getInfrastructureSummary, retry: false });
   const sources = useQuery({ queryKey: ["admin-infrastructure-sources"], queryFn: adminApi.listControlPlaneSources, retry: false });
+  const endpointsForCountries = useQuery({ queryKey: ["admin-infrastructure-endpoints-all"], queryFn: () => adminApi.listInfrastructureEndpoints({ page: 1, pageSize: 100 }), retry: false });
+  const endpointCountries = [...new Set((endpointsForCountries.data?.items ?? []).map((item) => item.countryCode).filter(Boolean))].sort();
   const endpoints = useQuery({
     queryKey: ["admin-infrastructure-endpoints", endpointPage, sourceCode, countryCode, protocol, healthStatus],
     queryFn: () =>
@@ -111,7 +123,7 @@ export default function InfrastructurePage() {
   const endpointPages = Math.max(1, Math.ceil((endpoints.data?.total ?? 0) / (endpoints.data?.pageSize ?? pageSize)));
   const incidentPages = Math.max(1, Math.ceil((incidents.data?.total ?? 0) / (incidents.data?.pageSize ?? pageSize)));
   const counters = [
-    { label: "Источники", value: summary.data?.sources, icon: RadioTower },
+    { label: "Панели", value: summary.data?.sources, icon: RadioTower },
     { label: "Endpoints", value: summary.data?.endpoints, icon: Server },
     { label: "Исправны", value: summary.data?.healthy, icon: Activity },
     { label: "Неисправны", value: summary.data?.unhealthy, icon: CircleAlert },
@@ -120,7 +132,7 @@ export default function InfrastructurePage() {
 
   return (
     <AppShell>
-      <PageHeader title="Инфраструктура" description="Список серверов (endpoint'ов), их состояние здоровья и открытые инциденты — клик по строке источника или endpoint'а открывает редактирование" />
+      <PageHeader title="Инфраструктура" description="Список серверов (endpoint'ов), их состояние здоровья и открытые инциденты — клик по строке панели или endpoint'а открывает редактирование" />
 
       <div className="grid grid-cols-1 gap-4 @xl/main:grid-cols-2 @5xl/main:grid-cols-5">
         {counters.map(({ label, value, icon: Icon }) => (
@@ -133,20 +145,20 @@ export default function InfrastructurePage() {
       <Card id="endpoints" className="scroll-mt-(--header-height)">
         <CardHeader>
           <CardTitle>Endpoints</CardTitle>
-          <CardDescription>Серверы платформы во всех источниках — страна, протокол и состояние здоровья</CardDescription>
+          <CardDescription>Серверы платформы по всем панелям — страна, протокол и состояние здоровья</CardDescription>
         </CardHeader>
         <CardContent>
           <div className="mb-4 grid gap-3 md:grid-cols-2 xl:grid-cols-4">
             <Select
-              items={[{ value: "all", label: "Все источники" }, ...(sources.data?.map((source) => ({ value: source.code, label: source.code })) ?? [])]}
+              items={[{ value: "all", label: "Все панели" }, ...(sources.data?.map((source) => ({ value: source.code, label: source.code })) ?? [])]}
               value={sourceCode}
               onValueChange={(value) => { setSourceCode(value ?? "all"); setEndpointPage(1); }}
             >
-              <SelectTrigger aria-label="Источник">
+              <SelectTrigger aria-label="Панель">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="all">Все источники</SelectItem>
+                <SelectItem value="all">Все панели</SelectItem>
                 {sources.data?.map((source) => (
                   <SelectItem key={source.id} value={source.code}>
                     {source.code}
@@ -154,7 +166,24 @@ export default function InfrastructurePage() {
                 ))}
               </SelectContent>
             </Select>
-            <Input aria-label="Страна" placeholder="Страна, например DE" value={countryCode} onChange={(event) => { setCountryCode(event.target.value); setEndpointPage(1); }} />
+            <Select
+              items={[{ value: "all", label: "Все страны" }, ...endpointCountries.map((code) => ({ value: code, label: code }))]}
+              value={countryCode || "all"}
+              onValueChange={(value) => { setCountryCode(value === "all" ? "" : (value ?? "")); setEndpointPage(1); }}
+            >
+              <SelectTrigger aria-label="Страна">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Все страны</SelectItem>
+                {endpointCountries.map((code) => (
+                  <SelectItem key={code} value={code}>
+                    {flagEmoji(code) && <span className="mr-1">{flagEmoji(code)}</span>}
+                    {code}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
             <Input aria-label="Протокол" placeholder="Протокол" value={protocol} onChange={(event) => { setProtocol(event.target.value); setEndpointPage(1); }} />
             <Input aria-label="Здоровье" placeholder="Например HEALTHY" value={healthStatus} onChange={(event) => { setHealthStatus(event.target.value); setEndpointPage(1); }} />
           </div>
@@ -246,6 +275,7 @@ function SourcesCard({ sources, mayWrite }: { sources: ReturnType<typeof useQuer
   const [countryCodes, setCountryCodes] = useState<Record<string, string>>({});
   const [syncingId, setSyncingId] = useState<string>();
   const [selectedSourceId, setSelectedSourceId] = useState<string>();
+  const [sourceCountryFilter, setSourceCountryFilter] = useState("all");
   const syncMutation = useMutation({
     mutationFn: ({ id, countryCode }: { id: string; countryCode?: string }) => adminApi.syncSource(id, countryCode ? { countryCode } : {}),
     onMutate: ({ id }) => setSyncingId(id),
@@ -263,7 +293,7 @@ function SourcesCard({ sources, mayWrite }: { sources: ReturnType<typeof useQuer
 
   const columns = useMemo<ColumnDef<ControlPlaneSourceSummary>[]>(
     () => [
-      { accessorKey: "code", header: "Источник", cell: ({ row }) => <span className="font-medium">{row.original.code}</span> },
+      { accessorKey: "code", header: "Панель", cell: ({ row }) => <span className="font-medium">{row.original.code}</span> },
       { id: "provider", header: "Провайдер", cell: ({ row }) => providerLabel(row.original.providerType) },
       { id: "status", header: "Статус", cell: ({ row }) => <Badge>{row.original.status}</Badge> },
       {
@@ -314,10 +344,13 @@ function SourcesCard({ sources, mayWrite }: { sources: ReturnType<typeof useQuer
     [countryCodes, syncingId, mayWrite],
   );
 
+  const sourceCountries = [...new Set((sources.data ?? []).map((source) => source.countryCode).filter(Boolean))].sort();
+  const filteredSources = sourceCountryFilter === "all" ? (sources.data ?? []) : (sources.data ?? []).filter((source) => source.countryCode === sourceCountryFilter);
+
   return (
     <Card id="sources" className="scroll-mt-(--header-height)">
       <CardHeader>
-        <CardTitle>Источники control plane</CardTitle>
+        <CardTitle>Панели управления</CardTitle>
         <CardDescription>Панели Remnawave и 3x-ui, из которых платформа получает список серверов и их состояние</CardDescription>
         {mayWrite && (
           <CardAction>
@@ -326,9 +359,31 @@ function SourcesCard({ sources, mayWrite }: { sources: ReturnType<typeof useQuer
         )}
       </CardHeader>
       <CardContent>
+        {sourceCountries.length > 0 && (
+          <div className="mb-4 max-w-64">
+            <Select
+              items={[{ value: "all", label: "Все страны" }, ...sourceCountries.map((code) => ({ value: code, label: code }))]}
+              value={sourceCountryFilter}
+              onValueChange={(value) => setSourceCountryFilter(value ?? "all")}
+            >
+              <SelectTrigger aria-label="Страна панели">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Все страны</SelectItem>
+                {sourceCountries.map((code) => (
+                  <SelectItem key={code} value={code}>
+                    {flagEmoji(code) && <span className="mr-1">{flagEmoji(code)}</span>}
+                    {code}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+        )}
         <DataTable
           columns={columns}
-          data={sources.data ?? []}
+          data={filteredSources}
           isLoading={sources.isLoading}
           isError={sources.isError}
           errorMessage="Не удалось получить данные инфраструктуры."

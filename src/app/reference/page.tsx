@@ -8,6 +8,7 @@ import { adminApi, ApiError } from "@/api/client";
 import type { BrandDetail, EndpointGroupListItem, PlanSummary } from "@/api/types";
 import { AppShell } from "@/components/app-shell";
 import { DataTable } from "@/components/data-table";
+import { EndpointName } from "@/components/endpoint-name";
 import { PageHeader } from "@/components/page-header";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -509,7 +510,7 @@ function EndpointGroupsCard() {
                             onCheckedChange={() => toggleMember(endpoint.id)}
                           />
                           <button type="button" className="flex-1 truncate text-left text-sm hover:underline" onClick={() => setSelectedEndpointId(endpoint.id)}>
-                            {endpoint.name} ({endpoint.countryCode}, {endpoint.protocol})
+                            <EndpointName name={endpoint.name} /> ({endpoint.countryCode}, {endpoint.protocol})
                           </button>
                         </div>
                       ))}

@@ -23,7 +23,7 @@ function providerLabel(providerType: string) {
 }
 
 function apiErrorMessage(error: ApiError): string {
-  if (error.status === 409) return "Источник с таким кодом уже существует.";
+  if (error.status === 409) return "Панель с таким кодом уже существует.";
   const details = error.details as { message?: string | string[] } | undefined;
   const message = details?.message;
   return (Array.isArray(message) ? message.join(", ") : message) ?? error.message;
@@ -67,11 +67,11 @@ function SourceEditBody({ source, mayWrite, onClose }: { source: ControlPlaneSou
         comment: values.comment,
       }),
     onSuccess: async () => {
-      toast.success("Источник обновлён.");
+      toast.success("Панель обновлена.");
       onClose();
       await queryClient.invalidateQueries({ queryKey: ["admin-infrastructure-sources"] });
     },
-    onError: (error) => toast.error(error instanceof ApiError ? apiErrorMessage(error) : "Не удалось обновить источник."),
+    onError: (error) => toast.error(error instanceof ApiError ? apiErrorMessage(error) : "Не удалось обновить панель."),
   });
 
   const submit = form.handleSubmit((values) => mutation.mutate(values));
@@ -86,7 +86,7 @@ function SourceEditBody({ source, mayWrite, onClose }: { source: ControlPlaneSou
       <form className="contents" onSubmit={submit}>
         <FieldGroup>
           <Field data-invalid={Boolean(form.formState.errors.code)}>
-            <FieldLabel htmlFor="source-edit-code">Код источника</FieldLabel>
+            <FieldLabel htmlFor="source-edit-code">Код панели</FieldLabel>
             <Input id="source-edit-code" disabled={!mayWrite} {...form.register("code")} />
             <FieldError errors={[form.formState.errors.code]} />
           </Field>

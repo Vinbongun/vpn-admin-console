@@ -38,7 +38,7 @@ export const navigation = [
     icon: Network,
     permission: "infrastructure.read",
     items: [
-      { label: "Источники", hash: "sources" },
+      { label: "Панели", hash: "sources" },
       { label: "Endpoints", hash: "endpoints" },
       { label: "Инциденты", hash: "incidents" },
     ],

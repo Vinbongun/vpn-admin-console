@@ -15,7 +15,7 @@ import { CredentialsFields } from "@/features/infrastructure/credentials-fields"
 import { rotateCredentialsSchema, type RotateCredentialsValues } from "@/features/infrastructure/schema";
 
 function apiErrorMessage(error: ApiError): string {
-  if (error.status === 404) return "Источник не найден.";
+  if (error.status === 404) return "Панель не найдена.";
   const details = error.details as { message?: string | string[] } | undefined;
   const message = details?.message;
   return (Array.isArray(message) ? message.join(", ") : message) ?? error.message;

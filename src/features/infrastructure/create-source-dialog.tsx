@@ -17,7 +17,7 @@ import { CredentialsFields } from "@/features/infrastructure/credentials-fields"
 import { createSourceSchema, providerTypes, sourceStatuses, type CreateSourceValues } from "@/features/infrastructure/schema";
 
 function apiErrorMessage(error: ApiError): string {
-  if (error.status === 409) return "Источник с таким кодом уже существует.";
+  if (error.status === 409) return "Панель с таким кодом уже существует.";
   const details = error.details as { message?: string | string[] } | undefined;
   const message = details?.message;
   return (Array.isArray(message) ? message.join(", ") : message) ?? error.message;
@@ -33,12 +33,12 @@ export function CreateSourceDialog() {
   const mutation = useMutation({
     mutationFn: adminApi.createControlPlaneSource,
     onSuccess: async () => {
-      toast.success("Источник добавлен.");
+      toast.success("Панель добавлена.");
       form.reset(defaultValues);
       setOpen(false);
       await queryClient.invalidateQueries({ queryKey: ["admin-infrastructure-sources"] });
     },
-    onError: (error) => toast.error(error instanceof ApiError ? apiErrorMessage(error) : "Не удалось добавить источник."),
+    onError: (error) => toast.error(error instanceof ApiError ? apiErrorMessage(error) : "Не удалось добавить панель."),
   });
 
   const submit = form.handleSubmit((values) =>
@@ -62,19 +62,19 @@ export function CreateSourceDialog() {
         render={
           <Button size="sm">
             <PlusIcon />
-            Добавить источник
+            Добавить панель
           </Button>
         }
       />
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
-          <DialogTitle>Добавить источник</DialogTitle>
-          <DialogDescription>Регистрирует строку источника control plane. Base URL и API-токен необязательны — если заданы, источник заработает сразу.</DialogDescription>
+          <DialogTitle>Добавить панель</DialogTitle>
+          <DialogDescription>Регистрирует запись панели управления. Base URL и API-токен необязательны — если заданы, панель заработает сразу.</DialogDescription>
         </DialogHeader>
         <form className="contents" onSubmit={submit}>
           <FieldGroup>
             <Field data-invalid={Boolean(form.formState.errors.code)}>
-              <FieldLabel htmlFor="source-code">Код источника</FieldLabel>
+              <FieldLabel htmlFor="source-code">Код панели</FieldLabel>
               <Input id="source-code" placeholder="Например DE_PANEL_1" {...form.register("code")} />
               <FieldError errors={[form.formState.errors.code]} />
             </Field>

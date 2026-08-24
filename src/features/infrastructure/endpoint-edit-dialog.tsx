@@ -7,6 +7,7 @@ import { Controller, useForm } from "react-hook-form";
 import { toast } from "sonner";
 import { adminApi, ApiError } from "@/api/client";
 import type { InfrastructureEndpointSummary } from "@/api/types";
+import { EndpointName } from "@/components/endpoint-name";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogClose, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -72,7 +73,9 @@ function EndpointEditBody({ endpoint, mayWrite, onClose }: { endpoint: Infrastru
   return (
     <>
       <DialogHeader>
-        <DialogTitle>{endpoint.name}</DialogTitle>
+        <DialogTitle>
+          <EndpointName name={endpoint.name} />
+        </DialogTitle>
         <DialogDescription>{endpoint.sourceCode}</DialogDescription>
       </DialogHeader>
       <form className="contents" onSubmit={submit}>
@@ -94,7 +97,7 @@ function EndpointEditBody({ endpoint, mayWrite, onClose }: { endpoint: Infrastru
           <Alert>
             <InfoIcon />
             <AlertTitle>Название, локация и протокол не редактируются</AlertTitle>
-            <AlertDescription>Каждая синхронизация источника перезаписывает эти поля свежими данными с панели — правка через UI была бы обманчивой и next sync её молча откатит.</AlertDescription>
+            <AlertDescription>Каждая синхронизация панели перезаписывает эти поля свежими данными с неё — правка через UI была бы обманчивой и next sync её молча откатит.</AlertDescription>
           </Alert>
 
           <Controller
