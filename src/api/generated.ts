@@ -1431,6 +1431,11 @@ export interface components {
             plan?: components["schemas"]["CustomerPlan"] | null;
             /** Format: email */
             customerEmail?: string;
+            /**
+             * Format: uuid
+             * @description For linking back to the customer's admin-console profile page.
+             */
+            customerId?: string;
         };
         SubscriptionDetail: components["schemas"]["SubscriptionSummary"] & {
             /** Format: uuid */

@@ -1,6 +1,8 @@
 "use client";
 
 import { useQuery } from "@tanstack/react-query";
+import { UserIcon } from "lucide-react";
+import Link from "next/link";
 import { useState } from "react";
 import { adminApi } from "@/api/client";
 import type { IssuedSubscriptionToken, PlanSummary, SubscriptionDetail, SubscriptionSummary } from "@/api/types";
@@ -26,6 +28,7 @@ export function SubscriptionDetailDialog({ subscriptionId, onOpenChange, staff }
   const detail = useSubscription(subscriptionId);
   const plans = useQuery({ queryKey: ["admin-plans", "subscription-detail"], queryFn: () => adminApi.listPlans({ page: 1, pageSize: 100, status: "ACTIVE" }), retry: false });
   const mayWrite = can(staff, "subscriptions.write");
+  const mayViewCustomer = can(staff, "customers.read");
 
   return (
     <Dialog open={Boolean(subscriptionId)} onOpenChange={onOpenChange}>
@@ -38,7 +41,7 @@ export function SubscriptionDetailDialog({ subscriptionId, onOpenChange, staff }
         ) : detail.isError ? (
           <ErrorState className="p-6" description="Не удалось получить детали подписки." />
         ) : detail.data ? (
-          <SubscriptionDetailBody key={detail.data.id} subscription={detail.data} plans={plans.data?.items ?? []} mayWrite={mayWrite} onClose={() => onOpenChange(false)} />
+          <SubscriptionDetailBody key={detail.data.id} subscription={detail.data} plans={plans.data?.items ?? []} mayWrite={mayWrite} mayViewCustomer={mayViewCustomer} onClose={() => onOpenChange(false)} />
         ) : null}
       </DialogContent>
     </Dialog>
@@ -49,11 +52,13 @@ function SubscriptionDetailBody({
   subscription,
   plans,
   mayWrite,
+  mayViewCustomer,
   onClose,
 }: {
   subscription: SubscriptionDetail;
   plans: PlanSummary[];
   mayWrite: boolean;
+  mayViewCustomer: boolean;
   onClose: () => void;
 }) {
   const [editStatus, setEditStatus] = useState<Status>(subscription.status);
@@ -70,6 +75,18 @@ function SubscriptionDetailBody({
       <DialogHeader className="border-b p-6 pb-4">
         <DialogTitle>{subscription.customerEmail}</DialogTitle>
         <DialogDescription>{subscription.id}</DialogDescription>
+        {mayViewCustomer && subscription.customerId && (
+          <Button
+            size="sm"
+            variant="link"
+            className="h-auto self-start p-0"
+            render={<Link href={`/users?customerId=${subscription.customerId}`} />}
+            nativeButton={false}
+          >
+            <UserIcon />
+            Перейти к клиенту
+          </Button>
+        )}
       </DialogHeader>
       <div className="flex flex-col gap-6 overflow-y-auto p-6">
         <dl className="grid grid-cols-2 gap-y-2 text-sm">

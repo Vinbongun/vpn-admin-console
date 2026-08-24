@@ -2,7 +2,8 @@
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import type { ColumnDef } from "@tanstack/react-table";
-import { useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
+import { Suspense, useEffect, useState } from "react";
 import { toast } from "sonner";
 import { adminApi } from "@/api/client";
 import type { AdminCustomerQuery, CustomerDetail, CustomerSummary } from "@/api/types";
@@ -44,6 +45,21 @@ const columns: ColumnDef<CustomerSummary>[] = [
     cell: ({ row }) => row.original.memberships.map((membership) => membership.brandCode).join(", ") || "—",
   },
 ];
+
+function SelectedCustomerFromQuery({ onSelect }: { onSelect: (customerId: string) => void }) {
+  const searchParams = useSearchParams();
+  const router = useRouter();
+  const customerId = searchParams.get("customerId");
+
+  useEffect(() => {
+    if (customerId) {
+      onSelect(customerId);
+      router.replace("/users");
+    }
+  }, [customerId, onSelect, router]);
+
+  return null;
+}
 
 export default function CustomersPage() {
   const queryClient = useQueryClient();
@@ -106,6 +122,9 @@ export default function CustomersPage() {
 
   return (
     <AppShell>
+      <Suspense fallback={null}>
+        <SelectedCustomerFromQuery onSelect={setSelectedId} />
+      </Suspense>
       <PageHeader title="Пользователи" description="Клиенты, их членства в брендах и подписки" />
 
       <PageToolbar>
