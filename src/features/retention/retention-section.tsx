@@ -14,14 +14,14 @@ import { can } from "@/lib/access-control";
 
 const DEFAULT_GRACE_DAYS = 3;
 
-export function RetentionSection({ staff }: { staff: { permissions: string[] } | undefined }) {
+export function RetentionSection({ staff, brandCodes }: { staff: { permissions: string[] } | undefined; brandCodes?: string }) {
   const [graceDaysInput, setGraceDaysInput] = useState(String(DEFAULT_GRACE_DAYS));
   const [appliedGraceDays, setAppliedGraceDays] = useState(DEFAULT_GRACE_DAYS);
 
   const mayView = can(staff, "subscriptions.read");
   const retention = useQuery({
-    queryKey: ["admin-retention-summary", appliedGraceDays],
-    queryFn: () => adminApi.getRetentionSummary(appliedGraceDays),
+    queryKey: ["admin-retention-summary", appliedGraceDays, brandCodes],
+    queryFn: () => adminApi.getRetentionSummary({ graceDays: appliedGraceDays, brandCodes }),
     enabled: mayView,
     retry: false,
   });

@@ -714,6 +714,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/admin/v1/dashboard/overview": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description Compact numbers for the admin console's landing page: revenue (today/7d/30d), client counts (total/paying/not paying), subscriptions expiring soon, and the two retention cohorts (fixed 3-day grace period) - all filterable by brand. Deliberately lighter than GET /admin/v1/finance/summary (no daily series, no per-plan breakdown); that endpoint backs the full Finance page. */
+        get: operations["getDashboardOverview"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/admin/v1/audit-events": {
         parameters: {
             query?: never;
@@ -1325,6 +1342,10 @@ export interface components {
             pageSize: number;
             total: number;
         };
+        CurrencyAmount: {
+            currency: string;
+            amount: number;
+        };
         FinanceSummary: {
             revenueByBrand: {
                 brandCode: string;
@@ -1336,6 +1357,50 @@ export interface components {
             };
             ordersByStatus: {
                 [key: string]: number;
+            };
+            /** @description One entry per currency actually in use, so multi-currency sums stay separate. */
+            revenueToday: components["schemas"]["CurrencyAmount"][];
+            revenueLast7d: components["schemas"]["CurrencyAmount"][];
+            revenueLast30d: components["schemas"]["CurrencyAmount"][];
+            /** @description Daily revenue for the last 30 days, one row per (date, currency). */
+            revenueSeries: {
+                /** Format: date */
+                date: string;
+                currency: string;
+                amount: number;
+            }[];
+            revenueByPlan: {
+                /** Format: uuid */
+                planId: string;
+                planCode: string | null;
+                planName: string | null;
+                currency: string;
+                amount: number;
+            }[];
+        };
+        DashboardOverview: {
+            revenue: {
+                today: components["schemas"]["CurrencyAmount"][];
+                last7d: components["schemas"]["CurrencyAmount"][];
+                last30d: components["schemas"]["CurrencyAmount"][];
+            };
+            /** @description Distinct customers (by customer_identity_id) across the selected brands' active memberships. */
+            clients: {
+                total: number;
+                /** @description Has at least one ACTIVE/TRIAL subscription right now. */
+                paying: number;
+                notPaying: number;
+            };
+            /** @description ACTIVE/TRIAL subscriptions with expires_at within the window (cumulative, not exclusive buckets). */
+            expiringSoon: {
+                in7d: number;
+                in14d: number;
+                in30d: number;
+            };
+            /** @description Same cohorts as GET /admin/v1/retention/summary, fixed at a 3-day grace period. */
+            retention: {
+                purchasedInactive: number;
+                expiredNoRenewal: number;
             };
         };
         RetentionSummary: {
@@ -3085,14 +3150,17 @@ export interface operations {
     };
     getFinanceSummary: {
         parameters: {
-            query?: never;
+            query?: {
+                /** @description Comma-separated brand codes; omit for all brands combined. */
+                brandCodes?: string;
+            };
             header?: never;
             path?: never;
             cookie?: never;
         };
         requestBody?: never;
         responses: {
-            /** @description Revenue by brand/currency and order counts by kind/status, all-time */
+            /** @description Revenue by brand/currency and order counts by kind/status (all-time), plus today/7d/30d totals, a daily series for the last 30 days, and revenue by plan */
             200: {
                 headers: {
                     [name: string]: unknown;
@@ -3107,6 +3175,8 @@ export interface operations {
         parameters: {
             query?: {
                 graceDays?: number;
+                /** @description Comma-separated brand codes; omit for all brands combined. */
+                brandCodes?: string;
             };
             header?: never;
             path?: never;
@@ -3131,6 +3201,36 @@ export interface operations {
                 content?: never;
             };
             /** @description subscriptions.read permission required */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    getDashboardOverview: {
+        parameters: {
+            query?: {
+                /** @description Comma-separated brand codes; omit for all brands combined. */
+                brandCodes?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Dashboard overview; requires finance.read */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DashboardOverview"];
+                };
+            };
+            /** @description Missing finance.read permission */
             403: {
                 headers: {
                     [name: string]: unknown;
