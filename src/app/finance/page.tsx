@@ -15,6 +15,7 @@ import { StatCard } from "@/components/stat-card";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { RevenueBarChart } from "@/features/finance/revenue-bar-chart";
 import { RevenueByPlan } from "@/features/finance/revenue-by-plan";
 import { useBrandFilter } from "@/hooks/use-brand-filter";
@@ -41,6 +42,13 @@ const columns: ColumnDef<OrderSummary>[] = [
   },
 ];
 
+const revenuePeriods = [
+  { value: "day", label: "Сегодня", days: 1 },
+  { value: "week", label: "Неделя", days: 7 },
+  { value: "month", label: "Месяц", days: 30 },
+] as const;
+type RevenuePeriod = (typeof revenuePeriods)[number]["value"];
+
 function groupByCurrency<T extends { currency: string }>(rows: T[]): Map<string, T[]> {
   const groups = new Map<string, T[]>();
   for (const row of rows) {
@@ -54,6 +62,7 @@ function groupByCurrency<T extends { currency: string }>(rows: T[]): Map<string,
 export default function FinancePage() {
   const [page, setPage] = useState(1);
   const [status, setStatus] = useState("all");
+  const [revenuePeriod, setRevenuePeriod] = useState<RevenuePeriod>("month");
   const { selected, setSelected, brandCodes } = useBrandFilter();
   const singleBrandCode = selected.length === 1 ? selected[0] : undefined;
 
@@ -121,21 +130,45 @@ export default function FinancePage() {
         </Card>
       )}
 
-      <SectionHeader title="Выручка по дням" description="Последние 30 дней" />
+      <SectionHeader
+        title="Выручка по дням"
+        description="Последние 30 дней"
+        actions={
+          <ToggleGroup
+            variant="outline"
+            spacing={0}
+            value={[revenuePeriod]}
+            onValueChange={(values) => {
+              const next = values[0];
+              if (next === "day" || next === "week" || next === "month") setRevenuePeriod(next);
+            }}
+          >
+            {revenuePeriods.map((period) => (
+              <ToggleGroupItem key={period.value} value={period.value}>
+                {period.label}
+              </ToggleGroupItem>
+            ))}
+          </ToggleGroup>
+        }
+      />
       {seriesByCurrency.size === 0 ? (
         <p className="text-sm text-muted-foreground">{summary.isLoading ? "Загрузка…" : "Нет данных за период."}</p>
       ) : (
-        <div className="grid grid-cols-1 gap-4 @xl/main:grid-cols-2">
-          {[...seriesByCurrency.entries()].map(([currency, points]) => (
-            <Card key={currency}>
-              <CardHeader>
-                <CardTitle>{currency}</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <RevenueBarChart currency={currency} points={[...points].sort((a, b) => a.date.localeCompare(b.date))} />
-              </CardContent>
-            </Card>
-          ))}
+        <div className="flex flex-col gap-4">
+          {[...seriesByCurrency.entries()].map(([currency, points]) => {
+            const sorted = [...points].sort((a, b) => a.date.localeCompare(b.date));
+            const days = revenuePeriods.find((period) => period.value === revenuePeriod)?.days ?? 30;
+            return (
+              <Card key={currency}>
+                <CardHeader>
+                  <CardTitle>{currency}</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <RevenueBarChart currency={currency} points={sorted.slice(-days)} />
+                </CardContent>
+              </Card>
+            );
+          })}
         </div>
       )}
 
@@ -143,7 +176,7 @@ export default function FinancePage() {
       {byPlanByCurrency.size === 0 ? (
         <p className="text-sm text-muted-foreground">{summary.isLoading ? "Загрузка…" : "Нет данных за период."}</p>
       ) : (
-        <div className="grid grid-cols-1 gap-4 @xl/main:grid-cols-2">
+        <div className="flex flex-col gap-4">
           {[...byPlanByCurrency.entries()].map(([currency, items]) => (
             <Card key={currency}>
               <CardHeader>
