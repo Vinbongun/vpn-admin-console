@@ -38,7 +38,9 @@ import type {
   StaffProfile,
   SyncSourceInventory,
   UpdateBrand,
+  UpdateControlPlaneSource,
   UpdateEndpointGroup,
+  UpdateInfrastructureEndpoint,
   UpdateMembership,
   UpdatePaymentGateway,
   UpdatePaymentMethod,
@@ -96,10 +98,14 @@ export const adminApi = {
   getInfrastructureSummary: async () => unwrap(await client.GET("/admin/v1/infrastructure/summary", { headers: staffHeaders() })),
   listControlPlaneSources: async () => unwrap(await client.GET("/admin/v1/infrastructure/sources", { headers: staffHeaders() })),
   createControlPlaneSource: async (body: CreateControlPlaneSource) => unwrap(await client.POST("/admin/v1/infrastructure/sources", { body, headers: staffHeaders() })),
+  updateControlPlaneSource: async (sourceId: string, body: UpdateControlPlaneSource) =>
+    unwrap(await client.PATCH("/admin/v1/infrastructure/sources/{id}", { params: { path: { id: sourceId } }, body, headers: staffHeaders() })),
   setControlPlaneSourceCredentials: async (sourceId: string, body: SetControlPlaneSourceCredentials) =>
     unwrap(await client.PUT("/admin/v1/infrastructure/sources/{id}/credentials", { params: { path: { id: sourceId } }, body, headers: staffHeaders() })),
   syncSource: async (sourceId: string, body: SyncSourceInventory = {}) => unwrap(await client.POST("/admin/v1/infrastructure/sources/{id}/sync", { params: { path: { id: sourceId } }, body, headers: staffHeaders() })),
   listInfrastructureEndpoints: async (query: AdminInfrastructureEndpointQuery = {}) => unwrap(await client.GET("/admin/v1/infrastructure/endpoints", { params: { query }, headers: staffHeaders() })),
+  updateInfrastructureEndpoint: async (endpointId: string, body: UpdateInfrastructureEndpoint) =>
+    unwrap(await client.PATCH("/admin/v1/infrastructure/endpoints/{id}", { params: { path: { id: endpointId } }, body, headers: staffHeaders() })),
   listInfrastructureIncidents: async (query: AdminInfrastructureIncidentQuery = {}) => unwrap(await client.GET("/admin/v1/infrastructure/incidents", { params: { query }, headers: staffHeaders() })),
   listOrders: async (query: AdminOrderQuery = {}) => unwrap(await client.GET("/admin/v1/orders", { params: { query }, headers: staffHeaders() })),
   getFinanceSummary: async (query: AdminFinanceQuery = {}) => unwrap(await client.GET("/admin/v1/finance/summary", { params: { query }, headers: staffHeaders() })),

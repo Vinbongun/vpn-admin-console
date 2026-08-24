@@ -1953,6 +1953,14 @@ export interface components {
             /** @description ISO 3166-1 alpha-2 code of where the control panel itself is hosted. */
             countryCode?: string | null;
             comment?: string | null;
+            /** @description Where this panel/server was bought (hosting provider or reseller name). */
+            purchasedFrom?: string | null;
+            costAmount?: number | null;
+            costCurrency?: string | null;
+            /** @enum {string|null} */
+            billingPeriod?: "MONTHLY" | "YEARLY" | "ONE_TIME" | "OTHER" | null;
+            /** Format: date */
+            nextPaymentAt?: string | null;
             /** Format: date-time */
             lastInventoryAt?: string | null;
             lastInventoryStatus?: string | null;
@@ -4613,9 +4621,17 @@ export interface operations {
                     code?: string;
                     /** @enum {string} */
                     status?: "ACTIVE" | "INACTIVE";
-                    /** @description ISO 3166-1 alpha-2 code of where the control panel is hosted. */
+                    /** @description ISO 3166-1 alpha-2 code of where the control panel is hosted. Also used as the fallback countryCode for POST .../sync when the sync request itself doesn't supply one - set this once here to let a "sync all panels" button call sync with no body. */
                     countryCode?: string;
                     comment?: string;
+                    /** @description Where this panel/server was bought (hosting provider or reseller name). */
+                    purchasedFrom?: string;
+                    costAmount?: number;
+                    costCurrency?: string;
+                    /** @enum {string} */
+                    billingPeriod?: "MONTHLY" | "YEARLY" | "ONE_TIME" | "OTHER";
+                    /** Format: date */
+                    nextPaymentAt?: string;
                 };
             };
         };
@@ -4711,7 +4727,7 @@ export interface operations {
         requestBody?: {
             content: {
                 "application/json": {
-                    /** @description Required for 3X_UI sources - 3x-ui's own API has no concept of which country a panel is in. Not needed for REMNAWAVE sources. */
+                    /** @description Needed for 3X_UI sources - 3x-ui's own API has no concept of which country a panel is in. Optional: falls back to the source's own stored countryCode (PATCH .../sources/{id}) when omitted, so a "sync all panels" button can call this with no body at all. Not needed for REMNAWAVE sources. 400 if neither is available for a 3X_UI source. */
                     countryCode?: string;
                 };
             };

@@ -34,9 +34,9 @@ export function CredentialsFields<T extends CredentialsFormValues>({ form, optio
           <InfoIcon />
           <AlertTitle>Данные панели не заданы</AlertTitle>
           <AlertDescription>
-            Источник будет создан без учётных данных. Чтобы синхронизация заработала, на бэкенде отдельно (вне UI) нужно задать переменные окружения{" "}
+            Панель будет создана без учётных данных. Чтобы синхронизация заработала, на бэкенде отдельно (вне UI) нужно задать переменные окружения{" "}
             <code className="font-mono">{"{CODE}_BASE_URL"}</code> и <code className="font-mono">{"{CODE}_API_TOKEN"}</code> и перезапустить сервис — иначе
-            синхронизация будет падать с ошибкой &laquo;Missing credentials&raquo;. Заполните оба поля выше, чтобы источник заработал сразу.
+            синхронизация будет падать с ошибкой &laquo;Missing credentials&raquo;. Заполните оба поля выше, чтобы панель заработала сразу.
           </AlertDescription>
         </Alert>
       )}

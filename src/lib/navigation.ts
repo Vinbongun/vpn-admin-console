@@ -29,7 +29,7 @@ export const navigation = [
     permission: "brands.read",
     items: [
       { label: "Тарифы", href: "/reference#plans" },
-      { label: "Группы endpoint'ов", href: "/reference#endpoint-groups" },
+      { label: "Серверные пакеты", href: "/reference#endpoint-groups" },
     ],
   },
   { label: "Бренды", href: "/brands", icon: Building2, permission: "brands.read" },
@@ -39,8 +39,8 @@ export const navigation = [
     icon: Network,
     permission: "infrastructure.read",
     items: [
-      { label: "Источники", href: "/infrastructure#sources" },
-      { label: "Endpoints", href: "/infrastructure#endpoints" },
+      { label: "Панели", href: "/infrastructure#sources" },
+      { label: "Серверы", href: "/infrastructure#endpoints" },
       { label: "Инциденты", href: "/infrastructure#incidents" },
     ],
   },
