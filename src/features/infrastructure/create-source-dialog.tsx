@@ -2,18 +2,18 @@
 
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { InfoIcon, PlusIcon } from "lucide-react";
+import { PlusIcon } from "lucide-react";
 import { useState } from "react";
-import { Controller, useForm, useWatch } from "react-hook-form";
+import { Controller, useForm } from "react-hook-form";
 import { toast } from "sonner";
 import { adminApi, ApiError } from "@/api/client";
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogClose, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Field, FieldError, FieldGroup, FieldLabel } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Spinner } from "@/components/ui/spinner";
+import { CredentialsFields } from "@/features/infrastructure/credentials-fields";
 import { createSourceSchema, providerTypes, sourceStatuses, type CreateSourceValues } from "@/features/infrastructure/schema";
 
 function apiErrorMessage(error: ApiError): string {
@@ -29,9 +29,6 @@ export function CreateSourceDialog() {
 
   const defaultValues = { code: "", providerType: undefined, status: "ACTIVE" as const, baseUrl: "", apiToken: "" };
   const form = useForm<CreateSourceValues>({ resolver: zodResolver(createSourceSchema), defaultValues });
-  const baseUrl = useWatch({ control: form.control, name: "baseUrl" });
-  const apiToken = useWatch({ control: form.control, name: "apiToken" });
-  const noCredentials = !baseUrl && !apiToken;
 
   const mutation = useMutation({
     mutationFn: adminApi.createControlPlaneSource,
@@ -124,27 +121,7 @@ export function CreateSourceDialog() {
                 </Field>
               )}
             />
-            <Field data-invalid={Boolean(form.formState.errors.baseUrl)}>
-              <FieldLabel htmlFor="source-base-url">Base URL панели (необязательно)</FieldLabel>
-              <Input id="source-base-url" placeholder="https://panel.example.com" {...form.register("baseUrl")} />
-              <FieldError errors={[form.formState.errors.baseUrl]} />
-            </Field>
-            <Field data-invalid={Boolean(form.formState.errors.apiToken)}>
-              <FieldLabel htmlFor="source-api-token">API-токен панели (необязательно)</FieldLabel>
-              <Input id="source-api-token" type="password" autoComplete="off" placeholder="Токен доступа" {...form.register("apiToken")} />
-              <FieldError errors={[form.formState.errors.apiToken]} />
-            </Field>
-            {noCredentials && (
-              <Alert>
-                <InfoIcon />
-                <AlertTitle>Данные панели не заданы</AlertTitle>
-                <AlertDescription>
-                  Источник будет создан без учётных данных. Чтобы синхронизация заработала, на бэкенде отдельно (вне UI) нужно задать переменные окружения{" "}
-                  <code className="font-mono">{"{CODE}_BASE_URL"}</code> и <code className="font-mono">{"{CODE}_API_TOKEN"}</code> и перезапустить сервис — иначе
-                  синхронизация будет падать с ошибкой &laquo;Missing credentials&raquo;. Заполните оба поля выше, чтобы источник заработал сразу.
-                </AlertDescription>
-              </Alert>
-            )}
+            <CredentialsFields form={form} optional />
           </FieldGroup>
           <DialogFooter>
             <DialogClose render={<Button type="button" variant="outline" />}>Отмена</DialogClose>

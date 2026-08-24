@@ -18,6 +18,7 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Spinner } from "@/components/ui/spinner";
 import { CreateSourceDialog } from "@/features/infrastructure/create-source-dialog";
+import { RotateCredentialsDialog } from "@/features/infrastructure/rotate-credentials-dialog";
 import { can } from "@/lib/access-control";
 
 const pageSize = 25;
@@ -33,7 +34,7 @@ function apiErrorMessage(error: ApiError): string {
 }
 
 function providerLabel(providerType: string) {
-  if (providerType === "THREE_X_UI") return "3x-ui";
+  if (providerType === "3X_UI") return "3x-ui";
   if (providerType === "REMNAWAVE") return "Remnawave";
   return providerType;
 }
@@ -273,7 +274,7 @@ function SourcesCard({ sources, mayWrite }: { sources: ReturnType<typeof useQuer
           const source = row.original;
           return (
             <div className="flex items-center gap-2">
-              {source.providerType === "THREE_X_UI" && (
+              {source.providerType === "3X_UI" && (
                 <Input
                   aria-label="Код страны"
                   placeholder="Страна (DE)"
@@ -285,19 +286,20 @@ function SourcesCard({ sources, mayWrite }: { sources: ReturnType<typeof useQuer
               <Button
                 size="sm"
                 variant="outline"
-                disabled={syncingId === source.id || (source.providerType === "THREE_X_UI" && !countryCodes[source.id])}
+                disabled={syncingId === source.id || (source.providerType === "3X_UI" && !countryCodes[source.id])}
                 onClick={() => syncMutation.mutate({ id: source.id, countryCode: countryCodes[source.id] })}
               >
                 {syncingId === source.id && <Spinner />}
                 Синхронизировать с панелью
               </Button>
+              {mayWrite && <RotateCredentialsDialog sourceId={source.id} sourceCode={source.code} canAutoSync={source.providerType !== "3X_UI"} />}
             </div>
           );
         },
       },
     ],
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [countryCodes, syncingId],
+    [countryCodes, syncingId, mayWrite],
   );
 
   return (

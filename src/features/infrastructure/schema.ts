@@ -22,3 +22,9 @@ export const createSourceSchema = z
     if (!apiToken) ctx.issues.push({ code: "custom", message: "Укажите вместе с базовым URL", path: ["apiToken"], input: apiToken });
   });
 export type CreateSourceValues = z.infer<typeof createSourceSchema>;
+
+export const rotateCredentialsSchema = z.object({
+  baseUrl: z.string().trim().min(1, "Укажите base URL"),
+  apiToken: z.string().trim().min(1, "Укажите API-токен"),
+});
+export type RotateCredentialsValues = z.infer<typeof rotateCredentialsSchema>;
