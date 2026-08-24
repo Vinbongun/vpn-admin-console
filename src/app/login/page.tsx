@@ -74,7 +74,7 @@ export default function LoginPage() {
       </div>
       <Card className="w-full max-w-md">
         <CardHeader className="items-center text-center">
-          <div className="mb-2 rounded-xl bg-primary p-3 text-primary-foreground">
+          <div className="mb-2 justify-self-center rounded-xl bg-primary p-3 text-primary-foreground">
             <ShieldCheck />
           </div>
           <CardTitle className="text-2xl">{step === "password" ? "VPN Platform" : "Подтвердите вход"}</CardTitle>
@@ -89,7 +89,7 @@ export default function LoginPage() {
                   name="email"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Рабочий email</FormLabel>
+                      <FormLabel>Email</FormLabel>
                       <FormControl>
                         <Input type="email" autoComplete="username" {...field} />
                       </FormControl>
@@ -120,7 +120,6 @@ export default function LoginPage() {
                   {passwordForm.formState.isSubmitting && <Spinner />}
                   Продолжить
                 </Button>
-                <p className="text-center text-xs text-muted-foreground">Сессия и права доступа проверяются на сервере.</p>
               </form>
             </Form>
           ) : (
@@ -159,9 +158,8 @@ export default function LoginPage() {
                   Подтвердить вход
                 </Button>
                 <Button className="w-full" type="button" variant="ghost" onClick={backToPassword}>
-                  Вернуться к email и паролю
+                  Ввести другой email
                 </Button>
-                <p className="text-center text-xs text-muted-foreground">Сессия и права доступа проверяются на сервере.</p>
               </form>
             </Form>
           )}

@@ -7,12 +7,19 @@ import { useState } from "react";
 import { adminApi } from "@/api/client";
 import type { OrderSummary } from "@/api/types";
 import { AppShell } from "@/components/app-shell";
+import { BrandFilter } from "@/components/brand-filter";
 import { DataTable, DataTablePagination } from "@/components/data-table";
 import { PageHeader } from "@/components/page-header";
+import { SectionHeader } from "@/components/section-header";
 import { StatCard } from "@/components/stat-card";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
+import { RevenueBarChart } from "@/features/finance/revenue-bar-chart";
+import { RevenueByPlan } from "@/features/finance/revenue-by-plan";
+import { useBrandFilter } from "@/hooks/use-brand-filter";
+import { formatCurrencyAmounts } from "@/lib/format-currency";
 
 const orderStatuses = ["PENDING", "PAID", "FAILED", "CANCELLED", "REFUNDED"] as const;
 const pageSize = 25;
@@ -35,20 +42,38 @@ const columns: ColumnDef<OrderSummary>[] = [
   },
 ];
 
+const revenuePeriods = [
+  { value: "day", label: "Сегодня", days: 1 },
+  { value: "week", label: "Неделя", days: 7 },
+  { value: "month", label: "Месяц", days: 30 },
+] as const;
+type RevenuePeriod = (typeof revenuePeriods)[number]["value"];
+
+function groupByCurrency<T extends { currency: string }>(rows: T[]): Map<string, T[]> {
+  const groups = new Map<string, T[]>();
+  for (const row of rows) {
+    const group = groups.get(row.currency) ?? [];
+    group.push(row);
+    groups.set(row.currency, group);
+  }
+  return groups;
+}
+
 export default function FinancePage() {
   const [page, setPage] = useState(1);
-  const [brandCode, setBrandCode] = useState("all");
   const [status, setStatus] = useState("all");
+  const [revenuePeriod, setRevenuePeriod] = useState<RevenuePeriod>("month");
+  const { selected, setSelected, brandCodes } = useBrandFilter();
+  const singleBrandCode = selected.length === 1 ? selected[0] : undefined;
 
-  const brands = useQuery({ queryKey: ["admin-brands"], queryFn: adminApi.listBrands, retry: false });
-  const summary = useQuery({ queryKey: ["admin-finance-summary"], queryFn: adminApi.getFinanceSummary, retry: false });
+  const summary = useQuery({ queryKey: ["admin-finance-summary", brandCodes], queryFn: () => adminApi.getFinanceSummary({ brandCodes }), retry: false });
   const orders = useQuery({
-    queryKey: ["admin-orders", page, brandCode, status],
+    queryKey: ["admin-orders", page, singleBrandCode, status],
     queryFn: () =>
       adminApi.listOrders({
         page,
         pageSize,
-        ...(brandCode !== "all" ? { brandCode } : {}),
+        ...(singleBrandCode ? { brandCode: singleBrandCode } : {}),
         ...(status !== "all" ? { status: status as (typeof orderStatuses)[number] } : {}),
       }),
     retry: false,
@@ -59,11 +84,19 @@ export default function FinancePage() {
     acc[row.currency] = (acc[row.currency] ?? 0) + row.amount;
     return acc;
   }, {});
+  const seriesByCurrency = groupByCurrency(summary.data?.revenueSeries ?? []);
+  const byPlanByCurrency = groupByCurrency(summary.data?.revenueByPlan ?? []);
 
   return (
     <AppShell>
-      <PageHeader title="Финансы" description="Оплаченные заказы, продления и выручка по брендам" />
+      <PageHeader title="Финансы" description="Оплаченные заказы, продления и выручка по брендам" actions={<BrandFilter selected={selected} onChange={setSelected} />} />
 
+      <SectionHeader title="Выручка" />
+      <div className="grid grid-cols-1 gap-4 @xl/main:grid-cols-3">
+        <StatCard label="Сегодня" icon={CircleDollarSign} value={summary.isLoading ? "…" : summary.isError ? "—" : formatCurrencyAmounts(summary.data?.revenueToday)} />
+        <StatCard label="7 дней" icon={CircleDollarSign} value={summary.isLoading ? "…" : summary.isError ? "—" : formatCurrencyAmounts(summary.data?.revenueLast7d)} />
+        <StatCard label="30 дней" icon={CircleDollarSign} value={summary.isLoading ? "…" : summary.isError ? "—" : formatCurrencyAmounts(summary.data?.revenueLast30d)} />
+      </div>
       <div className="grid grid-cols-1 gap-4 @xl/main:grid-cols-3">
         <StatCard
           label="Выручка всего"
@@ -97,59 +130,93 @@ export default function FinancePage() {
         </Card>
       )}
 
-      <Card>
-        <CardHeader>
-          <CardTitle>Фильтры</CardTitle>
-        </CardHeader>
-        <CardContent className="grid gap-3 md:grid-cols-2">
-          <Select
-            items={[{ value: "all", label: "Все бренды" }, ...(brands.data?.map((brand) => ({ value: brand.code, label: brand.name })) ?? [])]}
-            value={brandCode}
-            onValueChange={(value) => {
-              setBrandCode(value ?? "all");
-              setPage(1);
+      <SectionHeader
+        title="Выручка по дням"
+        description="Последние 30 дней"
+        actions={
+          <ToggleGroup
+            variant="outline"
+            spacing={0}
+            value={[revenuePeriod]}
+            onValueChange={(values) => {
+              const next = values[0];
+              if (next === "day" || next === "week" || next === "month") setRevenuePeriod(next);
             }}
           >
-            <SelectTrigger aria-label="Бренд">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">Все бренды</SelectItem>
-              {brands.data?.map((brand) => (
-                <SelectItem key={brand.id} value={brand.code}>
-                  {brand.name}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-          <Select
-            items={[{ value: "all", label: "Все статусы" }, ...orderStatuses.map((value) => ({ value, label: value }))]}
-            value={status}
-            onValueChange={(value) => {
-              setStatus(value ?? "all");
-              setPage(1);
-            }}
-          >
-            <SelectTrigger aria-label="Статус">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">Все статусы</SelectItem>
-              {orderStatuses.map((value) => (
-                <SelectItem key={value} value={value}>
-                  {value}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </CardContent>
-      </Card>
+            {revenuePeriods.map((period) => (
+              <ToggleGroupItem key={period.value} value={period.value}>
+                {period.label}
+              </ToggleGroupItem>
+            ))}
+          </ToggleGroup>
+        }
+      />
+      {seriesByCurrency.size === 0 ? (
+        <p className="text-sm text-muted-foreground">{summary.isLoading ? "Загрузка…" : "Нет данных за период."}</p>
+      ) : (
+        <div className="flex flex-col gap-4">
+          {[...seriesByCurrency.entries()].map(([currency, points]) => {
+            const sorted = [...points].sort((a, b) => a.date.localeCompare(b.date));
+            const days = revenuePeriods.find((period) => period.value === revenuePeriod)?.days ?? 30;
+            return (
+              <Card key={currency}>
+                <CardHeader>
+                  <CardTitle>{currency}</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <RevenueBarChart currency={currency} points={sorted.slice(-days)} />
+                </CardContent>
+              </Card>
+            );
+          })}
+        </div>
+      )}
+
+      <SectionHeader title="Выручка по тарифам" />
+      {byPlanByCurrency.size === 0 ? (
+        <p className="text-sm text-muted-foreground">{summary.isLoading ? "Загрузка…" : "Нет данных за период."}</p>
+      ) : (
+        <div className="flex flex-col gap-4">
+          {[...byPlanByCurrency.entries()].map(([currency, items]) => (
+            <Card key={currency}>
+              <CardHeader>
+                <CardTitle>{currency}</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <RevenueByPlan items={items} />
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+      )}
 
       <Card>
         <CardHeader>
           <CardTitle>Заказы</CardTitle>
         </CardHeader>
         <CardContent>
+          <div className="mb-4 grid gap-3 md:grid-cols-2">
+            <Select
+              items={[{ value: "all", label: "Все статусы" }, ...orderStatuses.map((value) => ({ value, label: value }))]}
+              value={status}
+              onValueChange={(value) => {
+                setStatus(value ?? "all");
+                setPage(1);
+              }}
+            >
+              <SelectTrigger aria-label="Статус">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Все статусы</SelectItem>
+                {orderStatuses.map((value) => (
+                  <SelectItem key={value} value={value}>
+                    {value}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
           <DataTable
             columns={columns}
             data={orders.data?.items ?? []}
