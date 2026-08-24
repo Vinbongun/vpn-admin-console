@@ -272,7 +272,6 @@ export default function InfrastructurePage() {
 
 function SourcesCard({ sources, mayWrite }: { sources: ReturnType<typeof useQuery<Awaited<ReturnType<typeof adminApi.listControlPlaneSources>>>>; mayWrite: boolean }) {
   const queryClient = useQueryClient();
-  const [countryCodes, setCountryCodes] = useState<Record<string, string>>({});
   const [syncingId, setSyncingId] = useState<string>();
   const [selectedSourceId, setSelectedSourceId] = useState<string>();
   const [sourceCountryFilter, setSourceCountryFilter] = useState("all");
@@ -314,26 +313,15 @@ function SourcesCard({ sources, mayWrite }: { sources: ReturnType<typeof useQuer
         header: "Синхронизация",
         cell: ({ row }) => {
           const source = row.original;
+          const needsCountry = source.providerType === "3X_UI" && !source.countryCode;
           return (
             <div className="flex items-center gap-2" onClick={(event) => event.stopPropagation()}>
-              {source.providerType === "3X_UI" && (
-                <div className="flex items-center gap-1.5" title="3x-ui не сообщает страну панели сама — код нужно указывать перед каждой синхронизацией">
-                  <span className="whitespace-nowrap text-xs text-muted-foreground">Страна:</span>
-                  <Input
-                    aria-label="Код страны для синхронизации"
-                    placeholder="DE"
-                    maxLength={2}
-                    className="w-14"
-                    value={countryCodes[source.id] ?? ""}
-                    onChange={(event) => setCountryCodes((value) => ({ ...value, [source.id]: event.target.value.toUpperCase() }))}
-                  />
-                </div>
-              )}
               <Button
                 size="sm"
                 variant="outline"
-                disabled={syncingId === source.id || (source.providerType === "3X_UI" && !countryCodes[source.id])}
-                onClick={() => syncMutation.mutate({ id: source.id, countryCode: countryCodes[source.id] })}
+                disabled={syncingId === source.id || needsCountry}
+                title={needsCountry ? "3x-ui не сообщает страну панели сама — задайте её в редактировании панели, чтобы синхронизировать" : undefined}
+                onClick={() => syncMutation.mutate({ id: source.id, countryCode: source.countryCode ?? undefined })}
               >
                 {syncingId === source.id && <Spinner />}
                 Синхронизировать с панелью
@@ -345,7 +333,7 @@ function SourcesCard({ sources, mayWrite }: { sources: ReturnType<typeof useQuer
       },
     ],
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [countryCodes, syncingId, mayWrite],
+    [syncingId, mayWrite],
   );
 
   const sourceCountries = [...new Set((sources.data ?? []).map((source) => source.countryCode).filter(Boolean))].sort();
