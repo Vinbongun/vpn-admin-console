@@ -13,10 +13,12 @@ import { PageHeader } from "@/components/page-header";
 import { StatCard } from "@/components/stat-card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardAction, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Spinner } from "@/components/ui/spinner";
+import { CreateSourceDialog } from "@/features/infrastructure/create-source-dialog";
+import { can } from "@/lib/access-control";
 
 const pageSize = 25;
 
@@ -73,6 +75,8 @@ export default function InfrastructurePage() {
   const [incidentStatus, setIncidentStatus] = useState<AdminInfrastructureIncidentQuery["status"] | "all">("all");
   const [severity, setSeverity] = useState<AdminInfrastructureIncidentQuery["severity"] | "all">("all");
 
+  const staff = useQuery({ queryKey: ["staff-session"], queryFn: adminApi.getSession, retry: false });
+  const mayWrite = can(staff.data, "infrastructure.write");
   const summary = useQuery({ queryKey: ["admin-infrastructure-summary"], queryFn: adminApi.getInfrastructureSummary, retry: false });
   const sources = useQuery({ queryKey: ["admin-infrastructure-sources"], queryFn: adminApi.listControlPlaneSources, retry: false });
   const endpoints = useQuery({
@@ -120,7 +124,7 @@ export default function InfrastructurePage() {
         ))}
       </div>
 
-      <SourcesCard sources={sources} />
+      <SourcesCard sources={sources} mayWrite={mayWrite} />
 
       <Card>
         <CardHeader>
@@ -225,7 +229,7 @@ export default function InfrastructurePage() {
   );
 }
 
-function SourcesCard({ sources }: { sources: ReturnType<typeof useQuery<Awaited<ReturnType<typeof adminApi.listControlPlaneSources>>>> }) {
+function SourcesCard({ sources, mayWrite }: { sources: ReturnType<typeof useQuery<Awaited<ReturnType<typeof adminApi.listControlPlaneSources>>>>; mayWrite: boolean }) {
   const queryClient = useQueryClient();
   const [countryCodes, setCountryCodes] = useState<Record<string, string>>({});
   const [syncingId, setSyncingId] = useState<string>();
@@ -301,6 +305,11 @@ function SourcesCard({ sources }: { sources: ReturnType<typeof useQuery<Awaited<
       <CardHeader>
         <CardTitle>Источники control plane</CardTitle>
         <CardDescription>Панели Remnawave и 3x-ui, из которых платформа получает список серверов и их состояние</CardDescription>
+        {mayWrite && (
+          <CardAction>
+            <CreateSourceDialog />
+          </CardAction>
+        )}
       </CardHeader>
       <CardContent>
         <DataTable

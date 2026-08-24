@@ -902,7 +902,8 @@ export interface paths {
         };
         get: operations["listControlPlaneSources"];
         put?: never;
-        post?: never;
+        /** @description Only registers the source row - credentials are never stored in the database. Set `{CODE}_BASE_URL`/`{CODE}_API_TOKEN` (or `{PROVIDER_TYPE}_...` as a fallback) in the backend's own environment and restart it before this source can actually sync. */
+        post: operations["createControlPlaneSource"];
         delete?: never;
         options?: never;
         head?: never;
@@ -1436,7 +1437,7 @@ export interface components {
         };
         UpsertProfileBinding: {
             /** @enum {string} */
-            providerType: "REMNAWAVE" | "THREE_X_UI" | "HYSTERIA2" | "WIREGUARD";
+            providerType: "REMNAWAVE" | "3X_UI" | "HYSTERIA2" | "WIREGUARD";
             providerBindingRef: string;
             /** @description Plaintext exists only in the authenticated request and process memory. */
             profileUri: string;
@@ -3470,6 +3471,53 @@ export interface operations {
             };
         };
     };
+    createControlPlaneSource: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    code: string;
+                    /** @enum {string} */
+                    providerType: "REMNAWAVE" | "3X_UI" | "HYSTERIA2" | "WIREGUARD";
+                    /**
+                     * @default ACTIVE
+                     * @enum {string}
+                     */
+                    status?: "ACTIVE" | "INACTIVE";
+                };
+            };
+        };
+        responses: {
+            /** @description Source created; requires infrastructure.write */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ControlPlaneSourceSummary"];
+                };
+            };
+            /** @description Missing infrastructure.write permission */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description A source with this code already exists */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
     syncControlPlaneSource: {
         parameters: {
             query?: never;
@@ -3482,7 +3530,7 @@ export interface operations {
         requestBody?: {
             content: {
                 "application/json": {
-                    /** @description Required for THREE_X_UI sources - 3x-ui's own API has no concept of which country a panel is in. Not needed for REMNAWAVE sources. */
+                    /** @description Required for 3X_UI sources - 3x-ui's own API has no concept of which country a panel is in. Not needed for REMNAWAVE sources. */
                     countryCode?: string;
                 };
             };

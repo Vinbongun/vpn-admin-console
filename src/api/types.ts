@@ -54,6 +54,7 @@ export type CreateBrand = NonNullable<operations["createAdminBrand"]["requestBod
 export type SetPlanPrice = NonNullable<operations["setPlanPrice"]["requestBody"]>["content"]["application/json"];
 export type CreatePlan = NonNullable<operations["createAdminPlan"]["requestBody"]>["content"]["application/json"];
 export type SyncSourceInventory = NonNullable<operations["syncControlPlaneSource"]["requestBody"]>["content"]["application/json"];
+export type CreateControlPlaneSource = operations["createControlPlaneSource"]["requestBody"]["content"]["application/json"];
 export type OrderSummary = Schemas["OrderSummary"];
 export type OrderPage = Schemas["OrderPage"];
 export type FinanceSummary = Schemas["FinanceSummary"];
