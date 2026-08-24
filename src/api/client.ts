@@ -5,6 +5,7 @@ import type {
   AdminAuditQuery,
   AdminCustomerQuery,
   AdminDashboardQuery,
+  AdminEndpointGroupQuery,
   AdminFinanceQuery,
   AdminInfrastructureEndpointQuery,
   AdminInfrastructureIncidentQuery,
@@ -88,7 +89,8 @@ export const adminApi = {
   listBrands: async () => unwrap(await client.GET("/admin/v1/brands", { headers: staffHeaders() })),
   createBrand: async (body: CreateBrand) => unwrap(await client.POST("/admin/v1/brands", { body, headers: staffHeaders() })),
   updateBrand: async (brandId: string, body: UpdateBrand) => unwrap(await client.PATCH("/admin/v1/brands/{id}", { params: { path: { id: brandId } }, body, headers: staffHeaders() })),
-  listEndpointGroups: async () => unwrap(await client.GET("/admin/v1/infrastructure/endpoint-groups", { params: { query: { page: 1, pageSize: 100 } }, headers: staffHeaders() })),
+  listEndpointGroups: async (query: AdminEndpointGroupQuery = {}) =>
+    unwrap(await client.GET("/admin/v1/infrastructure/endpoint-groups", { params: { query: { page: 1, pageSize: 100, ...query } }, headers: staffHeaders() })),
   getEndpointGroup: async (groupId: string) => unwrap(await client.GET("/admin/v1/infrastructure/endpoint-groups/{id}", { params: { path: { id: groupId } }, headers: staffHeaders() })),
   createEndpointGroup: async (body: CreateEndpointGroup) => unwrap(await client.POST("/admin/v1/infrastructure/endpoint-groups", { body, headers: staffHeaders() })),
   updateEndpointGroup: async (groupId: string, body: UpdateEndpointGroup) => unwrap(await client.PATCH("/admin/v1/infrastructure/endpoint-groups/{id}", { params: { path: { id: groupId } }, body, headers: staffHeaders() })),

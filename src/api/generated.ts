@@ -2015,6 +2015,12 @@ export interface components {
             routeClass: string;
             /** @enum {string} */
             status: "ACTIVE" | "ARCHIVED";
+            /**
+             * Format: uuid
+             * @description Fixed at creation - a server package belongs to exactly one brand and cannot be reassigned to another.
+             */
+            brandId: string;
+            brandCode: string;
             /** Format: date-time */
             createdAt?: string;
             /** Format: date-time */
@@ -2047,6 +2053,8 @@ export interface components {
             plans: components["schemas"]["EndpointGroupPlanRef"][];
         };
         CreateEndpointGroup: {
+            /** Format: uuid */
+            brandId: string;
             code: string;
             name: string;
             routeClass?: string;
@@ -4867,6 +4875,7 @@ export interface operations {
                 page?: number;
                 pageSize?: number;
                 status?: "ACTIVE" | "ARCHIVED";
+                brandId?: string;
             };
             header?: never;
             path?: never;
