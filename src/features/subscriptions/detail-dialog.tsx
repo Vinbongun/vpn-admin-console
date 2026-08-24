@@ -75,11 +75,13 @@ function SubscriptionDetailBody({
       <DialogHeader className="border-b p-6 pb-4">
         <DialogTitle>{subscription.customerEmail}</DialogTitle>
         <DialogDescription>{subscription.id}</DialogDescription>
+      </DialogHeader>
+      <div className="flex flex-col gap-6 overflow-y-auto p-6">
         {mayViewCustomer && subscription.customerId && (
           <Button
             size="sm"
-            variant="link"
-            className="h-auto self-start p-0"
+            variant="outline"
+            className="self-start"
             render={<Link href={`/users?customerId=${subscription.customerId}`} />}
             nativeButton={false}
           >
@@ -87,8 +89,6 @@ function SubscriptionDetailBody({
             Перейти к клиенту
           </Button>
         )}
-      </DialogHeader>
-      <div className="flex flex-col gap-6 overflow-y-auto p-6">
         <dl className="grid grid-cols-2 gap-y-2 text-sm">
           <dt className="text-muted-foreground">Привязка к бренду</dt>
           <dd className="truncate">{subscription.brandMembershipId ?? "—"}</dd>
