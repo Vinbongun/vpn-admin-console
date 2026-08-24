@@ -57,14 +57,14 @@ function EndpointEditBody({ endpoint, mayWrite, onClose }: { endpoint: Infrastru
   const mutation = useMutation({
     mutationFn: (values: UpdateEndpointValues) => adminApi.updateInfrastructureEndpoint(endpoint.id, values),
     onSuccess: async () => {
-      toast.success("Endpoint обновлён.");
+      toast.success("Сервер обновлён.");
       onClose();
       await Promise.all([
         queryClient.invalidateQueries({ queryKey: ["admin-infrastructure-endpoints"] }),
         queryClient.invalidateQueries({ queryKey: ["admin-infrastructure-endpoints-all"] }),
       ]);
     },
-    onError: (error) => toast.error(error instanceof ApiError ? apiErrorMessage(error) : "Не удалось обновить endpoint."),
+    onError: (error) => toast.error(error instanceof ApiError ? apiErrorMessage(error) : "Не удалось обновить сервер."),
   });
 
   const submit = form.handleSubmit((values) => mutation.mutate(values));

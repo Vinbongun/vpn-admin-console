@@ -46,7 +46,7 @@ function providerLabel(providerType: string) {
 const endpointColumns: ColumnDef<InfrastructureEndpointSummary>[] = [
   {
     accessorKey: "name",
-    header: "Endpoint",
+    header: "Сервер",
     cell: ({ row }) => (
       <span className="font-medium">
         <EndpointName name={row.original.name} />
@@ -65,7 +65,7 @@ const incidentColumns: ColumnDef<InfrastructureIncidentSummary>[] = [
   { id: "severity", header: "Критичность", cell: ({ row }) => <Badge>{row.original.severity}</Badge> },
   { id: "status", header: "Статус", cell: ({ row }) => <Badge>{row.original.status}</Badge> },
   { accessorKey: "kind", header: "Тип" },
-  { id: "endpointName", header: "Endpoint", cell: ({ row }) => (row.original.endpointName ? <EndpointName name={row.original.endpointName} /> : "—") },
+  { id: "endpointName", header: "Сервер", cell: ({ row }) => (row.original.endpointName ? <EndpointName name={row.original.endpointName} /> : "—") },
   {
     id: "summary",
     header: "Описание",
@@ -124,7 +124,7 @@ export default function InfrastructurePage() {
   const incidentPages = Math.max(1, Math.ceil((incidents.data?.total ?? 0) / (incidents.data?.pageSize ?? pageSize)));
   const counters = [
     { label: "Панели", value: summary.data?.sources, icon: RadioTower },
-    { label: "Endpoints", value: summary.data?.endpoints, icon: Server },
+    { label: "Серверы", value: summary.data?.endpoints, icon: Server },
     { label: "Исправны", value: summary.data?.healthy, icon: Activity },
     { label: "Неисправны", value: summary.data?.unhealthy, icon: CircleAlert },
     { label: "Открытые инциденты", value: summary.data?.openIncidents, icon: CircleAlert },
@@ -132,7 +132,7 @@ export default function InfrastructurePage() {
 
   return (
     <AppShell>
-      <PageHeader title="Инфраструктура" description="Список серверов (endpoint'ов), их состояние здоровья и открытые инциденты — клик по строке панели или endpoint'а открывает редактирование" />
+      <PageHeader title="Инфраструктура" description="Список серверов, их состояние здоровья и открытые инциденты — клик по строке панели или сервера открывает редактирование" />
 
       <div className="grid grid-cols-1 gap-4 @xl/main:grid-cols-2 @5xl/main:grid-cols-5">
         {counters.map(({ label, value, icon: Icon }) => (
@@ -144,7 +144,7 @@ export default function InfrastructurePage() {
 
       <Card id="endpoints" className="scroll-mt-(--header-height)">
         <CardHeader>
-          <CardTitle>Endpoints</CardTitle>
+          <CardTitle>Серверы</CardTitle>
           <CardDescription>Серверы платформы по всем панелям — страна, протокол и состояние здоровья</CardDescription>
         </CardHeader>
         <CardContent>
@@ -273,13 +273,15 @@ export default function InfrastructurePage() {
 function SourcesCard({ sources, mayWrite }: { sources: ReturnType<typeof useQuery<Awaited<ReturnType<typeof adminApi.listControlPlaneSources>>>>; mayWrite: boolean }) {
   const queryClient = useQueryClient();
   const [syncingId, setSyncingId] = useState<string>();
+  const [bulkSyncing, setBulkSyncing] = useState(false);
   const [selectedSourceId, setSelectedSourceId] = useState<string>();
   const [sourceCountryFilter, setSourceCountryFilter] = useState("all");
+  const anySyncing = bulkSyncing || Boolean(syncingId);
   const syncMutation = useMutation({
     mutationFn: ({ id, countryCode }: { id: string; countryCode?: string }) => adminApi.syncSource(id, countryCode ? { countryCode } : {}),
     onMutate: ({ id }) => setSyncingId(id),
     onSuccess: async (result) => {
-      toast.success(`Найдено endpoint'ов: ${result.count}`);
+      toast.success(`Найдено серверов: ${result.count}`);
       await Promise.all([
         queryClient.invalidateQueries({ queryKey: ["admin-infrastructure-sources"] }),
         queryClient.invalidateQueries({ queryKey: ["admin-infrastructure-endpoints"] }),
@@ -289,6 +291,48 @@ function SourcesCard({ sources, mayWrite }: { sources: ReturnType<typeof useQuer
     onError: (error) => toast.error(error instanceof ApiError ? apiErrorMessage(error) : "Не удалось синхронизировать"),
     onSettled: () => setSyncingId(undefined),
   });
+
+  const syncAll = async () => {
+    const targets = (sources.data ?? []).filter((source) => source.status === "ACTIVE");
+    if (targets.length === 0) {
+      toast.error("Нет активных панелей для синхронизации.");
+      return;
+    }
+    setBulkSyncing(true);
+    let okCount = 0;
+    const failures: { code: string; message: string }[] = [];
+    for (let i = 0; i < targets.length; i++) {
+      const source = targets[i];
+      setSyncingId(source.id);
+      const needsCountry = source.providerType === "3X_UI" && !source.countryCode;
+      if (needsCountry) {
+        failures.push({ code: source.code, message: "Не задана страна панели — заполните её в редактировании панели" });
+      } else {
+        try {
+          const result = await adminApi.syncSource(source.id, source.countryCode ? { countryCode: source.countryCode } : {});
+          okCount += 1;
+          void result;
+        } catch (error) {
+          failures.push({ code: source.code, message: error instanceof ApiError ? apiErrorMessage(error) : "Не удалось синхронизировать" });
+        }
+      }
+      if (i < targets.length - 1) await new Promise((resolve) => setTimeout(resolve, 400));
+    }
+    setSyncingId(undefined);
+    setBulkSyncing(false);
+    await Promise.all([
+      queryClient.invalidateQueries({ queryKey: ["admin-infrastructure-sources"] }),
+      queryClient.invalidateQueries({ queryKey: ["admin-infrastructure-endpoints"] }),
+      queryClient.invalidateQueries({ queryKey: ["admin-infrastructure-summary"] }),
+    ]);
+    if (failures.length === 0) {
+      toast.success(`Синхронизировано панелей: ${okCount} из ${targets.length}.`);
+    } else {
+      toast.error(`Успешно: ${okCount}, с ошибкой: ${failures.length} из ${targets.length}`, {
+        description: failures.map((failure) => `${failure.code}: ${failure.message}`).join("\n"),
+      });
+    }
+  };
 
   const columns = useMemo<ColumnDef<ControlPlaneSourceSummary>[]>(
     () => [
@@ -306,7 +350,7 @@ function SourcesCard({ sources, mayWrite }: { sources: ReturnType<typeof useQuer
           </div>
         ),
       },
-      { accessorKey: "endpointCount", header: "Endpoints" },
+      { accessorKey: "endpointCount", header: "Серверы" },
       { accessorKey: "unhealthyCount", header: "Неисправны" },
       {
         id: "sync",
@@ -319,7 +363,7 @@ function SourcesCard({ sources, mayWrite }: { sources: ReturnType<typeof useQuer
               <Button
                 size="sm"
                 variant="outline"
-                disabled={syncingId === source.id || needsCountry}
+                disabled={anySyncing || needsCountry}
                 title={needsCountry ? "3x-ui не сообщает страну панели сама — задайте её в редактировании панели, чтобы синхронизировать" : undefined}
                 onClick={() => syncMutation.mutate({ id: source.id, countryCode: source.countryCode ?? undefined })}
               >
@@ -333,7 +377,7 @@ function SourcesCard({ sources, mayWrite }: { sources: ReturnType<typeof useQuer
       },
     ],
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [syncingId, mayWrite],
+    [syncingId, anySyncing, mayWrite],
   );
 
   const sourceCountries = [...new Set((sources.data ?? []).map((source) => source.countryCode).filter(Boolean))].sort();
@@ -344,11 +388,15 @@ function SourcesCard({ sources, mayWrite }: { sources: ReturnType<typeof useQuer
       <CardHeader>
         <CardTitle>Панели управления</CardTitle>
         <CardDescription>Панели Remnawave и 3x-ui, из которых платформа получает список серверов и их состояние</CardDescription>
-        {mayWrite && (
-          <CardAction>
-            <CreateSourceDialog />
-          </CardAction>
-        )}
+        <CardAction>
+          <div className="flex items-center gap-2">
+            <Button size="sm" variant="outline" disabled={anySyncing || !sources.data?.length} onClick={syncAll}>
+              {bulkSyncing && <Spinner />}
+              Обновить все панели
+            </Button>
+            {mayWrite && <CreateSourceDialog />}
+          </div>
+        </CardAction>
       </CardHeader>
       <CardContent>
         {sourceCountries.length > 0 && (

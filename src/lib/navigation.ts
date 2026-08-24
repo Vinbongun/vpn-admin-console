@@ -39,7 +39,7 @@ export const navigation = [
     permission: "infrastructure.read",
     items: [
       { label: "Панели", hash: "sources" },
-      { label: "Endpoints", hash: "endpoints" },
+      { label: "Серверы", hash: "endpoints" },
       { label: "Инциденты", hash: "incidents" },
     ],
   },
