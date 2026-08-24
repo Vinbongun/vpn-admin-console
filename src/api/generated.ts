@@ -276,8 +276,41 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** @description Pays for a plan through the mock payment provider synchronously (there is no real gateway yet) and activates or renews the subscription in the same request. Renewal vs. new subscription is decided by the backend: any non-REVOKED subscription already on this membership+plan is renewed (expiry extended from whichever is later, now or its current expiry - early renewal never loses paid time); otherwise a new subscription is created starting now. */
+        /** @description Opens a PENDING order + PENDING payment_intent (stamped with the brand's default gateway/method - checkout stays hidden from the customer) and returns immediately; it does NOT pay or activate anything yet. The customer-portal is expected to drive its own mock "enter your card" page against the returned orderId, then call POST .../{id}/confirm to actually resolve it. Renewal vs. new subscription is a preview only here - the real decision is made fresh at confirm time. */
         post: operations["createOrder"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/customer/v1/orders/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["getOrder"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/customer/v1/orders/{id}/confirm": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** @description Stands in for a real gateway's payment-result webhook, driven by the customer-portal's own mock "enter your card" page. A card number starting with `22222` approves the charge (and only then activates/renews the subscription); anything else - including a `55555` prefix - declines it. Only the full card digits' last 4 are ever stored (`maskedPan`), mirroring what a real gateway would return. */
+        post: operations["confirmOrder"];
         delete?: never;
         options?: never;
         head?: never;
@@ -633,6 +666,106 @@ export interface paths {
         patch: operations["updateAdminBrand"];
         trace?: never;
     };
+    "/admin/v1/brands/{id}/payment-methods": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["listBrandPaymentMethods"];
+        /** @description Full replace of which payment methods this brand can use, and which one is the default createOrder() picks (checkout stays hidden from the customer - no gateway/method choice on their side). At most one default per brand. */
+        put: operations["replaceBrandPaymentMethods"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/v1/payment-gateways": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["listPaymentGateways"];
+        put?: never;
+        /** @description Every gateway has its own credential shape (login/password, API key, a base path, ...) so `credentials` is an opaque string map, encrypted (AES-256-GCM) and never returned by this or any other endpoint once stored. */
+        post: operations["createPaymentGateway"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/v1/payment-gateways/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /** @description "Deleting" a gateway from the admin UI is a status flip to INACTIVE, not a real DELETE - historical payment_intents keep a foreign key to it. */
+        patch: operations["updatePaymentGateway"];
+        trace?: never;
+    };
+    "/admin/v1/payment-gateways/{id}/credentials": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put: operations["setPaymentGatewayCredentials"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/v1/payment-gateways/{id}/methods": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["createPaymentMethod"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/v1/payment-gateways/{id}/methods/{methodId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /** @description "Deleting" a method is a status flip to INACTIVE, not a real DELETE. */
+        patch: operations["updatePaymentMethod"];
+        trace?: never;
+    };
     "/admin/v1/plans": {
         parameters: {
             query?: never;
@@ -689,6 +822,88 @@ export interface paths {
             cookie?: never;
         };
         get: operations["getFinanceSummary"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/v1/payments": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description The payment_intents-centric view of the same data /admin/v1/orders shows order-centric - a payment always belongs to exactly one order in this mock flow (no retries yet), but carries gateway/method/failure/refund detail the order itself doesn't. */
+        get: operations["listPayments"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/v1/payments/summary": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["getPaymentsSummary"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/v1/payments/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["getPayment"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/v1/payments/{id}/refund": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** @description Only a SUCCEEDED payment can be refunded. On success: the subscription tied to the order is revoked immediately (SubscriptionService.revoke - not just a financial record). `simulateFailure` is a deliberate test-only flag (not a random %) to exercise the failed-refund path on demand - remove it once a real gateway that can genuinely fail a refund is wired up. */
+        post: operations["refundPayment"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/v1/payment-logs": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["listPaymentLogs"];
         put?: never;
         post?: never;
         delete?: never;
@@ -927,6 +1142,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/admin/v1/infrastructure/sources/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /** @description providerType is intentionally not editable - changing it after creation would desync the row from the read/write adapter actually used to reach the panel. To change credentials use PUT .../credentials instead. */
+        patch: operations["updateControlPlaneSource"];
+        trace?: never;
+    };
     "/admin/v1/infrastructure/sources/{id}/credentials": {
         parameters: {
             query?: never;
@@ -974,6 +1206,23 @@ export interface paths {
         options?: never;
         head?: never;
         patch?: never;
+        trace?: never;
+    };
+    "/admin/v1/infrastructure/endpoints/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /** @description Only healthStatus (manual override) and comment are editable - name/countryCode/city/ protocol/transport are overwritten wholesale by every inventory sync from the live panel, so exposing them for editing here would be misleading. */
+        patch: operations["updateInfrastructureEndpoint"];
         trace?: never;
     };
     "/admin/v1/infrastructure/incidents": {
@@ -1266,14 +1515,51 @@ export interface components {
             code: string;
             name: string;
             status: string;
-            /** @description Free-form; `settings.public` is what GET /customer/v1/brand-config exposes verbatim, and `settings.hostnames` is the array used to resolve a brand by domain. */
-            settings: {
-                [key: string]: unknown;
+            /** @description Admin-only reference link to this brand's customer portal. */
+            portalUrl: string | null;
+            /** @description Admin-only reference link to the brand's marketing homepage. */
+            homepageUrl: string | null;
+            /** @description Domains GET /customer/v1/brand-config resolves this brand by. */
+            hostnames: string[];
+            /** @description Exposed verbatim (merged) by GET /customer/v1/brand-config. */
+            public: {
+                logoUrl: string | null;
+                faviconUrl: string | null;
+                supportEmail: string | null;
+                termsUrl: string | null;
+                privacyUrl: string | null;
             };
             /** Format: date-time */
             createdAt?: string;
             /** Format: date-time */
             updatedAt?: string;
+        };
+        BrandPaymentMethod: {
+            /** Format: uuid */
+            id: string;
+            code: string;
+            name: string;
+            gatewayCode: string;
+            gatewayName: string;
+            isDefault: boolean;
+        };
+        PaymentMethod: {
+            /** Format: uuid */
+            id: string;
+            code: string;
+            name: string;
+            /** @enum {string} */
+            status: "ACTIVE" | "INACTIVE";
+        };
+        PaymentGateway: {
+            /** Format: uuid */
+            id: string;
+            code: string;
+            name: string;
+            /** @enum {string} */
+            status: "ACTIVE" | "INACTIVE";
+            credentialsStored: boolean;
+            methods: components["schemas"]["PaymentMethod"][];
         };
         PlanSummary: {
             /** Format: uuid */
@@ -1293,9 +1579,36 @@ export interface components {
                 periodDays?: number;
             } | null;
         };
+        OrderOpened: {
+            /** Format: uuid */
+            orderId: string;
+            /** Format: uuid */
+            paymentIntentId: string;
+            /** @enum {string} */
+            status: "PENDING";
+            /** @enum {string} */
+            kind: "NEW" | "RENEWAL";
+            amount: number;
+            currency: string;
+        };
+        OrderState: {
+            /** Format: uuid */
+            id: string;
+            /** @enum {string} */
+            status: "PENDING" | "PAID" | "FAILED" | "CANCELLED" | "REFUNDED";
+            /** @enum {string} */
+            kind: "NEW" | "RENEWAL";
+            amount: number;
+            currency: string;
+            /** Format: uuid */
+            subscriptionId: string | null;
+            failureReason: string | null;
+        };
         OrderResult: {
             /** Format: uuid */
             orderId: string;
+            /** @enum {string} */
+            status: "SUCCEEDED";
             /** Format: uuid */
             subscriptionId: string;
             /** @enum {string} */
@@ -1307,6 +1620,14 @@ export interface components {
             startsAt: string;
             /** Format: date-time */
             expiresAt: string;
+        };
+        OrderDeclined: {
+            /** Format: uuid */
+            orderId: string;
+            /** @enum {string} */
+            status: "FAILED";
+            /** @enum {string} */
+            failureReason: "INSUFFICIENT_FUNDS" | "CARD_DECLINED" | "GATEWAY_ERROR" | "TIMEOUT" | "CANCELLED_BY_CUSTOMER" | "OTHER";
         };
         CustomerPurchasablePlan: {
             /** Format: uuid */
@@ -1377,6 +1698,68 @@ export interface components {
                 currency: string;
                 amount: number;
             }[];
+        };
+        PaymentSummary: {
+            /** Format: uuid */
+            id: string;
+            /** Format: uuid */
+            orderId: string;
+            brandCode: string;
+            customerEmail: string;
+            planCode: string;
+            planName: string;
+            amount: number;
+            currency: string;
+            /** @enum {string} */
+            status: "PENDING" | "SUCCEEDED" | "FAILED" | "REFUNDED";
+            gatewayCode?: string | null;
+            methodName?: string | null;
+            failureReason?: string | null;
+            maskedPan?: string | null;
+            /** Format: date-time */
+            createdAt?: string;
+            /** Format: date-time */
+            refundedAt?: string | null;
+        };
+        PaymentPage: components["schemas"]["PageMetadata"] & {
+            items: components["schemas"]["PaymentSummary"][];
+        };
+        PaymentGatewayLog: {
+            /** Format: uuid */
+            id: string;
+            /** Format: uuid */
+            paymentIntentId?: string;
+            /** @enum {string} */
+            eventType: "CHARGE_ATTEMPT" | "CHARGE_RESULT" | "REFUND_REQUESTED" | "REFUND_RESULT";
+            /** @enum {string} */
+            level: "INFO" | "ERROR";
+            message: string;
+            payload: {
+                [key: string]: unknown;
+            };
+            /** Format: date-time */
+            createdAt: string;
+        };
+        PaymentDetail: components["schemas"]["PaymentSummary"] & {
+            /** @enum {string} */
+            kind: "NEW" | "RENEWAL";
+            /** Format: uuid */
+            subscriptionId: string | null;
+            methodCode: string | null;
+            logs: components["schemas"]["PaymentGatewayLog"][];
+        };
+        PaymentLogPage: components["schemas"]["PageMetadata"] & {
+            items: components["schemas"]["PaymentGatewayLog"][];
+        };
+        PaymentsSummary: {
+            today: components["schemas"]["PaymentsSummaryWindow"];
+            last7d: components["schemas"]["PaymentsSummaryWindow"];
+            last30d: components["schemas"]["PaymentsSummaryWindow"];
+        };
+        PaymentsSummaryWindow: {
+            pending: number;
+            succeeded: number;
+            failed: number;
         };
         DashboardOverview: {
             revenue: {
@@ -1567,6 +1950,9 @@ export interface components {
             capabilities: {
                 [key: string]: unknown;
             };
+            /** @description ISO 3166-1 alpha-2 code of where the control panel itself is hosted. */
+            countryCode?: string | null;
+            comment?: string | null;
             /** Format: date-time */
             lastInventoryAt?: string | null;
             lastInventoryStatus?: string | null;
@@ -1584,6 +1970,7 @@ export interface components {
             protocol: string;
             transport?: string | null;
             healthStatus: string;
+            comment?: string | null;
             /** Format: date-time */
             lastSeenAt?: string | null;
             /** Format: date-time */
@@ -2181,22 +2568,22 @@ export interface operations {
                     brandMembershipId: string;
                     /** Format: uuid */
                     planId: string;
-                    /** @description Best-effort: only applied on a NEW (not renewal) order; an invalid, unknown, or self-referral code is silently ignored rather than failing the purchase. */
+                    /** @description Stored on the order and only applied at confirm time, on a NEW (not renewal) order; an invalid, unknown, or self-referral code is silently ignored rather than failing the purchase. */
                     referralCode?: string;
                 };
             };
         };
         responses: {
-            /** @description Paid order and the resulting subscription state */
+            /** @description Order opened, awaiting confirmation */
             201: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["OrderResult"];
+                    "application/json": components["schemas"]["OrderOpened"];
                 };
             };
-            /** @description Membership/plan/brand mismatch */
+            /** @description Membership/plan/brand mismatch, the plan has no price set, or the brand has no default payment method configured */
             400: {
                 headers: {
                     [name: string]: unknown;
@@ -2205,6 +2592,91 @@ export interface operations {
             };
             /** @description Invalid customer session */
             401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    getOrder: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Current order/payment state, scoped to the calling customer */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["OrderState"];
+                };
+            };
+            /** @description Invalid customer session */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Order not found (or belongs to another customer) */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    confirmOrder: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    cardNumber: string;
+                };
+            };
+        };
+        responses: {
+            /** @description Order resolved (approved or declined) */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["OrderResult"] | components["schemas"]["OrderDeclined"];
+                };
+            };
+            /** @description Invalid customer session */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Order not found (or belongs to another customer) */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description This order has already been resolved */
+            409: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -2979,9 +3451,24 @@ export interface operations {
                     name?: string;
                     /** @enum {string} */
                     status?: "ACTIVE" | "ARCHIVED";
-                    /** @description Replaces the entire settings object (not a merge) - `public.*` is exposed verbatim by GET /customer/v1/brand-config, and `hostnames` is the array used to resolve a brand by domain. */
-                    settings?: {
-                        [key: string]: unknown;
+                    /** Format: uri */
+                    portalUrl?: string;
+                    /** Format: uri */
+                    homepageUrl?: string;
+                    /** @description Replaces the whole list (not a merge). */
+                    hostnames?: string[];
+                    /** @description Merged key-by-key into the existing `public` object (not a full replace) - sending only supportEmail leaves a previously-set logoUrl untouched. */
+                    public?: {
+                        /** Format: uri */
+                        logoUrl?: string;
+                        /** Format: uri */
+                        faviconUrl?: string;
+                        /** Format: email */
+                        supportEmail?: string;
+                        /** Format: uri */
+                        termsUrl?: string;
+                        /** Format: uri */
+                        privacyUrl?: string;
                     };
                 };
             };
@@ -2997,6 +3484,312 @@ export interface operations {
                 };
             };
             /** @description Brand not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    listBrandPaymentMethods: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Payment methods enabled for this brand */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BrandPaymentMethod"][];
+                };
+            };
+        };
+    };
+    replaceBrandPaymentMethods: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    paymentMethodIds: string[];
+                    /** Format: uuid */
+                    defaultPaymentMethodId?: string;
+                };
+            };
+        };
+        responses: {
+            /** @description Replaced */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /** Format: uuid */
+                        brandId: string;
+                        paymentMethodIds: string[];
+                        /** Format: uuid */
+                        defaultPaymentMethodId: string | null;
+                    };
+                };
+            };
+            /** @description Unknown payment method id */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Brand not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    listPaymentGateways: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Payment gateways with their methods */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PaymentGateway"][];
+                };
+            };
+        };
+    };
+    createPaymentGateway: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    code: string;
+                    name: string;
+                    /**
+                     * @default ACTIVE
+                     * @enum {string}
+                     */
+                    status?: "ACTIVE" | "INACTIVE";
+                    credentials?: {
+                        [key: string]: string;
+                    };
+                };
+            };
+        };
+        responses: {
+            /** @description Created; requires finance.write */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PaymentGateway"];
+                };
+            };
+            /** @description A payment gateway with this code already exists */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    updatePaymentGateway: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    code?: string;
+                    name?: string;
+                    /** @enum {string} */
+                    status?: "ACTIVE" | "INACTIVE";
+                };
+            };
+        };
+        responses: {
+            /** @description Updated; requires finance.write */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PaymentGateway"];
+                };
+            };
+            /** @description Payment gateway not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description A payment gateway with this code already exists */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    setPaymentGatewayCredentials: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    credentials: {
+                        [key: string]: string;
+                    };
+                };
+            };
+        };
+        responses: {
+            /** @description Rotated; requires finance.write */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /** Format: uuid */
+                        id: string;
+                        credentialsStored: boolean;
+                    };
+                };
+            };
+            /** @description Payment gateway not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    createPaymentMethod: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    code: string;
+                    name: string;
+                    /**
+                     * @default ACTIVE
+                     * @enum {string}
+                     */
+                    status?: "ACTIVE" | "INACTIVE";
+                };
+            };
+        };
+        responses: {
+            /** @description Created; requires finance.write */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PaymentMethod"];
+                };
+            };
+            /** @description Payment gateway not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description A payment method with this code already exists on this gateway */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    updatePaymentMethod: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+                methodId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    name?: string;
+                    /** @enum {string} */
+                    status?: "ACTIVE" | "INACTIVE";
+                };
+            };
+        };
+        responses: {
+            /** @description Updated; requires finance.write */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PaymentMethod"];
+                };
+            };
+            /** @description Payment gateway or method not found */
             404: {
                 headers: {
                     [name: string]: unknown;
@@ -3167,6 +3960,165 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["FinanceSummary"];
+                };
+            };
+        };
+    };
+    listPayments: {
+        parameters: {
+            query?: {
+                page?: number;
+                pageSize?: number;
+                brandCode?: string;
+                planCode?: string;
+                status?: "PENDING" | "SUCCEEDED" | "FAILED" | "REFUNDED";
+                gatewayCode?: string;
+                methodCode?: string;
+                dateFrom?: string;
+                dateTo?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Paginated payments across all brands */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PaymentPage"];
+                };
+            };
+        };
+    };
+    getPaymentsSummary: {
+        parameters: {
+            query?: {
+                /** @description Comma-separated brand codes; omit for all brands combined. */
+                brandCodes?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Payment counts by status for today/7d/30d windows */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PaymentsSummary"];
+                };
+            };
+        };
+    };
+    getPayment: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Full payment detail, including the gateway event log for this payment */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PaymentDetail"];
+                };
+            };
+            /** @description Payment not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    refundPayment: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": {
+                    /** @default false */
+                    simulateFailure?: boolean;
+                };
+            };
+        };
+        responses: {
+            /** @description Refund resolved; requires finance.write */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /** Format: uuid */
+                        id: string;
+                        refunded: boolean;
+                        /** @enum {string} */
+                        reason?: "SIMULATED_FAILURE";
+                    };
+                };
+            };
+            /** @description Payment not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Only a succeeded payment can be refunded */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    listPaymentLogs: {
+        parameters: {
+            query?: {
+                page?: number;
+                pageSize?: number;
+                level?: "INFO" | "ERROR";
+                eventType?: "CHARGE_ATTEMPT" | "CHARGE_RESULT" | "REFUND_REQUESTED" | "REFUND_RESULT";
+                paymentIntentId?: string;
+                dateFrom?: string;
+                dateTo?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Payment gateway event log, across all payments */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PaymentLogPage"];
                 };
             };
         };
@@ -3646,6 +4598,60 @@ export interface operations {
             };
         };
     };
+    updateControlPlaneSource: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    code?: string;
+                    /** @enum {string} */
+                    status?: "ACTIVE" | "INACTIVE";
+                    /** @description ISO 3166-1 alpha-2 code of where the control panel is hosted. */
+                    countryCode?: string;
+                    comment?: string;
+                };
+            };
+        };
+        responses: {
+            /** @description Source updated; requires infrastructure.write */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ControlPlaneSourceSummary"];
+                };
+            };
+            /** @description Missing infrastructure.write permission */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Control plane source not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description A source with this code already exists */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
     setControlPlaneSourceCredentials: {
         parameters: {
             query?: never;
@@ -3762,6 +4768,55 @@ export interface operations {
                 content: {
                     "application/json": components["schemas"]["InfrastructureEndpointPage"];
                 };
+            };
+        };
+    };
+    updateInfrastructureEndpoint: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    /** @enum {string} */
+                    healthStatus?: "PROVISIONING" | "HEALTHY" | "DEGRADED" | "UNHEALTHY" | "DRAINING" | "DISABLED" | "RETIRED";
+                    comment?: string;
+                };
+            };
+        };
+        responses: {
+            /** @description Endpoint updated; requires infrastructure.write */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /** Format: uuid */
+                        id: string;
+                        healthStatus: string;
+                        comment: string | null;
+                    };
+                };
+            };
+            /** @description Missing infrastructure.write permission */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Endpoint not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
         };
     };
