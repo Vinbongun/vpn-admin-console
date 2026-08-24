@@ -22,7 +22,6 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Spinner } from "@/components/ui/spinner";
-import { Textarea } from "@/components/ui/textarea";
 import { EndpointEditDialog } from "@/features/infrastructure/endpoint-edit-dialog";
 import { can } from "@/lib/access-control";
 
@@ -48,8 +47,7 @@ function BrandsCard() {
   const [createOpen, setCreateOpen] = useState(false);
   const [newBrand, setNewBrand] = useState({ code: "", name: "" });
   const [editingBrand, setEditingBrand] = useState<BrandDetail>();
-  const [form, setForm] = useState<{ name: string; status: "ACTIVE" | "ARCHIVED"; settings: string }>({ name: "", status: "ACTIVE", settings: "{}" });
-  const [formError, setFormError] = useState<string>();
+  const [form, setForm] = useState<{ name: string; status: "ACTIVE" | "ARCHIVED" }>({ name: "", status: "ACTIVE" });
   const brands = useQuery({ queryKey: ["admin-brands"], queryFn: adminApi.listBrands, retry: false });
 
   const createMutation = useMutation({
@@ -63,8 +61,8 @@ function BrandsCard() {
     onError: (error) => toast.error(error instanceof ApiError ? (error.status === 409 ? "Бренд с таким кодом уже существует." : apiErrorMessage(error)) : "Не удалось создать бренд."),
   });
   const updateMutation = useMutation({
-    mutationFn: (input: { id: string; name: string; status: "ACTIVE" | "ARCHIVED"; settings: Record<string, unknown> }) =>
-      adminApi.updateBrand(input.id, { name: input.name, status: input.status, settings: input.settings }),
+    mutationFn: (input: { id: string; name: string; status: "ACTIVE" | "ARCHIVED" }) =>
+      adminApi.updateBrand(input.id, { name: input.name, status: input.status }),
     onSuccess: async () => {
       setEditingBrand(undefined);
       toast.success("Бренд обновлён.");
@@ -75,18 +73,11 @@ function BrandsCard() {
 
   const startEdit = (brand: BrandDetail) => {
     setEditingBrand(brand);
-    setForm({ name: brand.name, status: brand.status === "ARCHIVED" ? "ARCHIVED" : "ACTIVE", settings: JSON.stringify(brand.settings, null, 2) });
-    setFormError(undefined);
+    setForm({ name: brand.name, status: brand.status === "ARCHIVED" ? "ARCHIVED" : "ACTIVE" });
   };
 
   const save = () => {
-    try {
-      const settings = JSON.parse(form.settings) as Record<string, unknown>;
-      setFormError(undefined);
-      updateMutation.mutate({ id: editingBrand!.id, name: form.name, status: form.status, settings });
-    } catch {
-      setFormError("Settings должны быть валидным JSON.");
-    }
+    updateMutation.mutate({ id: editingBrand!.id, name: form.name, status: form.status });
   };
 
   const columns: ColumnDef<BrandDetail>[] = [
@@ -172,12 +163,6 @@ function BrandsCard() {
                   <SelectItem value="ARCHIVED">ARCHIVED</SelectItem>
                 </SelectContent>
               </Select>
-            </div>
-            <div className="space-y-2">
-              <Label>Settings JSON</Label>
-              <Textarea className="min-h-32 font-mono text-xs" value={form.settings} onChange={(event) => setForm((value) => ({ ...value, settings: event.target.value }))} />
-              <p className="text-xs text-muted-foreground">`settings.public` уходит клиентскому сайту как есть (публичная white-label конфигурация); `settings.hostnames` — массив доменов для определения бренда.</p>
-              {formError && <p className="text-xs text-destructive">{formError}</p>}
             </div>
           </div>
           <DialogFooter>
