@@ -104,7 +104,7 @@ function BrandsCard() {
   ];
 
   return (
-    <Card>
+    <Card id="brands" className="scroll-mt-(--header-height)">
       <CardHeader className="flex flex-row items-start justify-between gap-4 space-y-0">
         <div>
           <CardTitle>Бренды</CardTitle>
@@ -274,7 +274,7 @@ function PlansCard() {
   ];
 
   return (
-    <Card>
+    <Card id="plans" className="scroll-mt-(--header-height)">
       <CardHeader className="flex flex-row items-start justify-between gap-4 space-y-0">
         <div>
           <CardTitle>Тарифы</CardTitle>
@@ -421,7 +421,7 @@ function EndpointGroupsCard() {
   ];
 
   return (
-    <Card>
+    <Card id="endpoint-groups" className="scroll-mt-(--header-height)">
       <CardHeader className="flex flex-row items-start justify-between gap-4 space-y-0">
         <div>
           <CardTitle>Группы endpoint&#39;ов</CardTitle>

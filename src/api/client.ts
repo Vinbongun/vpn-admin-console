@@ -33,7 +33,7 @@ import type {
   UpsertReferralProgram,
 } from "@/api/types";
 
-const API_URL = (process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:3000").replace(/\/$/, "");
+export const API_URL = (process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:3000").replace(/\/$/, "");
 const client = createClient<paths>({ baseUrl: API_URL, fetch: (input) => globalThis.fetch(input) });
 
 export class ApiError extends Error {

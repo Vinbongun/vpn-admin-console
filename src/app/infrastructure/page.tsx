@@ -127,7 +127,7 @@ export default function InfrastructurePage() {
 
       <SourcesCard sources={sources} mayWrite={mayWrite} />
 
-      <Card>
+      <Card id="endpoints" className="scroll-mt-(--header-height)">
         <CardHeader>
           <CardTitle>Endpoints</CardTitle>
           <CardDescription>Серверы платформы во всех источниках — страна, протокол и состояние здоровья</CardDescription>
@@ -167,7 +167,7 @@ export default function InfrastructurePage() {
         </CardContent>
       </Card>
 
-      <Card>
+      <Card id="incidents" className="scroll-mt-(--header-height)">
         <CardHeader>
           <CardTitle>Инциденты</CardTitle>
           <CardDescription>История проблем с endpoint&#39;ами — от временной деградации до полной недоступности</CardDescription>
@@ -303,7 +303,7 @@ function SourcesCard({ sources, mayWrite }: { sources: ReturnType<typeof useQuer
   );
 
   return (
-    <Card>
+    <Card id="sources" className="scroll-mt-(--header-height)">
       <CardHeader>
         <CardTitle>Источники control plane</CardTitle>
         <CardDescription>Панели Remnawave и 3x-ui, из которых платформа получает список серверов и их состояние</CardDescription>

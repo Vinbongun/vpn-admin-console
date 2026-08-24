@@ -1,17 +1,18 @@
 "use client";
 
 import { useQuery } from "@tanstack/react-query";
-import { LogOutIcon, ShieldCheckIcon } from "lucide-react";
+import { ChevronDownIcon, ChevronsUpDownIcon, ExternalLinkIcon, GaugeIcon, LogOutIcon, ShieldCheckIcon, UserRoundIcon } from "lucide-react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
-import { adminApi } from "@/api/client";
+import { API_URL, adminApi } from "@/api/client";
 import { sessionTokens } from "@/api/session";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Breadcrumb, BreadcrumbItem, BreadcrumbList, BreadcrumbPage } from "@/components/ui/breadcrumb";
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuGroup, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Separator } from "@/components/ui/separator";
 import {
   Sidebar,
@@ -24,6 +25,9 @@ import {
   SidebarMenu,
   SidebarMenuButton,
   SidebarMenuItem,
+  SidebarMenuSub,
+  SidebarMenuSubButton,
+  SidebarMenuSubItem,
   SidebarProvider,
   SidebarTrigger,
 } from "@/components/ui/sidebar";
@@ -44,7 +48,6 @@ export function AppShell({ children }: { children: React.ReactNode }) {
 
   const items = navigation.filter((item) => !item.permission || can(staff, item.permission));
   const current = navigation.find((item) => item.href === pathname);
-  const initials = staff?.displayName.slice(0, 2).toUpperCase() ?? "--";
 
   const logout = async () => {
     setIsLoggingOut(true);
@@ -70,15 +73,41 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         <SidebarHeader>
           <SidebarMenu>
             <SidebarMenuItem>
-              <SidebarMenuButton size="lg" render={<Link href="/" />}>
-                <div className="flex aspect-square size-7 items-center justify-center rounded-md bg-primary text-primary-foreground">
-                  <ShieldCheckIcon className="size-4" />
-                </div>
-                <div className="grid flex-1 text-left text-sm leading-tight">
-                  <span className="truncate font-medium">VPN Platform</span>
-                  <span className="truncate text-xs text-muted-foreground">Admin Console</span>
-                </div>
-              </SidebarMenuButton>
+              <DropdownMenu>
+                <DropdownMenuTrigger
+                  render={
+                    <SidebarMenuButton size="lg">
+                      <div className="flex aspect-square size-7 items-center justify-center rounded-md bg-primary text-primary-foreground">
+                        <ShieldCheckIcon className="size-4" />
+                      </div>
+                      <div className="grid flex-1 text-left text-sm leading-tight">
+                        <span className="truncate font-medium">VPN Platform</span>
+                        <span className="truncate text-xs text-muted-foreground">Admin Console</span>
+                      </div>
+                      <ChevronsUpDownIcon className="ml-auto size-4" />
+                    </SidebarMenuButton>
+                  }
+                />
+                <DropdownMenuContent side="right" align="start" className="w-64">
+                  <DropdownMenuGroup>
+                    <DropdownMenuLabel className="font-normal">
+                      <div className="flex flex-col gap-1">
+                        <p className="text-sm font-medium">VPN Platform</p>
+                        <p className="text-xs text-muted-foreground">Admin Console</p>
+                      </div>
+                    </DropdownMenuLabel>
+                  </DropdownMenuGroup>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem render={<Link href="/" />}>
+                    <GaugeIcon />
+                    Обзор
+                  </DropdownMenuItem>
+                  <DropdownMenuItem render={<a href={`${API_URL}/docs`} target="_blank" rel="noreferrer" />}>
+                    <ExternalLinkIcon />
+                    API документация
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
             </SidebarMenuItem>
           </SidebarMenu>
         </SidebarHeader>
@@ -86,14 +115,39 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           <SidebarGroup>
             <SidebarGroupContent>
               <SidebarMenu>
-                {items.map(({ href, label, icon: Icon }) => (
-                  <SidebarMenuItem key={href}>
-                    <SidebarMenuButton render={<Link href={href} />} isActive={pathname === href} tooltip={label}>
-                      <Icon />
-                      <span>{label}</span>
-                    </SidebarMenuButton>
-                  </SidebarMenuItem>
-                ))}
+                {items.map(({ href, label, icon: Icon, items: subItems }) => {
+                  const isCurrent = pathname === href;
+                  if (!subItems) {
+                    return (
+                      <SidebarMenuItem key={href}>
+                        <SidebarMenuButton render={<Link href={href} />} isActive={isCurrent} tooltip={label}>
+                          <Icon />
+                          <span>{label}</span>
+                        </SidebarMenuButton>
+                      </SidebarMenuItem>
+                    );
+                  }
+                  return (
+                    <Collapsible key={href} defaultOpen={isCurrent} className="group/collapsible">
+                      <SidebarMenuItem>
+                        <SidebarMenuButton render={<CollapsibleTrigger />} isActive={isCurrent} tooltip={label}>
+                          <Icon />
+                          <span>{label}</span>
+                          <ChevronDownIcon className="ml-auto transition-transform group-data-open/collapsible:rotate-180" />
+                        </SidebarMenuButton>
+                        <CollapsibleContent>
+                          <SidebarMenuSub>
+                            {subItems.map((subItem) => (
+                              <SidebarMenuSubItem key={subItem.hash}>
+                                <SidebarMenuSubButton render={<Link href={`${href}#${subItem.hash}`} />}>{subItem.label}</SidebarMenuSubButton>
+                              </SidebarMenuSubItem>
+                            ))}
+                          </SidebarMenuSub>
+                        </CollapsibleContent>
+                      </SidebarMenuItem>
+                    </Collapsible>
+                  );
+                })}
               </SidebarMenu>
             </SidebarGroupContent>
           </SidebarGroup>
@@ -106,7 +160,9 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                   render={
                     <SidebarMenuButton size="lg">
                       <Avatar className="size-7">
-                        <AvatarFallback className="text-xs">{initials}</AvatarFallback>
+                        <AvatarFallback className="text-xs">
+                          <UserRoundIcon className="size-4" />
+                        </AvatarFallback>
                       </Avatar>
                       <div className="grid flex-1 text-left text-sm leading-tight">
                         <span className="truncate font-medium">{staff?.displayName ?? "Загрузка…"}</span>
@@ -116,13 +172,15 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                   }
                 />
                 <DropdownMenuContent side="right" align="end" className="w-64">
-                  <DropdownMenuLabel className="font-normal">
-                    <div className="flex flex-col gap-1">
-                      <p className="text-sm font-medium">{staff?.displayName}</p>
-                      <p className="text-xs text-muted-foreground">{staff?.email}</p>
-                      {staff?.roles[0] && <Badge className="mt-1 w-fit">{staff.roles[0]}</Badge>}
-                    </div>
-                  </DropdownMenuLabel>
+                  <DropdownMenuGroup>
+                    <DropdownMenuLabel className="font-normal">
+                      <div className="flex flex-col gap-1">
+                        <p className="text-sm font-medium">{staff?.displayName}</p>
+                        <p className="text-xs text-muted-foreground">{staff?.email}</p>
+                        {staff?.roles[0] && <Badge className="mt-1 w-fit">{staff.roles[0]}</Badge>}
+                      </div>
+                    </DropdownMenuLabel>
+                  </DropdownMenuGroup>
                   <DropdownMenuSeparator />
                   <DropdownMenuItem disabled={isLoggingOut} onClick={logout}>
                     {isLoggingOut ? <Spinner /> : <LogOutIcon />}
