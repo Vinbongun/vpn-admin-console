@@ -29,7 +29,7 @@ export const navigation = [
     items: [
       { label: "Бренды", hash: "brands" },
       { label: "Тарифы", hash: "plans" },
-      { label: "Группы endpoint'ов", hash: "endpoint-groups" },
+      { label: "Серверные пакеты", hash: "endpoint-groups" },
     ],
   },
   {

@@ -22,6 +22,8 @@ import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "
 import { Skeleton } from "@/components/ui/skeleton";
 import { Spinner } from "@/components/ui/spinner";
 import { Textarea } from "@/components/ui/textarea";
+import { EndpointEditDialog } from "@/features/infrastructure/endpoint-edit-dialog";
+import { can } from "@/lib/access-control";
 
 function apiErrorMessage(error: ApiError): string {
   const details = error.details as { message?: string | string[] } | undefined;
@@ -32,7 +34,7 @@ function apiErrorMessage(error: ApiError): string {
 export default function ReferencePage() {
   return (
     <AppShell>
-      <PageHeader title="Справочники" description="Бренды, тарифы и группы endpoint'ов" />
+      <PageHeader title="Справочники" description="Бренды, тарифы и серверные пакеты" />
       <BrandsCard />
       <PlansCard />
       <EndpointGroupsCard />
@@ -359,7 +361,10 @@ function EndpointGroupsCard() {
   const queryClient = useQueryClient();
   const [createOpen, setCreateOpen] = useState(false);
   const [selectedId, setSelectedId] = useState<string>();
+  const [selectedEndpointId, setSelectedEndpointId] = useState<string>();
   const [newGroup, setNewGroup] = useState({ code: "", name: "", routeClass: "" });
+  const staff = useQuery({ queryKey: ["staff-session"], queryFn: adminApi.getSession, retry: false });
+  const mayEditEndpoints = can(staff.data, "infrastructure.write");
   const groups = useQuery({ queryKey: ["admin-endpoint-groups"], queryFn: adminApi.listEndpointGroups, retry: false });
   const detail = useQuery({ queryKey: ["admin-endpoint-group", selectedId], queryFn: () => adminApi.getEndpointGroup(selectedId!), enabled: Boolean(selectedId), retry: false });
   const endpoints = useQuery({ queryKey: ["admin-infrastructure-endpoints-all"], queryFn: () => adminApi.listInfrastructureEndpoints({ page: 1, pageSize: 100 }), retry: false });
@@ -407,7 +412,7 @@ function EndpointGroupsCard() {
   };
 
   const columns: ColumnDef<EndpointGroupListItem>[] = [
-    { id: "name", header: "Группа", cell: ({ row }) => (
+    { id: "name", header: "Пакет", cell: ({ row }) => (
       <div>
         <p className="font-medium">{row.original.name}</p>
         <p className="text-xs text-muted-foreground">
@@ -424,22 +429,25 @@ function EndpointGroupsCard() {
     <Card id="endpoint-groups" className="scroll-mt-(--header-height)">
       <CardHeader className="flex flex-row items-start justify-between gap-4 space-y-0">
         <div>
-          <CardTitle>Группы endpoint&#39;ов</CardTitle>
-          <CardDescription>Наборы серверов, объединённые для выдачи доступа — каждой группе назначаются тарифы, которые её получают</CardDescription>
+          <CardTitle>Серверные пакеты</CardTitle>
+          <CardDescription>
+            «Серверный пакет» — это набор серверов (endpoint&#39;ов), которые вместе выдаются клиенту в рамках одного тарифа. Например, пакет «Европа Стандарт» может включать сервера в
+            Нидерландах, Франции и Германии. Один сервер может входить сразу в несколько пакетов.
+          </CardDescription>
         </div>
         <Dialog open={createOpen} onOpenChange={setCreateOpen}>
-          <DialogTrigger render={<Button size="sm">Создать группу</Button>} />
+          <DialogTrigger render={<Button size="sm">Создать пакет</Button>} />
           <DialogContent>
             <DialogHeader>
-              <DialogTitle>Создать группу endpoint&#39;ов</DialogTitle>
+              <DialogTitle>Создать серверный пакет</DialogTitle>
             </DialogHeader>
             <div className="space-y-3">
               <div className="space-y-2">
-                <Label>Код группы</Label>
+                <Label>Код пакета</Label>
                 <Input placeholder="Код (A-Z0-9_)" value={newGroup.code} onChange={(event) => setNewGroup((value) => ({ ...value, code: event.target.value.toUpperCase() }))} />
               </div>
               <div className="space-y-2">
-                <Label>Название группы</Label>
+                <Label>Название пакета</Label>
                 <Input placeholder="Название" value={newGroup.name} onChange={(event) => setNewGroup((value) => ({ ...value, name: event.target.value }))} />
               </div>
               <div className="space-y-2">
@@ -478,7 +486,7 @@ function EndpointGroupsCard() {
               <Skeleton className="h-4 w-64" />
             </div>
           ) : detail.isError ? (
-            <p className="pt-6 text-sm text-destructive">Не удалось получить карточку группы.</p>
+            <p className="pt-6 text-sm text-destructive">Не удалось получить карточку пакета.</p>
           ) : detail.data ? (
             <>
               <SheetHeader>
@@ -489,14 +497,21 @@ function EndpointGroupsCard() {
               </SheetHeader>
               <div className="mt-4 space-y-6">
                 <div>
-                  <p className="mb-2 text-sm font-medium text-muted-foreground">Endpoint&#39;ы в группе</p>
+                  <p className="mb-2 text-sm font-medium text-muted-foreground">Серверы в пакете — клик по названию открывает редактирование</p>
                   <ScrollArea className="h-64 rounded-md border p-3">
                     <div className="space-y-2">
                       {endpoints.data?.items.map((endpoint) => (
-                        <Label key={endpoint.id} className="flex items-center gap-2 font-normal">
-                          <Checkbox checked={memberIds.has(endpoint.id)} disabled={membersMutation.isPending} onCheckedChange={() => toggleMember(endpoint.id)} />
-                          {endpoint.name} ({endpoint.countryCode}, {endpoint.protocol})
-                        </Label>
+                        <div key={endpoint.id} className="flex items-center gap-2">
+                          <Checkbox
+                            id={`member-${endpoint.id}`}
+                            checked={memberIds.has(endpoint.id)}
+                            disabled={membersMutation.isPending}
+                            onCheckedChange={() => toggleMember(endpoint.id)}
+                          />
+                          <button type="button" className="flex-1 truncate text-left text-sm hover:underline" onClick={() => setSelectedEndpointId(endpoint.id)}>
+                            {endpoint.name} ({endpoint.countryCode}, {endpoint.protocol})
+                          </button>
+                        </div>
                       ))}
                     </div>
                   </ScrollArea>
@@ -519,6 +534,12 @@ function EndpointGroupsCard() {
           ) : null}
         </SheetContent>
       </Sheet>
+
+      <EndpointEditDialog
+        endpoint={endpoints.data?.items.find((endpoint) => endpoint.id === selectedEndpointId)}
+        onOpenChange={(open) => !open && setSelectedEndpointId(undefined)}
+        mayWrite={mayEditEndpoints}
+      />
     </Card>
   );
 }

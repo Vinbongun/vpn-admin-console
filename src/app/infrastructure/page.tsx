@@ -18,7 +18,9 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Spinner } from "@/components/ui/spinner";
 import { CreateSourceDialog } from "@/features/infrastructure/create-source-dialog";
+import { EndpointEditDialog } from "@/features/infrastructure/endpoint-edit-dialog";
 import { RotateCredentialsDialog } from "@/features/infrastructure/rotate-credentials-dialog";
+import { SourceEditDialog } from "@/features/infrastructure/source-edit-dialog";
 import { can } from "@/lib/access-control";
 
 const pageSize = 25;
@@ -75,6 +77,7 @@ export default function InfrastructurePage() {
   const [incidentPage, setIncidentPage] = useState(1);
   const [incidentStatus, setIncidentStatus] = useState<AdminInfrastructureIncidentQuery["status"] | "all">("all");
   const [severity, setSeverity] = useState<AdminInfrastructureIncidentQuery["severity"] | "all">("all");
+  const [selectedEndpointId, setSelectedEndpointId] = useState<string>();
 
   const staff = useQuery({ queryKey: ["staff-session"], queryFn: adminApi.getSession, retry: false });
   const mayWrite = can(staff.data, "infrastructure.write");
@@ -117,7 +120,7 @@ export default function InfrastructurePage() {
 
   return (
     <AppShell>
-      <PageHeader title="Инфраструктура" description="Список серверов (endpoint'ов), их состояние здоровья и открытые инциденты — данные доступны только для просмотра" />
+      <PageHeader title="Инфраструктура" description="Список серверов (endpoint'ов), их состояние здоровья и открытые инциденты — клик по строке источника или endpoint'а открывает редактирование" />
 
       <div className="grid grid-cols-1 gap-4 @xl/main:grid-cols-2 @5xl/main:grid-cols-5">
         {counters.map(({ label, value, icon: Icon }) => (
@@ -162,6 +165,8 @@ export default function InfrastructurePage() {
             isError={endpoints.isError}
             errorMessage="Не удалось получить данные инфраструктуры."
             emptyMessage="Данные не найдены."
+            onRowClick={(item) => setSelectedEndpointId(item.id)}
+            isRowActive={(item) => item.id === selectedEndpointId}
           />
           <DataTablePagination page={endpointPage} pageCount={endpointPages} onPageChange={setEndpointPage} />
         </CardContent>
@@ -226,6 +231,12 @@ export default function InfrastructurePage() {
           <DataTablePagination page={incidentPage} pageCount={incidentPages} onPageChange={setIncidentPage} />
         </CardContent>
       </Card>
+
+      <EndpointEditDialog
+        endpoint={endpoints.data?.items.find((item) => item.id === selectedEndpointId)}
+        onOpenChange={(open) => !open && setSelectedEndpointId(undefined)}
+        mayWrite={mayWrite}
+      />
     </AppShell>
   );
 }
@@ -234,6 +245,7 @@ function SourcesCard({ sources, mayWrite }: { sources: ReturnType<typeof useQuer
   const queryClient = useQueryClient();
   const [countryCodes, setCountryCodes] = useState<Record<string, string>>({});
   const [syncingId, setSyncingId] = useState<string>();
+  const [selectedSourceId, setSelectedSourceId] = useState<string>();
   const syncMutation = useMutation({
     mutationFn: ({ id, countryCode }: { id: string; countryCode?: string }) => adminApi.syncSource(id, countryCode ? { countryCode } : {}),
     onMutate: ({ id }) => setSyncingId(id),
@@ -273,7 +285,7 @@ function SourcesCard({ sources, mayWrite }: { sources: ReturnType<typeof useQuer
         cell: ({ row }) => {
           const source = row.original;
           return (
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2" onClick={(event) => event.stopPropagation()}>
               {source.providerType === "3X_UI" && (
                 <Input
                   aria-label="Код страны"
@@ -321,8 +333,16 @@ function SourcesCard({ sources, mayWrite }: { sources: ReturnType<typeof useQuer
           isError={sources.isError}
           errorMessage="Не удалось получить данные инфраструктуры."
           emptyMessage="Данные не найдены."
+          onRowClick={(source) => setSelectedSourceId(source.id)}
+          isRowActive={(source) => source.id === selectedSourceId}
         />
       </CardContent>
+
+      <SourceEditDialog
+        source={sources.data?.find((source) => source.id === selectedSourceId)}
+        onOpenChange={(open) => !open && setSelectedSourceId(undefined)}
+        mayWrite={mayWrite}
+      />
     </Card>
   );
 }

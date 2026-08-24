@@ -927,6 +927,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/admin/v1/infrastructure/sources/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /** @description providerType is intentionally not editable - changing it after creation would desync the row from the read/write adapter actually used to reach the panel. To change credentials use PUT .../credentials instead. */
+        patch: operations["updateControlPlaneSource"];
+        trace?: never;
+    };
     "/admin/v1/infrastructure/sources/{id}/credentials": {
         parameters: {
             query?: never;
@@ -974,6 +991,23 @@ export interface paths {
         options?: never;
         head?: never;
         patch?: never;
+        trace?: never;
+    };
+    "/admin/v1/infrastructure/endpoints/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /** @description Only healthStatus (manual override) and comment are editable - name/countryCode/city/ protocol/transport are overwritten wholesale by every inventory sync from the live panel, so exposing them for editing here would be misleading. */
+        patch: operations["updateInfrastructureEndpoint"];
         trace?: never;
     };
     "/admin/v1/infrastructure/incidents": {
@@ -1567,6 +1601,9 @@ export interface components {
             capabilities: {
                 [key: string]: unknown;
             };
+            /** @description ISO 3166-1 alpha-2 code of where the control panel itself is hosted. */
+            countryCode?: string | null;
+            comment?: string | null;
             /** Format: date-time */
             lastInventoryAt?: string | null;
             lastInventoryStatus?: string | null;
@@ -1584,6 +1621,7 @@ export interface components {
             protocol: string;
             transport?: string | null;
             healthStatus: string;
+            comment?: string | null;
             /** Format: date-time */
             lastSeenAt?: string | null;
             /** Format: date-time */
@@ -3646,6 +3684,60 @@ export interface operations {
             };
         };
     };
+    updateControlPlaneSource: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    code?: string;
+                    /** @enum {string} */
+                    status?: "ACTIVE" | "INACTIVE";
+                    /** @description ISO 3166-1 alpha-2 code of where the control panel is hosted. */
+                    countryCode?: string;
+                    comment?: string;
+                };
+            };
+        };
+        responses: {
+            /** @description Source updated; requires infrastructure.write */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ControlPlaneSourceSummary"];
+                };
+            };
+            /** @description Missing infrastructure.write permission */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Control plane source not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description A source with this code already exists */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
     setControlPlaneSourceCredentials: {
         parameters: {
             query?: never;
@@ -3762,6 +3854,55 @@ export interface operations {
                 content: {
                     "application/json": components["schemas"]["InfrastructureEndpointPage"];
                 };
+            };
+        };
+    };
+    updateInfrastructureEndpoint: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    /** @enum {string} */
+                    healthStatus?: "PROVISIONING" | "HEALTHY" | "DEGRADED" | "UNHEALTHY" | "DRAINING" | "DISABLED" | "RETIRED";
+                    comment?: string;
+                };
+            };
+        };
+        responses: {
+            /** @description Endpoint updated; requires infrastructure.write */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /** Format: uuid */
+                        id: string;
+                        healthStatus: string;
+                        comment: string | null;
+                    };
+                };
+            };
+            /** @description Missing infrastructure.write permission */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Endpoint not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
         };
     };
