@@ -13,7 +13,9 @@ import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { BrandBasicsSection } from "@/features/brands/brand-basics-section";
 import { BrandHostnamesSection } from "@/features/brands/brand-hostnames-section";
+import { BrandPackagesSection } from "@/features/brands/brand-packages-section";
 import { BrandPaymentMethodsSection } from "@/features/brands/brand-payment-methods-section";
+import { BrandPlansSection } from "@/features/brands/brand-plans-section";
 import { BrandPublicSection } from "@/features/brands/brand-public-section";
 import { can } from "@/lib/access-control";
 
@@ -55,6 +57,10 @@ export function BrandDetailPage() {
           <BrandHostnamesSection brand={brand} mayWrite={mayWrite} />
           <Separator />
           <BrandPublicSection brand={brand} mayWrite={mayWrite} />
+          <Separator />
+          <BrandPackagesSection brand={brand} mayWrite={mayWrite} />
+          <Separator />
+          <BrandPlansSection brand={brand} mayWrite={mayWrite} />
           <Separator />
           <BrandPaymentMethodsSection brandId={brand.id} mayWrite={mayWrite} />
         </>

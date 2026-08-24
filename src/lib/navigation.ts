@@ -1,6 +1,5 @@
 import {
   Activity,
-  BookOpen,
   Building2,
   CircleDollarSign,
   FileClock,
@@ -22,16 +21,6 @@ export const navigation = [
   { label: "Обзор", href: "/", icon: Gauge },
   { label: "Пользователи", href: "/users", icon: Users, permission: "customers.read" },
   { label: "Подписки", href: "/subscriptions", icon: Activity, permission: "subscriptions.read" },
-  {
-    label: "Справочники",
-    href: "/reference",
-    icon: BookOpen,
-    permission: "brands.read",
-    items: [
-      { label: "Тарифы", href: "/reference#plans" },
-      { label: "Серверные пакеты", href: "/reference#endpoint-groups" },
-    ],
-  },
   { label: "Бренды", href: "/brands", icon: Building2, permission: "brands.read" },
   {
     label: "Инфраструктура",

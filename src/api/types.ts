@@ -49,6 +49,7 @@ export type AdminPlanQuery = NonNullable<operations["listAdminPlans"]["parameter
 export type AdminAuditQuery = NonNullable<operations["listAdminAuditEvents"]["parameters"]["query"]>;
 export type AdminInfrastructureEndpointQuery = NonNullable<operations["listInfrastructureEndpoints"]["parameters"]["query"]>;
 export type AdminInfrastructureIncidentQuery = NonNullable<operations["listInfrastructureIncidents"]["parameters"]["query"]>;
+export type AdminEndpointGroupQuery = NonNullable<operations["listEndpointGroups"]["parameters"]["query"]>;
 export type UpdateBrand = NonNullable<operations["updateAdminBrand"]["requestBody"]>["content"]["application/json"];
 export type CreateBrand = NonNullable<operations["createAdminBrand"]["requestBody"]>["content"]["application/json"];
 export type SetPlanPrice = NonNullable<operations["setPlanPrice"]["requestBody"]>["content"]["application/json"];
