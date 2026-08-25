@@ -100,7 +100,13 @@ function SubscriptionDetailBody({
 
         <Separator />
 
-        <DevicesSection subscriptionId={subscription.id} deviceLimit={subscription.plan?.deviceLimit} mayWrite={mayWrite} />
+        <DevicesSection
+          subscriptionId={subscription.id}
+          deviceLimit={subscription.plan?.deviceLimit}
+          activeDeviceCount={subscription.activeDeviceCount}
+          activeDeviceCountCheckedAt={subscription.activeDeviceCountCheckedAt}
+          mayWrite={mayWrite}
+        />
 
         {issuedToken && (
           <Alert className="border-amber-500/50">

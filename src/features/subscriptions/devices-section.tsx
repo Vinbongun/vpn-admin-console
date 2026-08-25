@@ -1,7 +1,7 @@
 "use client";
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { SmartphoneIcon } from "lucide-react";
+import { InfoIcon, SmartphoneIcon } from "lucide-react";
 import { toast } from "sonner";
 import { adminApi } from "@/api/client";
 import { ConfirmDialog } from "@/components/confirm-dialog";
@@ -10,12 +10,25 @@ import { ErrorState } from "@/components/error-state";
 import { StatusBadge } from "@/components/status-badge";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 
 function formatDate(value: string) {
   return new Date(value).toLocaleString("ru-RU");
 }
 
-export function DevicesSection({ subscriptionId, deviceLimit, mayWrite }: { subscriptionId: string; deviceLimit?: number; mayWrite: boolean }) {
+export function DevicesSection({
+  subscriptionId,
+  deviceLimit,
+  activeDeviceCount,
+  activeDeviceCountCheckedAt,
+  mayWrite,
+}: {
+  subscriptionId: string;
+  deviceLimit?: number;
+  activeDeviceCount?: number | null;
+  activeDeviceCountCheckedAt?: string | null;
+  mayWrite: boolean;
+}) {
   const queryClient = useQueryClient();
   const devices = useQuery({ queryKey: ["admin-subscription-devices", subscriptionId], queryFn: () => adminApi.listDevices(subscriptionId), retry: false });
 
@@ -39,6 +52,24 @@ export function DevicesSection({ subscriptionId, deviceLimit, mayWrite }: { subs
             {activeCount} / {deviceLimit}
           </span>
         )}
+      </div>
+      <div className="mb-3 flex items-center gap-1.5 text-xs text-muted-foreground">
+        <span>
+          {activeDeviceCount == null
+            ? "Активные подключения: ещё не проверялось"
+            : deviceLimit !== undefined
+              ? `Активные подключения: ${activeDeviceCount} из ${deviceLimit}`
+              : `Активные подключения: ${activeDeviceCount}`}
+        </span>
+        <Tooltip>
+          <TooltipTrigger>
+            <InfoIcon className="size-3.5" />
+          </TooltipTrigger>
+          <TooltipContent>
+            Эвристика «видели недавно» (окно в несколько минут) по данным фонового опроса раз в ~3 минуты — не точный счётчик одновременных сессий, ни одна панель такого не отдаёт.
+          </TooltipContent>
+        </Tooltip>
+        {activeDeviceCountCheckedAt && <span>· обновлено {formatDate(activeDeviceCountCheckedAt)}</span>}
       </div>
       {devices.isLoading ? (
         <div className="space-y-2">

@@ -6,11 +6,13 @@ import { Activity, CircleAlert, RadioTower, Server } from "lucide-react";
 import { useMemo, useState } from "react";
 import { toast } from "sonner";
 import { adminApi, ApiError } from "@/api/client";
-import type { AdminInfrastructureIncidentQuery, ControlPlaneSourceSummary, InfrastructureEndpointSummary, InfrastructureIncidentSummary } from "@/api/types";
+import type { AdminInfrastructureIncidentQuery, AdminPopularityQuery, ControlPlaneSourceSummary, InfrastructureEndpointSummary, InfrastructureIncidentSummary } from "@/api/types";
 import { AppShell } from "@/components/app-shell";
 import { CountryFlag } from "@/components/country-flag";
 import { DataTable, DataTablePagination } from "@/components/data-table";
 import { EndpointName } from "@/components/endpoint-name";
+import { ErrorState } from "@/components/error-state";
+import { LoadingState } from "@/components/loading-state";
 import { PageHeader } from "@/components/page-header";
 import { StatCard } from "@/components/stat-card";
 import { Badge } from "@/components/ui/badge";
@@ -261,12 +263,116 @@ export default function InfrastructurePage() {
         </CardContent>
       </Card>
 
+      <PopularityCard />
+
       <EndpointEditDialog
         endpoint={endpoints.data?.items.find((item) => item.id === selectedEndpointId)}
         onOpenChange={(open) => !open && setSelectedEndpointId(undefined)}
         mayWrite={mayWrite}
       />
     </AppShell>
+  );
+}
+
+function PopularityCard() {
+  const [mode, setMode] = useState<"assigned" | "live">("assigned");
+  const [days, setDays] = useState("7");
+  const popularity = useQuery({
+    queryKey: ["admin-dashboard-popularity", mode, days],
+    queryFn: () => adminApi.getDashboardPopularity({ mode, ...(mode === "live" ? { days: Number(days) } : {}) } satisfies AdminPopularityQuery),
+    retry: false,
+  });
+
+  const servers = (popularity.data?.servers ?? []).filter((server) => server.name);
+  const protocols = popularity.data?.protocols ?? [];
+  const countFor = (item: { subscriptionCount?: number; sampleCount?: number }) => (mode === "assigned" ? (item.subscriptionCount ?? 0) : (item.sampleCount ?? 0));
+
+  return (
+    <Card id="popularity" className="scroll-mt-(--header-height)">
+      <CardHeader>
+        <CardTitle>Популярность серверов и протоколов</CardTitle>
+        <CardDescription>
+          {mode === "assigned"
+            ? "На скольких активных подписках сейчас реально назначен сервер/протокол — точное число, без задержки."
+            : `Сколько раз за последние ${days} дней сервер/протокол видели активным по данным фонового опроса — относительный рейтинг, не точное число уникальных пользователей.`}
+        </CardDescription>
+      </CardHeader>
+      <CardContent>
+        <div className="mb-4 grid gap-3 sm:max-w-md sm:grid-cols-2">
+          <Select
+            items={[
+              { value: "assigned", label: "По назначению" },
+              { value: "live", label: "По реальному использованию" },
+            ]}
+            value={mode}
+            onValueChange={(value) => setMode((value as "assigned" | "live") ?? "assigned")}
+          >
+            <SelectTrigger aria-label="Режим">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="assigned">По назначению</SelectItem>
+              <SelectItem value="live">По реальному использованию</SelectItem>
+            </SelectContent>
+          </Select>
+          {mode === "live" && (
+            <Select items={[{ value: "7", label: "7 дней" }, { value: "30", label: "30 дней" }]} value={days} onValueChange={(value) => setDays(value ?? "7")}>
+              <SelectTrigger aria-label="Окно, дней">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="7">7 дней</SelectItem>
+                <SelectItem value="30">30 дней</SelectItem>
+              </SelectContent>
+            </Select>
+          )}
+        </div>
+
+        {popularity.isLoading ? (
+          <LoadingState />
+        ) : popularity.isError ? (
+          <ErrorState description="Не удалось получить статистику популярности." />
+        ) : (
+          <div className="grid gap-6 md:grid-cols-2">
+            <div>
+              <p className="mb-2 text-sm font-medium text-muted-foreground">Топ серверов</p>
+              {servers.length === 0 ? (
+                <p className="text-sm text-muted-foreground">Данных нет.</p>
+              ) : (
+                <div className="space-y-2">
+                  {servers.map((server, index) => (
+                    <div key={server.endpointId ?? index} className="flex items-center justify-between gap-2 rounded-lg border p-2.5 text-sm">
+                      <div className="min-w-0">
+                        <p className="truncate font-medium">
+                          <EndpointName name={server.name!} />
+                        </p>
+                        <p className="truncate text-xs text-muted-foreground">{[server.countryCode, server.protocol].filter(Boolean).join(" · ")}</p>
+                      </div>
+                      <span className="shrink-0 font-medium tabular-nums">{countFor(server)}</span>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+            <div>
+              <p className="mb-2 text-sm font-medium text-muted-foreground">Топ протоколов</p>
+              {protocols.length === 0 ? (
+                <p className="text-sm text-muted-foreground">Данных нет.</p>
+              ) : (
+                <div className="space-y-2">
+                  {protocols.map((protocol) => (
+                    <div key={protocol.protocol} className="flex items-center justify-between gap-2 rounded-lg border p-2.5 text-sm">
+                      <span className="font-medium">{protocol.protocol}</span>
+                      <span className="shrink-0 font-medium tabular-nums">{countFor(protocol)}</span>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+      </CardContent>
+    </Card>
   );
 }
 

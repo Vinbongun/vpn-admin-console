@@ -73,9 +73,11 @@ export type UpsertReferralProgram = NonNullable<operations["upsertReferralProgra
 export type AdminReferralQuery = NonNullable<operations["listAdminReferrals"]["parameters"]["query"]>;
 export type CurrencyAmount = Schemas["CurrencyAmount"];
 export type DashboardOverview = Schemas["DashboardOverview"];
+export type DashboardPopularity = Schemas["DashboardPopularity"];
 export type AdminFinanceQuery = NonNullable<operations["getFinanceSummary"]["parameters"]["query"]>;
 export type AdminRetentionQuery = NonNullable<operations["getRetentionSummary"]["parameters"]["query"]>;
 export type AdminDashboardQuery = NonNullable<operations["getDashboardOverview"]["parameters"]["query"]>;
+export type AdminPopularityQuery = NonNullable<operations["getDashboardPopularity"]["parameters"]["query"]>;
 
 export type PaymentSummary = Schemas["PaymentSummary"];
 export type PaymentPage = Schemas["PaymentPage"];

@@ -212,6 +212,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/customer/v1/subscriptions/{subscriptionId}/tokens/rotate": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** @description Self-service reissue, scoped to a subscription owned by the calling customer. Revokes the previous active token (if any) - already-configured VPN clients using the old link stop working immediately, so the customer-portal should warn about this before calling. An initial token is also issued automatically the moment a purchase first succeeds (see POST /customer/v1/orders/{id}/confirm) - this endpoint is only for a deliberate reissue afterwards. */
+        post: operations["rotateCustomerSubscriptionToken"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/customer/v1/subscriptions/{subscriptionId}/devices": {
         parameters: {
             query?: never;
@@ -946,6 +963,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/admin/v1/dashboard/popularity": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description Which servers/protocols are more popular, in one of two senses: "assigned" (default) counts active subscriptions currently provisioned onto each server/protocol via plan_endpoint_groups - no new infrastructure, always available. "live" sums what the device-usage poller actually observed recently-active over the requested window, from endpoint_protocol_usage_hourly - a relative ranking signal (tick counts), not an exact concurrent-user figure. */
+        get: operations["getDashboardPopularity"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/admin/v1/audit-events": {
         parameters: {
             query?: never;
@@ -1086,6 +1120,23 @@ export interface paths {
         put?: never;
         /** @description Compares every active control-plane source's live user list against what profile_bindings says should currently have access, and reflects any drift as infrastructure_incidents rows (RECONCILIATION_MISSING, RECONCILIATION_DISABLED, RECONCILIATION_ORPHANED) rather than auto-repairing anything. Previously-open reconciliation incidents that no longer reproduce are marked RESOLVED. Intended to be called on an interval by an external worker/cron, much less frequently than run-next since it scans full user lists per source. */
         post: operations["runReconciliation"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/internal/v1/device-usage/poll": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** @description Polls every active REMNAWAVE/3X_UI panel once for per-protocol recency samples, sums how many are recently-active per subscription across every panel/protocol it touches into activeDeviceCount, and opens a device_usage_overages row (soft signal only, no auto-disconnect) when that total exceeds the plan's device_limit - a Telegram alert is sent separately by /internal/v1/alerts/telegram/notify-due. Also bumps endpoint_protocol_usage_hourly for the "live" popularity report. */
+        post: operations["pollDeviceUsage"];
         delete?: never;
         options?: never;
         head?: never;
@@ -1436,6 +1487,13 @@ export interface components {
              * @description For linking back to the customer's admin-console profile page.
              */
             customerId?: string;
+            /** @description Cached count of protocol connections (summed across every panel/protocol this subscription touches) seen recently active, refreshed by a background poller every few minutes. A recency heuristic ("seen within the last few minutes"), not a live concurrent-session count - no panel exposes a true real-time figure. Null until the poller has run at least once for this subscription. */
+            activeDeviceCount?: number | null;
+            /**
+             * Format: date-time
+             * @description When activeDeviceCount was last refreshed.
+             */
+            activeDeviceCountCheckedAt?: string | null;
         };
         SubscriptionDetail: components["schemas"]["SubscriptionSummary"] & {
             /** Format: uuid */
@@ -1791,6 +1849,30 @@ export interface components {
                 expiredNoRenewal: number;
             };
         };
+        DashboardPopularity: {
+            /** @enum {string} */
+            mode: "assigned" | "live";
+            /** @description live mode only */
+            windowDays?: number;
+            servers: {
+                /** Format: uuid */
+                endpointId?: string | null;
+                name?: string | null;
+                countryCode?: string | null;
+                protocol: string;
+                /** @description assigned mode */
+                subscriptionCount?: number;
+                /** @description live mode */
+                sampleCount?: number;
+            }[];
+            protocols: {
+                protocol: string;
+                /** @description assigned mode */
+                subscriptionCount?: number;
+                /** @description live mode */
+                sampleCount?: number;
+            }[];
+        };
         RetentionSummary: {
             graceDays: number;
             /** @description ACTIVE/TRIAL subscriptions past the grace period with no observed traffic */
@@ -1928,6 +2010,12 @@ export interface components {
             opened: number;
             /** @description Previously-open incidents that no longer reproduce and were closed */
             resolved: number;
+        };
+        DeviceUsagePollResult: {
+            sourcesChecked: number;
+            subscriptionsUpdated: number;
+            overagesOpened: number;
+            overagesResolved: number;
         };
         ExpireDueResult: {
             /** @description Subscriptions transitioned from ACTIVE/TRIAL to EXPIRED in this pass */
@@ -2441,6 +2529,42 @@ export interface operations {
             };
             /** @description Invalid customer session */
             401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    rotateCustomerSubscriptionToken: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                subscriptionId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description New plaintext token, returned exactly once */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["IssuedSubscriptionToken"];
+                };
+            };
+            /** @description Invalid customer session */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Subscription not found (or does not belong to this customer) */
+            404: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -4212,6 +4336,37 @@ export interface operations {
             };
         };
     };
+    getDashboardPopularity: {
+        parameters: {
+            query?: {
+                mode?: "assigned" | "live";
+                /** @description live mode only: how many days to sum over. */
+                days?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Popularity breakdown; requires infrastructure.read */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DashboardPopularity"];
+                };
+            };
+            /** @description Missing infrastructure.read permission */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
     listAdminAuditEvents: {
         parameters: {
             query?: {
@@ -4469,6 +4624,33 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["ReconciliationRunResult"];
+                };
+            };
+            /** @description Invalid internal credential */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    pollDeviceUsage: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Summary of this poll */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DeviceUsagePollResult"];
                 };
             };
             /** @description Invalid internal credential */
