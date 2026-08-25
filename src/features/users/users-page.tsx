@@ -3,7 +3,7 @@
 import { useQuery } from "@tanstack/react-query";
 import type { ColumnDef } from "@tanstack/react-table";
 import { useRouter, useSearchParams } from "next/navigation";
-import { Suspense, useEffect, useState } from "react";
+import { Suspense, useCallback, useEffect, useState } from "react";
 import { adminApi } from "@/api/client";
 import type { AdminCustomerQuery, CustomerSummary } from "@/api/types";
 import { AppShell } from "@/components/app-shell";
@@ -124,15 +124,18 @@ export function UsersPage() {
 
   const staff = useQuery({ queryKey: ["staff-session"], queryFn: adminApi.getSession, retry: false });
 
-  const selectCustomer = (customerId: string) => {
-    setSelectedId(customerId);
-    setTab("customers");
-    router.replace(`/users?customerId=${customerId}`);
-  };
-  const closeCustomer = () => {
+  const selectCustomer = useCallback(
+    (customerId: string) => {
+      setSelectedId(customerId);
+      setTab("customers");
+      router.replace(`/users?customerId=${customerId}`);
+    },
+    [router],
+  );
+  const closeCustomer = useCallback(() => {
     setSelectedId(undefined);
     router.replace("/users");
-  };
+  }, [router]);
 
   return (
     <AppShell>

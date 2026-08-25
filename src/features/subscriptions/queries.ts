@@ -54,3 +54,15 @@ export function useRotateSubscriptionTokenMutation(onIssued: (token: Awaited<Ret
     onSuccess: onIssued,
   });
 }
+
+export function useExtendSubscriptionMutation(id: string | undefined, onDone: () => void, customerId?: string) {
+  const invalidate = useInvalidateSubscriptions(id);
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id: subscriptionId, days, reason }: { id: string; days: number; reason: string }) => adminApi.extendSubscription(subscriptionId, { days, reason }),
+    onSuccess: async () => {
+      onDone();
+      await Promise.all([invalidate(), ...(customerId ? [queryClient.invalidateQueries({ queryKey: ["admin-customer", customerId] })] : [])]);
+    },
+  });
+}

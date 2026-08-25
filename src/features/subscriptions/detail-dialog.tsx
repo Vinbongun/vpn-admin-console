@@ -20,7 +20,7 @@ import { ConfirmDialog } from "@/components/confirm-dialog";
 import { DevicesSection } from "@/features/subscriptions/devices-section";
 import { ErrorState } from "@/components/error-state";
 import { subscriptionStatuses } from "@/features/subscriptions/schema";
-import { useRevokeSubscriptionMutation, useRotateSubscriptionTokenMutation, useSubscription, useUpdateSubscriptionMutation } from "@/features/subscriptions/queries";
+import { useExtendSubscriptionMutation, useRevokeSubscriptionMutation, useRotateSubscriptionTokenMutation, useSubscription, useUpdateSubscriptionMutation } from "@/features/subscriptions/queries";
 import { can } from "@/lib/access-control";
 
 type Status = SubscriptionSummary["status"];
@@ -66,10 +66,16 @@ function SubscriptionDetailBody({
   const [editPlanId, setEditPlanId] = useState("none");
   const [reason, setReason] = useState("");
   const [issuedToken, setIssuedToken] = useState<IssuedSubscriptionToken>();
+  const [extendOpen, setExtendOpen] = useState(false);
+  const [extendForm, setExtendForm] = useState({ days: "7", reason: "" });
 
   const updateMutation = useUpdateSubscriptionMutation(subscription.id);
   const revokeMutation = useRevokeSubscriptionMutation(subscription.id, onClose);
   const rotateMutation = useRotateSubscriptionTokenMutation(setIssuedToken);
+  const extendMutation = useExtendSubscriptionMutation(subscription.id, () => {
+    setExtendOpen(false);
+    setExtendForm({ days: "7", reason: "" });
+  }, subscription.customerId ?? undefined);
 
   return (
     <>
@@ -118,6 +124,43 @@ function SubscriptionDetailBody({
           activeDeviceCountCheckedAt={subscription.activeDeviceCountCheckedAt}
           mayWrite={mayWrite}
         />
+
+        {mayWrite && subscription.status !== "REVOKED" && (
+          <div>
+            {extendOpen ? (
+              <FieldGroup className="gap-3 rounded-lg border border-dashed p-3">
+                <p className="text-xs text-muted-foreground">Продлить дату окончания на N дней от текущей даты окончания (или от сегодня, если подписка уже истекла). Для розыгрышей, компенсаций, тестов — без отдельного заказа.</p>
+                <div className="grid grid-cols-2 gap-2">
+                  <Field>
+                    <FieldLabel htmlFor="extend-days">Дней</FieldLabel>
+                    <Input id="extend-days" type="number" min={1} value={extendForm.days} onChange={(event) => setExtendForm((value) => ({ ...value, days: event.target.value }))} />
+                  </Field>
+                  <Field>
+                    <FieldLabel htmlFor="extend-reason">Причина</FieldLabel>
+                    <Input id="extend-reason" placeholder="Причина" value={extendForm.reason} onChange={(event) => setExtendForm((value) => ({ ...value, reason: event.target.value }))} />
+                  </Field>
+                </div>
+                <div className="flex gap-2">
+                  <Button
+                    size="sm"
+                    disabled={!extendForm.days || Number(extendForm.days) <= 0 || !extendForm.reason || extendMutation.isPending}
+                    onClick={() => extendMutation.mutate({ id: subscription.id, days: Number(extendForm.days), reason: extendForm.reason })}
+                  >
+                    {extendMutation.isPending && <Spinner />}
+                    Продлить
+                  </Button>
+                  <Button size="sm" variant="outline" onClick={() => setExtendOpen(false)}>
+                    Отмена
+                  </Button>
+                </div>
+              </FieldGroup>
+            ) : (
+              <Button size="sm" variant="outline" onClick={() => setExtendOpen(true)}>
+                Продлить
+              </Button>
+            )}
+          </div>
+        )}
 
         {issuedToken && (
           <Alert className="border-amber-500/50">

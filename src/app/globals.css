@@ -122,6 +122,60 @@
 
 * { border-color: var(--border); }
 
+.md-article {
+  --md-bg: #fff;
+  --md-text: rgba(0, 0, 0, 0.8);
+  --md-muted: rgba(0, 0, 0, 0.6);
+  --md-fill: rgba(0, 0, 0, 0.04);
+  --md-fill-strong: rgba(0, 0, 0, 0.06);
+  --md-rule: rgba(0, 0, 0, 0.1);
+  --md-rule-strong: rgba(0, 0, 0, 0.16);
+  --md-link: hsl(210 100% 45%);
+  max-width: 720px;
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  font: 14px/1.55 -apple-system, BlinkMacSystemFont, "SF Pro", "Segoe UI", sans-serif;
+  overflow-wrap: break-word;
+  color: var(--md-text);
+}
+.dark .md-article {
+  --md-bg: #0d0d0d;
+  --md-text: rgba(255, 255, 255, 0.85);
+  --md-muted: rgba(255, 255, 255, 0.6);
+  --md-fill: rgba(255, 255, 255, 0.06);
+  --md-fill-strong: rgba(255, 255, 255, 0.09);
+  --md-rule: rgba(255, 255, 255, 0.14);
+  --md-rule-strong: rgba(255, 255, 255, 0.22);
+  --md-link: hsl(210 100% 72%);
+}
+.md-article > :first-child { margin-top: 0; }
+.md-article :is(h1, h2, h3, h4, h5, h6) { margin: 6px 0 0; line-height: 1.25; font-weight: 600; text-wrap: balance; }
+.md-article h1 { font-size: 1.35em; }
+.md-article h2 { font-size: 1.15em; color: var(--md-muted); }
+.md-article :is(h3, h4, h5, h6) { font-size: 1em; }
+.md-article :is(p, ul, ol, blockquote, table, pre, hr) { margin: 0; }
+.md-article strong { font-weight: 600; }
+.md-article a { color: var(--md-link); text-decoration: none; }
+.md-article a:hover { text-decoration: underline; }
+.md-article :is(ul, ol) { display: flex; flex-direction: column; gap: 6px; padding-left: 22px; }
+.md-article ul { list-style: disc; }
+.md-article ol { list-style: decimal; }
+.md-article :is(li, td, th) > * + :is(p, ul, ol, blockquote) { margin-top: 6px; }
+.md-article blockquote { display: flex; flex-direction: column; gap: 10px; border-left: 2px solid var(--md-rule); padding-left: 10px; color: var(--md-muted); }
+.md-article :not(pre) > code { background: var(--md-fill); padding: 1px 3px; border-radius: 4px; font: 0.92em "SF Mono", ui-monospace, Menlo, Consolas, monospace; }
+.md-article a > code { background: none; color: inherit; }
+.md-article pre { background: var(--md-fill); padding: 10px 12px; border-radius: 6px; overflow-x: auto; font: 12px/1.5 "SF Mono", ui-monospace, Menlo, Consolas, monospace; margin-block: 4px; }
+.md-article pre code { background: none; padding: 0; font: inherit; }
+.md-article table { width: 100%; border-collapse: separate; border-spacing: 2px; font: inherit; }
+.md-article :is(th, td) { padding: 6px 8px; border-radius: 3px; text-align: left; vertical-align: top; }
+.md-article th { background: var(--md-fill-strong); font-weight: 600; }
+.md-article td { background: var(--md-fill); }
+.md-article :is(th, td) :not(pre) > code { background: transparent; }
+.md-article hr { border: 0; border-top: 1px solid var(--md-rule-strong); margin-block: 10px; }
+.md-article img { max-width: 100%; height: auto; border-radius: 4px; }
+
 @layer base {
   * {
     @apply border-border outline-ring/50;
