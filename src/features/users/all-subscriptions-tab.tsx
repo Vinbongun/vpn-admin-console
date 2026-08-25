@@ -5,9 +5,7 @@ import type { SortingState } from "@tanstack/react-table";
 import { useState } from "react";
 import { adminApi } from "@/api/client";
 import type { AdminSubscriptionQuery } from "@/api/types";
-import { AppShell } from "@/components/app-shell";
 import { DataTable, DataTablePagination } from "@/components/data-table";
-import { PageHeader } from "@/components/page-header";
 import { PageToolbar, ToolbarSearch } from "@/components/page-toolbar";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { subscriptionColumns } from "@/features/subscriptions/columns";
@@ -19,7 +17,7 @@ import { can } from "@/lib/access-control";
 
 const pageSize = 25;
 
-export function SubscriptionsPage() {
+export function AllSubscriptionsTab({ staff }: { staff: { permissions: string[] } | undefined }) {
   const [page, setPage] = useState(1);
   const [brandCode, setBrandCode] = useState("all");
   const [customerEmail, setCustomerEmail] = useState("");
@@ -27,7 +25,6 @@ export function SubscriptionsPage() {
   const [sorting, setSorting] = useState<SortingState>([{ id: "createdAt", desc: true }]);
   const [selectedId, setSelectedId] = useState<string>();
 
-  const staff = useQuery({ queryKey: ["staff-session"], queryFn: adminApi.getSession, retry: false });
   const brands = useQuery({ queryKey: ["admin-brands"], queryFn: adminApi.listBrands, retry: false });
 
   const sort = sorting[0];
@@ -41,13 +38,11 @@ export function SubscriptionsPage() {
     ...(status !== "all" ? { status: status as AdminSubscriptionQuery["status"] } : {}),
   });
 
-  const mayWrite = can(staff.data, "subscriptions.write");
+  const mayWrite = can(staff, "subscriptions.write");
   const totalPages = Math.max(1, Math.ceil((subscriptions.data?.total ?? 0) / (subscriptions.data?.pageSize ?? pageSize)));
 
   return (
-    <AppShell>
-      <PageHeader title="Подписки" description="Управление подписками клиентов" actions={mayWrite && <CreateSubscriptionDialog />} />
-
+    <div className="flex flex-col gap-4">
       <PageToolbar>
         <ToolbarSearch value={customerEmail} onChange={(value) => { setCustomerEmail(value); setPage(1); }} placeholder="Email клиента" />
         <Select
@@ -84,6 +79,7 @@ export function SubscriptionsPage() {
             ))}
           </SelectContent>
         </Select>
+        {mayWrite && <CreateSubscriptionDialog />}
       </PageToolbar>
 
       <DataTable
@@ -100,7 +96,7 @@ export function SubscriptionsPage() {
       />
       <DataTablePagination page={page} pageCount={totalPages} onPageChange={setPage} />
 
-      <SubscriptionDetailDialog subscriptionId={selectedId} onOpenChange={(open) => !open && setSelectedId(undefined)} staff={staff.data} />
-    </AppShell>
+      <SubscriptionDetailDialog subscriptionId={selectedId} onOpenChange={(open) => !open && setSelectedId(undefined)} staff={staff} />
+    </div>
   );
 }
