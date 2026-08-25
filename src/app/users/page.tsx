@@ -225,6 +225,9 @@ export default function CustomersPage() {
                             <div>
                               <p className="font-medium">{membership.brandName}</p>
                               <p className="text-xs text-muted-foreground">{membership.brandCode}</p>
+                              {membership.createdAt && (
+                                <p className="text-xs text-muted-foreground">Регистрация: {new Date(membership.createdAt).toLocaleDateString()}</p>
+                              )}
                             </div>
                             <StatusBadge status={membership.status} />
                           </div>

@@ -18,10 +18,11 @@ export type UpdateSubscription = Schemas["UpdateSubscription"];
 export type RotateSubscriptionToken = Schemas["RotateSubscriptionToken"];
 export type IssuedSubscriptionToken = Schemas["IssuedSubscriptionToken"];
 export type CustomerSummary = Schemas["CustomerSummary"];
-export type CustomerDetail = Schemas["CustomerDetail"];
+// createdAt is actually returned by the backend for each membership but missing from its OpenAPI schema.
+export type BrandMembershipSummary = Schemas["BrandMembershipSummary"] & { createdAt?: string };
+export type CustomerDetail = Omit<Schemas["CustomerDetail"], "memberships"> & { memberships: BrandMembershipSummary[] };
 export type CustomerSubscriptionSummary = Schemas["CustomerSubscriptionSummary"];
 export type CustomerPage = Schemas["CustomerPage"];
-export type BrandMembershipSummary = Schemas["BrandMembershipSummary"];
 export type UpdateMembership = Schemas["UpdateMembership"];
 export type PlanSummary = Schemas["PlanSummary"];
 export type PlanPage = Schemas["PlanPage"];
