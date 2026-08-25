@@ -20,6 +20,11 @@ export const brandBasicsSchema = z.object({
 });
 export type BrandBasicsValues = z.infer<typeof brandBasicsSchema>;
 
+const decoyTextEntrySchema = z.object({
+  value: z.string().trim().max(60, "До 60 символов"),
+});
+const decoyTextListSchema = z.array(decoyTextEntrySchema).max(10, "Не более 10 подключений");
+
 export const brandPublicSchema = z.object({
   logoUrl: z.string().trim(),
   faviconUrl: z.string().trim(),
@@ -30,5 +35,7 @@ export const brandPublicSchema = z.object({
   profileTitle: z.string().trim().max(25, "До 25 символов — ограничение Happ"),
   announce: z.string().trim().max(200, "До 200 символов"),
   supportUrl: z.string().trim(),
+  decoyExpired: decoyTextListSchema,
+  decoyBlocked: decoyTextListSchema,
 });
 export type BrandPublicValues = z.infer<typeof brandPublicSchema>;

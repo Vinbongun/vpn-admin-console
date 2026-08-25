@@ -1601,6 +1601,11 @@ export interface components {
                 announce: string | null;
                 /** @description Sent as the Happ "support-url" subscription header, if set. */
                 supportUrl: string | null;
+                /** @description Brand-configurable decoy "connection" names shown instead of real servers for a lapsed subscription (see PATCH .../brands/{id} for the full semantics). Empty arrays here mean the built-in default pair is being used. */
+                decoyTexts: {
+                    expired: string[];
+                    blocked: string[];
+                };
             };
             /** Format: date-time */
             createdAt?: string;
@@ -3638,6 +3643,13 @@ export interface operations {
                          * @description Sent as the Happ "support-url" subscription header, if set (e.g. a Telegram support chat link).
                          */
                         supportUrl?: string;
+                        /** @description Fully replaces both lists together (not merged key-by-key like the rest of `public` - send both `expired` and `blocked` even if only one changed, or the other reverts to empty/default). */
+                        decoyTexts?: {
+                            /** @description Each entry becomes one decoy "connection" shown instead of real servers for an EXPIRED subscription. `{site}` is substituted with this brand's siteUrl. Empty/unset uses a built-in default pair. */
+                            expired?: string[];
+                            /** @description Same as `expired`, for REVOKED/SUSPENDED/PAST_DUE. */
+                            blocked?: string[];
+                        };
                     };
                 };
             };
