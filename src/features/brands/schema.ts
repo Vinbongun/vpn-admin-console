@@ -26,5 +26,9 @@ export const brandPublicSchema = z.object({
   supportEmail: z.string().trim(),
   termsUrl: z.string().trim(),
   privacyUrl: z.string().trim(),
+  siteUrl: z.string().trim(),
+  profileTitle: z.string().trim().max(25, "До 25 символов — ограничение Happ"),
+  announce: z.string().trim().max(200, "До 200 символов"),
+  supportUrl: z.string().trim(),
 });
 export type BrandPublicValues = z.infer<typeof brandPublicSchema>;

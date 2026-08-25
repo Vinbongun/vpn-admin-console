@@ -6,6 +6,7 @@ import Link from "next/link";
 import { useState } from "react";
 import { adminApi } from "@/api/client";
 import type { IssuedSubscriptionToken, PlanSummary, SubscriptionDetail, SubscriptionSummary } from "@/api/types";
+import { StatusBadge } from "@/components/status-badge";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -90,6 +91,16 @@ function SubscriptionDetailBody({
           </Button>
         )}
         <dl className="grid grid-cols-2 gap-y-2 text-sm">
+          <dt className="text-muted-foreground">Статус</dt>
+          <dd>
+            <StatusBadge status={subscription.status} />
+          </dd>
+          {subscription.status === "REVOKED" && subscription.revokedReason && (
+            <>
+              <dt className="text-muted-foreground">Причина отзыва</dt>
+              <dd>{subscription.revokedReason}</dd>
+            </>
+          )}
           <dt className="text-muted-foreground">Привязка к бренду</dt>
           <dd className="truncate">{subscription.brandMembershipId ?? "—"}</dd>
           <dt className="text-muted-foreground">Тариф</dt>
