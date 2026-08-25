@@ -17,16 +17,33 @@ import { createSubscriptionSchema, type CreateSubscriptionValues } from "@/featu
 
 const defaultValues: CreateSubscriptionValues = { brandMembershipId: "", planId: "none", status: "ACTIVE", startsAt: "", expiresAt: "" };
 
-export function CreateSubscriptionDialog() {
+type MembershipOption = { id: string; label: string };
+
+export function CreateSubscriptionDialog({
+  scopedCustomer,
+  trigger,
+}: {
+  scopedCustomer?: { id: string; memberships: MembershipOption[] };
+  trigger?: React.ReactElement;
+} = {}) {
   const [open, setOpen] = useState(false);
-  const customers = useQuery({ queryKey: ["admin-customers", "subscription-form"], queryFn: () => adminApi.listCustomers({ page: 1, pageSize: 100 }), retry: false });
+  const customers = useQuery({
+    queryKey: ["admin-customers", "subscription-form"],
+    queryFn: () => adminApi.listCustomers({ page: 1, pageSize: 100 }),
+    retry: false,
+    enabled: open && !scopedCustomer,
+  });
   const plans = useQuery({ queryKey: ["admin-plans", "subscription-form"], queryFn: () => adminApi.listPlans({ page: 1, pageSize: 100, status: "ACTIVE" }), retry: false });
+
+  const membershipOptions: MembershipOption[] = scopedCustomer
+    ? scopedCustomer.memberships
+    : (customers.data?.items.flatMap((customer) => customer.memberships.map((membership) => ({ id: membership.id, label: `${customer.email} · ${membership.brandCode}` }))) ?? []);
 
   const form = useForm<CreateSubscriptionValues>({ resolver: zodResolver(createSubscriptionSchema), defaultValues });
   const createMutation = useCreateSubscriptionMutation(() => {
     form.reset(defaultValues);
     setOpen(false);
-  });
+  }, scopedCustomer?.id);
 
   const submit = form.handleSubmit((values) => {
     createMutation.mutate({
@@ -42,16 +59,18 @@ export function CreateSubscriptionDialog() {
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger
         render={
-          <Button size="sm">
-            <PlusIcon />
-            Создать подписку
-          </Button>
+          trigger ?? (
+            <Button size="sm">
+              <PlusIcon />
+              Создать подписку
+            </Button>
+          )
         }
       />
       <DialogContent className="sm:max-w-lg">
         <DialogHeader>
           <DialogTitle>Создать подписку</DialogTitle>
-          <DialogDescription>Бренд клиента и тариф выбираются из уже существующих записей.</DialogDescription>
+          <DialogDescription>{scopedCustomer ? "Бренд клиента и тариф выбираются из уже существующих записей." : "Клиент, бренд и тариф выбираются из уже существующих записей."}</DialogDescription>
         </DialogHeader>
         <form className="contents" onSubmit={submit}>
           <FieldGroup>
@@ -62,7 +81,7 @@ export function CreateSubscriptionDialog() {
                 <Field data-invalid={Boolean(fieldState.error)}>
                   <FieldLabel htmlFor="brandMembershipId">Привязка к бренду</FieldLabel>
                   <Select
-                    items={customers.data?.items.flatMap((customer) => customer.memberships.map((membership) => ({ value: membership.id, label: `${customer.email} · ${membership.brandCode}` }))) ?? []}
+                    items={membershipOptions.map((option) => ({ value: option.id, label: option.label }))}
                     value={field.value || null}
                     onValueChange={(value) => field.onChange(value ?? "")}
                   >
@@ -70,13 +89,11 @@ export function CreateSubscriptionDialog() {
                       <SelectValue placeholder="Выберите привязку к бренду" />
                     </SelectTrigger>
                     <SelectContent>
-                      {customers.data?.items.flatMap((customer) =>
-                        customer.memberships.map((membership) => (
-                          <SelectItem key={membership.id} value={membership.id}>
-                            {customer.email} · {membership.brandCode}
-                          </SelectItem>
-                        )),
-                      )}
+                      {membershipOptions.map((option) => (
+                        <SelectItem key={option.id} value={option.id}>
+                          {option.label}
+                        </SelectItem>
+                      ))}
                     </SelectContent>
                   </Select>
                   <FieldError errors={[fieldState.error]} />

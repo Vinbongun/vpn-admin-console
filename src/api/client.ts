@@ -15,7 +15,8 @@ import type {
   AdminPaymentsSummaryQuery,
   AdminPlanQuery,
   AdminPopularityQuery,
-  AdminReferralQuery,
+  AdminPromoCodeQuery,
+  AdminReferralPartnerQuery,
   AdminRetentionQuery,
   AdminSubscriptionQuery,
   CreateBrand,
@@ -24,6 +25,7 @@ import type {
   CreatePaymentGateway,
   CreatePaymentMethod,
   CreatePlan,
+  CreateReferralPartner,
   CreateSubscription,
   CustomerDetail,
   IssuedSubscriptionToken,
@@ -47,8 +49,9 @@ import type {
   UpdateMembership,
   UpdatePaymentGateway,
   UpdatePaymentMethod,
+  UpdateReferralPartner,
   UpdateSubscription,
-  UpsertReferralProgram,
+  UpsertPromoCode,
 } from "@/api/types";
 
 export const API_URL = (process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:3000").replace(/\/$/, "");
@@ -118,9 +121,15 @@ export const adminApi = {
   getDashboardPopularity: async (query: AdminPopularityQuery = {}) => unwrap(await client.GET("/admin/v1/dashboard/popularity", { params: { query }, headers: staffHeaders() })),
   listDevices: async (subscriptionId: string) => unwrap(await client.GET("/admin/v1/subscriptions/{subscriptionId}/devices", { params: { path: { subscriptionId } }, headers: staffHeaders() })),
   removeDevice: async (subscriptionId: string, deviceId: string) => unwrap<void>(await client.DELETE("/admin/v1/subscriptions/{subscriptionId}/devices/{deviceId}", { params: { path: { subscriptionId, deviceId } }, headers: staffHeaders() })),
-  listReferralPrograms: async () => unwrap(await client.GET("/admin/v1/referral-programs", { headers: staffHeaders() })),
-  upsertReferralProgram: async (body: UpsertReferralProgram) => unwrap(await client.POST("/admin/v1/referral-programs", { body, headers: staffHeaders() })),
-  listReferrals: async (query: AdminReferralQuery = {}) => unwrap(await client.GET("/admin/v1/referrals", { params: { query }, headers: staffHeaders() })),
+  listReferralPartners: async (query: AdminReferralPartnerQuery = {}) => unwrap(await client.GET("/admin/v1/referral-partners", { params: { query }, headers: staffHeaders() })),
+  createReferralPartner: async (body: CreateReferralPartner) => unwrap(await client.POST("/admin/v1/referral-partners", { body, headers: staffHeaders() })),
+  updateReferralPartner: async (partnerId: string, body: UpdateReferralPartner) =>
+    unwrap(await client.PATCH("/admin/v1/referral-partners/{id}", { params: { path: { id: partnerId } }, body, headers: staffHeaders() })),
+  listPromoCodes: async (query: AdminPromoCodeQuery = {}) => unwrap(await client.GET("/admin/v1/promo-codes", { params: { query }, headers: staffHeaders() })),
+  createPromoCode: async (body: UpsertPromoCode) => unwrap(await client.POST("/admin/v1/promo-codes", { body, headers: staffHeaders() })),
+  updatePromoCode: async (promoCodeId: string, body: UpsertPromoCode) =>
+    unwrap(await client.PATCH("/admin/v1/promo-codes/{id}", { params: { path: { id: promoCodeId } }, body, headers: staffHeaders() })),
+  getReferralPartnerStats: async () => unwrap(await client.GET("/admin/v1/referrals/stats", { headers: staffHeaders() })),
   listPayments: async (query: AdminPaymentQuery = {}) => unwrap(await client.GET("/admin/v1/payments", { params: { query }, headers: staffHeaders() })),
   getPaymentsSummary: async (query: AdminPaymentsSummaryQuery = {}) => unwrap(await client.GET("/admin/v1/payments/summary", { params: { query }, headers: staffHeaders() })),
   getPayment: async (paymentId: string) => unwrap(await client.GET("/admin/v1/payments/{id}", { params: { path: { id: paymentId } }, headers: staffHeaders() })),

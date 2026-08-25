@@ -334,57 +334,24 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/customer/v1/referrals/me": {
+    "/admin/v1/referral-partners": {
         parameters: {
             query?: never;
             header?: never;
             path?: never;
             cookie?: never;
         };
-        /** @description Creates the customer's referral code on first call (against the brand's DEFAULT program) and returns it alongside every referral they've earned so far. */
-        get: operations["getOwnReferralCode"];
+        get: operations["listReferralPartners"];
         put?: never;
-        post?: never;
+        /** @description Referral partners are manually managed (there is no self-service signup) - for now this is effectively just the project owner, added by hand. */
+        post: operations["createReferralPartner"];
         delete?: never;
         options?: never;
         head?: never;
         patch?: never;
         trace?: never;
     };
-    "/admin/v1/referral-programs": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get: operations["listReferralPrograms"];
-        put?: never;
-        /** @description Creates or updates the program for a brand+campaignCode (default campaignCode is "DEFAULT"). */
-        post: operations["upsertReferralProgram"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/admin/v1/referrals": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get: operations["listAdminReferrals"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/internal/v1/referrals/confirm-due": {
+    "/admin/v1/referral-partners/{id}": {
         parameters: {
             query?: never;
             header?: never;
@@ -393,8 +360,73 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** @description Confirms PENDING referrals whose first order's subscription has reached EXPIRED (its paid period fully elapsed) while the order is still PAID, and credits the referrer's ledger with a REFERRAL_CREDIT entry. Intended to be called on an interval by an external worker/cron, alongside subscriptions/expire-due. */
-        post: operations["confirmDueReferrals"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch: operations["updateReferralPartner"];
+        trace?: never;
+    };
+    "/admin/v1/promo-codes": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["listPromoCodes"];
+        put?: never;
+        post: operations["createPromoCode"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/v1/promo-codes/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch: operations["updatePromoCode"];
+        trace?: never;
+    };
+    "/admin/v1/referrals/stats": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description Aggregate per-referral-partner stats backing the main admin "Рефералы" dashboard - active code count, redemption counts (all-time + this month), and pending/confirmed payout totals. */
+        get: operations["promoCodeStatsByPartner"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/internal/v1/promo-codes/confirm-due": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** @description Confirms PENDING promo code redemptions whose order's subscription has reached EXPIRED (its paid period fully elapsed) while the order is still PAID, and credits the referral partner's ledger. Intended to be called on an interval by an external worker/cron, alongside subscriptions/expire-due. */
+        post: operations["confirmDuePromoCodePayouts"];
         delete?: never;
         options?: never;
         head?: never;
@@ -1535,6 +1567,8 @@ export interface components {
             brandCode: string;
             brandName: string;
             status: string;
+            /** @description This brand's customer-portal base URL, if configured - only present on the single-customer detail response (GET /admin/v1/customers/{id}), not the list. Not a deep link to this specific customer's own subscriptions page - portal sessions are per-customer, an admin cannot generate a link that logs the customer in. */
+            portalUrl?: string | null;
         };
         UpdateMembership: {
             /** @enum {string} */
@@ -1549,6 +1583,23 @@ export interface components {
             /** Format: date-time */
             createdAt: string;
             memberships: components["schemas"]["BrandMembershipSummary"][];
+        };
+        SubscriptionTokenSummary: {
+            /** Format: uuid */
+            id: string;
+            tokenPrefix: string;
+            /** @enum {string} */
+            status: "ACTIVE" | "REVOKED";
+            /** @description The full `/s/{token}` link, only populated for the current ACTIVE token - every past (rotated/revoked) token has only its one-way hash stored, the same way a password is stored, so its working link can never be recovered, only its issuance history (prefix, dates, status). */
+            subscriptionUrl: string | null;
+            /** Format: date-time */
+            createdAt: string;
+            /** Format: date-time */
+            lastUsedAt: string | null;
+            /** Format: date-time */
+            revokedAt: string | null;
+            /** Format: date-time */
+            expiresAt: string | null;
         };
         CustomerSubscriptionSummary: {
             /** Format: uuid */
@@ -1569,6 +1620,8 @@ export interface components {
                 code?: string;
                 name?: string;
             }[];
+            /** @description Every subscription-URL token ever issued for this subscription, newest first - lets support staff find the link a customer was given without waiting for the customer to look it up themselves. */
+            tokens: components["schemas"]["SubscriptionTokenSummary"][];
         };
         CustomerDetail: components["schemas"]["CustomerSummary"] & {
             subscriptions: components["schemas"]["CustomerSubscriptionSummary"][];
@@ -1899,13 +1952,10 @@ export interface components {
             /** @description Customers whose most recent subscription expired without a renewal */
             expiredNoRenewal: number;
         };
-        ReferralProgram: {
+        ReferralPartner: {
             /** Format: uuid */
             id: string;
-            /** Format: uuid */
-            brandId: string;
-            campaignCode: string;
-            rewardPercent: number;
+            name: string;
             /** @enum {string} */
             status: "ACTIVE" | "INACTIVE";
             /** Format: date-time */
@@ -1913,28 +1963,55 @@ export interface components {
             /** Format: date-time */
             updatedAt: string;
         };
-        ReferralSummary: {
+        UpsertPromoCode: {
+            code: string;
+            /** Format: uuid */
+            referralPartnerId: string;
+            /** @enum {string} */
+            discountType: "PERCENT" | "FIXED_PRICE";
+            /** @description Percent (0-100) if discountType is PERCENT, or an absolute price if FIXED_PRICE. */
+            discountValue: number;
+            /** @description Computed against the order's full undiscounted list price, not the discounted amount actually charged. */
+            payoutPercent: number;
+            /** @description One code can apply to several brands, at the same discount/payout values. */
+            brandIds: string[];
+            /** @enum {string} */
+            status?: "ACTIVE" | "INACTIVE";
+        };
+        PromoCode: {
             /** Format: uuid */
             id: string;
+            code: string;
+            /** Format: uuid */
+            referralPartnerId: string;
             /** @enum {string} */
-            status: "PENDING" | "CONFIRMED" | "CANCELLED";
-            rewardAmount: number;
-            rewardCurrency: string;
+            discountType: "PERCENT" | "FIXED_PRICE";
+            discountValue: number;
+            payoutPercent: number;
+            brandIds: string[];
+            /** @enum {string} */
+            status: "ACTIVE" | "INACTIVE";
             /** Format: date-time */
             createdAt: string;
             /** Format: date-time */
-            confirmedAt?: string | null;
+            updatedAt: string;
         };
-        ReferralMe: {
-            code: string;
-            rewardPercent: number;
-            referrals: components["schemas"]["ReferralSummary"][];
-        };
-        ReferralPage: {
-            items: components["schemas"]["ReferralSummary"][];
+        PromoCodePage: {
+            items: components["schemas"]["PromoCode"][];
             page: number;
             pageSize: number;
             total: number;
+        };
+        ReferralPartnerStats: {
+            /** Format: uuid */
+            referralPartnerId: string;
+            referralPartnerName: string;
+            activeCodes: number;
+            redemptionsTotal: number;
+            redemptionsThisMonth: number;
+            payoutPending: number;
+            payoutConfirmed: number;
+            currency: string | null;
         };
         PlanPage: components["schemas"]["PageMetadata"] & {
             items: components["schemas"]["PlanSummary"][];
@@ -2215,7 +2292,7 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            /** @description Health-filtered non-cacheable subscription body. `sing-box` and `xray` return a JSON document `{ "outbounds": [...] }`; `mihomo` returns a YAML document `{ proxies: [...] }` - one entry per eligible endpoint, in each format's own schema. Endpoints using a transport the selected format does not support (XHTTP for all three structured formats currently) or a protocol the renderer does not yet cover are silently omitted rather than emitted as a broken entry. When `format` is omitted and the request's User-Agent looks like an ordinary browser (not a recognized VPN client), an HTML status page is returned instead of a subscription body, showing status/expiry/server count, a copyable subscription link, and each eligible server's own direct decrypted link - mirroring how panels like 3x-ui present their own subscription links to a browser versus a client app. */
+            /** @description Health-filtered non-cacheable subscription body. `sing-box` and `xray` return a JSON document `{ "outbounds": [...] }`; `mihomo` returns a YAML document `{ proxies: [...] }` - one entry per eligible endpoint, in each format's own schema. Endpoints using a transport the selected format does not support (XHTTP for all three structured formats currently) or a protocol the renderer does not yet cover are silently omitted rather than emitted as a broken entry. When `format` is omitted and the request's User-Agent looks like an ordinary browser (not a recognized VPN client), an HTML status page is returned instead of a subscription body, showing status/expiry/server count, a copyable subscription link, and each eligible server's own direct decrypted link - mirroring how panels like 3x-ui present their own subscription links to a browser versus a client app. Every endpoint name (here and in the subscription body itself) is prefixed with its country's flag emoji; the 3 healthiest/least- loaded endpoints within the subscription's own plan also get a rank number and a fire emoji ahead of the flag (e.g. "1. France Vless") and are sorted to the front of the list - purely cosmetic labeling/ordering of servers the subscription already has access to, granting no additional access. */
             200: {
                 headers: {
                     [name: string]: unknown;
@@ -2732,8 +2809,8 @@ export interface operations {
                     brandMembershipId: string;
                     /** Format: uuid */
                     planId: string;
-                    /** @description Stored on the order and only applied at confirm time, on a NEW (not renewal) order; an invalid, unknown, or self-referral code is silently ignored rather than failing the purchase. */
-                    referralCode?: string;
+                    /** @description Applied immediately: the discount is computed and baked into this order's amount right away. An invalid, inactive, or wrong-brand code fails the request with 400 rather than silently proceeding at full price. */
+                    promoCode?: string;
                 };
             };
         };
@@ -2747,7 +2824,7 @@ export interface operations {
                     "application/json": components["schemas"]["OrderOpened"];
                 };
             };
-            /** @description Membership/plan/brand mismatch, the plan has no price set, or the brand has no default payment method configured */
+            /** @description Membership/plan/brand mismatch, the plan has no price set, the brand has no default payment method configured, or promoCode is invalid/inactive/inapplicable to this brand */
             400: {
                 headers: {
                     [name: string]: unknown;
@@ -2848,56 +2925,24 @@ export interface operations {
             };
         };
     };
-    getOwnReferralCode: {
+    listReferralPartners: {
         parameters: {
-            query?: never;
+            query?: {
+                status?: "ACTIVE" | "INACTIVE";
+            };
             header?: never;
             path?: never;
             cookie?: never;
         };
         requestBody?: never;
         responses: {
-            /** @description The customer's referral code and referral history */
+            /** @description All referral partners; requires finance.read */
             200: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["ReferralMe"];
-                };
-            };
-            /** @description A brand session is required */
-            400: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-            /** @description Brand membership not found, or no referral program configured for this brand */
-            404: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-        };
-    };
-    listReferralPrograms: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description All referral programs across brands; requires finance.read */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ReferralProgram"][];
+                    "application/json": components["schemas"]["ReferralPartner"][];
                 };
             };
             /** @description Missing finance.read permission */
@@ -2909,7 +2954,7 @@ export interface operations {
             };
         };
     };
-    upsertReferralProgram: {
+    createReferralPartner: {
         parameters: {
             query?: never;
             header?: never;
@@ -2919,25 +2964,20 @@ export interface operations {
         requestBody: {
             content: {
                 "application/json": {
-                    /** Format: uuid */
-                    brandId: string;
-                    /** @default DEFAULT */
-                    campaignCode?: string;
-                    /** @default 10 */
-                    rewardPercent?: number;
+                    name: string;
                     /** @enum {string} */
                     status?: "ACTIVE" | "INACTIVE";
                 };
             };
         };
         responses: {
-            /** @description Program created or updated; requires finance.write */
+            /** @description Referral partner created; requires finance.write */
             201: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["ReferralProgram"];
+                    "application/json": components["schemas"]["ReferralPartner"];
                 };
             };
             /** @description Missing finance.write permission */
@@ -2949,12 +2989,60 @@ export interface operations {
             };
         };
     };
-    listAdminReferrals: {
+    updateReferralPartner: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    name?: string;
+                    /** @enum {string} */
+                    status?: "ACTIVE" | "INACTIVE";
+                };
+            };
+        };
+        responses: {
+            /** @description Referral partner updated; requires finance.write */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ReferralPartner"];
+                };
+            };
+            /** @description Referral partner not found */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Missing finance.write permission */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    listPromoCodes: {
         parameters: {
             query?: {
                 page?: number;
                 pageSize?: number;
-                status?: "PENDING" | "CONFIRMED" | "CANCELLED";
+                brandId?: string;
+                referralPartnerId?: string;
+                status?: "ACTIVE" | "INACTIVE";
+                /** @description Case-insensitive substring search */
+                code?: string;
             };
             header?: never;
             path?: never;
@@ -2962,13 +3050,13 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            /** @description Paginated referrals across all brands; requires finance.read */
+            /** @description Paginated promo codes; requires finance.read */
             200: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["ReferralPage"];
+                    "application/json": components["schemas"]["PromoCodePage"];
                 };
             };
             /** @description Missing finance.read permission */
@@ -2980,7 +3068,92 @@ export interface operations {
             };
         };
     };
-    confirmDueReferrals: {
+    createPromoCode: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UpsertPromoCode"];
+            };
+        };
+        responses: {
+            /** @description Promo code created; requires finance.write */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PromoCode"];
+                };
+            };
+            /** @description Missing finance.write permission */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Promo code already exists */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    updatePromoCode: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UpsertPromoCode"];
+            };
+        };
+        responses: {
+            /** @description Promo code updated; requires finance.write */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PromoCode"];
+                };
+            };
+            /** @description Promo code not found */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Missing finance.write permission */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Promo code already exists */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    promoCodeStatsByPartner: {
         parameters: {
             query?: never;
             header?: never;
@@ -2989,7 +3162,34 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            /** @description Number of referrals confirmed and credited in this pass */
+            /** @description Per-partner aggregate stats; requires finance.read */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ReferralPartnerStats"][];
+                };
+            };
+            /** @description Missing finance.read permission */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    confirmDuePromoCodePayouts: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Number of redemptions confirmed and credited in this pass */
             201: {
                 headers: {
                     [name: string]: unknown;
