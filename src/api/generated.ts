@@ -1603,6 +1603,8 @@ export interface components {
                 announce: string | null;
                 /** @description Sent as the Happ "support-url" subscription header, if set. */
                 supportUrl: string | null;
+                /** @description Sent as "profile-update-interval" (whole hours). Null means the platform default (6 hours) applies. */
+                profileUpdateIntervalHours: number | null;
                 /** @description Brand-configurable decoy "connection" names shown instead of real servers for a lapsed subscription (see PATCH .../brands/{id} for the full semantics). Empty arrays here mean the built-in default pair is being used. */
                 decoyTexts: {
                     expired: string[];
@@ -3645,6 +3647,8 @@ export interface operations {
                          * @description Sent as the Happ "support-url" subscription header, if set (e.g. a Telegram support chat link).
                          */
                         supportUrl?: string;
+                        /** @description How often Happ (and similarly-behaved apps) re-fetch this brand's subscriptions, sent as "profile-update-interval". Happ documents this header in whole hours only - there is no sub-hour value. Unset uses the platform default (6 hours). */
+                        profileUpdateIntervalHours?: number;
                         /** @description Fully replaces both lists together (not merged key-by-key like the rest of `public` - send both `expired` and `blocked` even if only one changed, or the other reverts to empty/default). */
                         decoyTexts?: {
                             /** @description Each entry becomes one decoy "connection" shown instead of real servers for an EXPIRED subscription. `{site}` is substituted with this brand's siteUrl. Empty/unset uses a built-in default pair. */

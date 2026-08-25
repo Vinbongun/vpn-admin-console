@@ -109,6 +109,7 @@ export function BrandPublicSection({ brand, mayWrite }: { brand: BrandDetail; ma
       profileTitle: brand.public.profileTitle ?? "",
       announce: brand.public.announce ?? "",
       supportUrl: brand.public.supportUrl ?? "",
+      profileUpdateIntervalHours: brand.public.profileUpdateIntervalHours != null ? String(brand.public.profileUpdateIntervalHours) : "",
       decoyExpired: (brand.public.decoyTexts?.expired ?? []).map((value) => ({ value })),
       decoyBlocked: (brand.public.decoyTexts?.blocked ?? []).map((value) => ({ value })),
     },
@@ -129,6 +130,7 @@ export function BrandPublicSection({ brand, mayWrite }: { brand: BrandDetail; ma
           profileTitle: values.profileTitle || undefined,
           announce: values.announce || undefined,
           supportUrl: values.supportUrl || undefined,
+          ...(values.profileUpdateIntervalHours ? { profileUpdateIntervalHours: Number(values.profileUpdateIntervalHours) } : {}),
           decoyTexts: {
             expired: values.decoyExpired.map((entry) => entry.value.trim()).filter(Boolean),
             blocked: values.decoyBlocked.map((entry) => entry.value.trim()).filter(Boolean),
@@ -198,6 +200,23 @@ export function BrandPublicSection({ brand, mayWrite }: { brand: BrandDetail; ma
                 <Textarea id="brand-public-announce" disabled={!mayWrite} maxLength={200} rows={2} {...form.register("announce")} />
                 <FieldDescription>{announce.length} / 200</FieldDescription>
                 <FieldError errors={[form.formState.errors.announce]} />
+              </Field>
+              <Field className="sm:max-w-64" data-invalid={Boolean(form.formState.errors.profileUpdateIntervalHours)}>
+                <FieldLabel htmlFor="brand-public-update-interval">Как часто клиент обновляет список серверов (в часах)</FieldLabel>
+                <Input
+                  id="brand-public-update-interval"
+                  type="number"
+                  min={1}
+                  max={24}
+                  step={1}
+                  disabled={!mayWrite}
+                  placeholder="По умолчанию — 6"
+                  {...form.register("profileUpdateIntervalHours")}
+                />
+                <FieldDescription>
+                  Как часто приложение клиента (Happ и подобные) само перезапрашивает список серверов. Минимальный шаг — 1 час, меньше физически не поддерживается используемым протоколом.
+                </FieldDescription>
+                <FieldError errors={[form.formState.errors.profileUpdateIntervalHours]} />
               </Field>
               <DecoyTextsList
                 title="Тексты при истечении подписки"
