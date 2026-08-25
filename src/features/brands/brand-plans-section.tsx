@@ -23,13 +23,16 @@ function apiErrorMessage(error: ApiError): string {
 }
 
 const billingModels = ["DEVICE_PLAN", "ACCOUNT_PLAN", "FAMILY_PLAN"] as const;
+const serviceLines = ["MAIN", "WHITELIST"] as const;
 
 export function BrandPlansSection({ brand, mayWrite }: { brand: BrandDetail; mayWrite: boolean }) {
   const queryClient = useQueryClient();
   const [createOpen, setCreateOpen] = useState(false);
   const [priceEditingId, setPriceEditingId] = useState<string>();
   const [priceForm, setPriceForm] = useState<{ amount: string; currency: string }>({ amount: "", currency: "USD" });
-  const [newPlan, setNewPlan] = useState({ code: "", name: "", billingModel: "DEVICE_PLAN" as (typeof billingModels)[number], deviceLimit: "1" });
+  const [newPlan, setNewPlan] = useState({ code: "", name: "", billingModel: "DEVICE_PLAN" as (typeof billingModels)[number], deviceLimit: "1", serviceLine: "MAIN" as (typeof serviceLines)[number] });
+  const [editingPlan, setEditingPlan] = useState<PlanSummary>();
+  const [editForm, setEditForm] = useState({ name: "", billingModel: "DEVICE_PLAN" as (typeof billingModels)[number], deviceLimit: "1", status: "ACTIVE" as "ACTIVE" | "INACTIVE", serviceLine: "MAIN" as (typeof serviceLines)[number] });
   const plans = useQuery({ queryKey: ["admin-brand-plans", brand.id], queryFn: () => adminApi.listPlans({ brandCode: brand.code, pageSize: 100 }), retry: false });
 
   const priceMutation = useMutation({
@@ -42,19 +45,39 @@ export function BrandPlansSection({ brand, mayWrite }: { brand: BrandDetail; may
     onError: () => toast.error("Не удалось обновить цену."),
   });
   const createMutation = useMutation({
-    mutationFn: () => adminApi.createPlan({ brandId: brand.id, code: newPlan.code, name: newPlan.name, billingModel: newPlan.billingModel, deviceLimit: Number(newPlan.deviceLimit) }),
+    mutationFn: () => adminApi.createPlan({ brandId: brand.id, code: newPlan.code, name: newPlan.name, billingModel: newPlan.billingModel, deviceLimit: Number(newPlan.deviceLimit), serviceLine: newPlan.serviceLine }),
     onSuccess: async () => {
-      setNewPlan({ code: "", name: "", billingModel: "DEVICE_PLAN", deviceLimit: "1" });
+      setNewPlan({ code: "", name: "", billingModel: "DEVICE_PLAN", deviceLimit: "1", serviceLine: "MAIN" });
       setCreateOpen(false);
       toast.success("Тариф создан.");
       await queryClient.invalidateQueries({ queryKey: ["admin-brand-plans", brand.id] });
     },
     onError: (error) => toast.error(error instanceof ApiError ? (error.status === 409 ? "Тариф с таким кодом уже существует у этого бренда." : apiErrorMessage(error)) : "Не удалось создать тариф."),
   });
+  const updateMutation = useMutation({
+    mutationFn: (input: { id: string; body: { name: string; billingModel: (typeof billingModels)[number]; deviceLimit: number; status: "ACTIVE" | "INACTIVE"; serviceLine: (typeof serviceLines)[number] } }) =>
+      adminApi.updatePlan(input.id, input.body),
+    onSuccess: async () => {
+      setEditingPlan(undefined);
+      toast.success("Тариф обновлён.");
+      await queryClient.invalidateQueries({ queryKey: ["admin-brand-plans", brand.id] });
+    },
+    onError: (error) => toast.error(error instanceof ApiError ? apiErrorMessage(error) : "Не удалось обновить тариф."),
+  });
 
   const startPriceEdit = (plan: PlanSummary) => {
     setPriceEditingId(plan.id);
     setPriceForm({ amount: plan.price ? String(plan.price.amount) : "", currency: plan.price?.currency ?? "USD" });
+  };
+  const startEdit = (plan: PlanSummary) => {
+    setEditingPlan(plan);
+    setEditForm({
+      name: plan.name,
+      billingModel: plan.billingModel,
+      deviceLimit: String(plan.deviceLimit),
+      status: plan.status === "INACTIVE" ? "INACTIVE" : "ACTIVE",
+      serviceLine: plan.serviceLine,
+    });
   };
 
   const columns: ColumnDef<PlanSummary>[] = [
@@ -65,7 +88,9 @@ export function BrandPlansSection({ brand, mayWrite }: { brand: BrandDetail; may
       </div>
     ) },
     { accessorKey: "billingModel", header: "Модель" },
+    { accessorKey: "serviceLine", header: "Линейка" },
     { accessorKey: "deviceLimit", header: "Устройств" },
+    { accessorKey: "status", header: "Статус" },
     { id: "price", header: "Цена", cell: ({ row }) => {
       const plan = row.original;
       if (priceEditingId === plan.id) {
@@ -98,7 +123,10 @@ export function BrandPlansSection({ brand, mayWrite }: { brand: BrandDetail; may
               );
             }
             return (
-              <div className="text-right">
+              <div className="flex justify-end gap-2">
+                <Button size="sm" variant="outline" onClick={() => startEdit(plan)}>
+                  Редактировать
+                </Button>
                 <Button size="sm" variant="outline" onClick={() => startPriceEdit(plan)}>
                   Задать цену
                 </Button>
@@ -154,6 +182,25 @@ export function BrandPlansSection({ brand, mayWrite }: { brand: BrandDetail; may
                     <Label>Лимит устройств</Label>
                     <Input type="number" min={1} value={newPlan.deviceLimit} onChange={(event) => setNewPlan((value) => ({ ...value, deviceLimit: event.target.value }))} />
                   </div>
+                  <div className="space-y-2">
+                    <Label>Линейка услуг</Label>
+                    <Select
+                      items={serviceLines.map((value) => ({ value, label: value }))}
+                      value={newPlan.serviceLine}
+                      onValueChange={(value) => setNewPlan((prev) => ({ ...prev, serviceLine: value as (typeof serviceLines)[number] }))}
+                    >
+                      <SelectTrigger className="w-full">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {serviceLines.map((line) => (
+                          <SelectItem key={line} value={line}>
+                            {line}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
                 </div>
                 <DialogFooter>
                   <DialogClose render={<Button type="button" variant="outline" />}>Отмена</DialogClose>
@@ -172,6 +219,101 @@ export function BrandPlansSection({ brand, mayWrite }: { brand: BrandDetail; may
           <DataTable columns={columns} data={plans.data?.items ?? []} isLoading={plans.isLoading} isError={plans.isError} errorMessage="Не удалось получить тарифы." emptyMessage="Тарифы не найдены." />
         </CardContent>
       </Card>
+
+      <Dialog open={Boolean(editingPlan)} onOpenChange={(open) => !open && setEditingPlan(undefined)}>
+        <DialogContent className="sm:max-w-lg">
+          <DialogHeader>
+            <DialogTitle>Редактировать тариф</DialogTitle>
+          </DialogHeader>
+          <div className="grid gap-3 sm:grid-cols-2">
+            <div className="space-y-2 sm:col-span-2">
+              <Label>Код тарифа</Label>
+              <Input disabled value={editingPlan?.code ?? ""} />
+            </div>
+            <div className="space-y-2">
+              <Label>Название тарифа</Label>
+              <Input placeholder="Название" value={editForm.name} onChange={(event) => setEditForm((value) => ({ ...value, name: event.target.value }))} />
+            </div>
+            <div className="space-y-2">
+              <Label>Лимит устройств</Label>
+              <Input type="number" min={1} value={editForm.deviceLimit} onChange={(event) => setEditForm((value) => ({ ...value, deviceLimit: event.target.value }))} />
+            </div>
+            <div className="space-y-2">
+              <Label>Модель тарификации</Label>
+              <Select
+                items={billingModels.map((value) => ({ value, label: value }))}
+                value={editForm.billingModel}
+                onValueChange={(value) => setEditForm((prev) => ({ ...prev, billingModel: value as (typeof billingModels)[number] }))}
+              >
+                <SelectTrigger className="w-full">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {billingModels.map((model) => (
+                    <SelectItem key={model} value={model}>
+                      {model}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2">
+              <Label>Линейка услуг</Label>
+              <Select
+                items={serviceLines.map((value) => ({ value, label: value }))}
+                value={editForm.serviceLine}
+                onValueChange={(value) => setEditForm((prev) => ({ ...prev, serviceLine: value as (typeof serviceLines)[number] }))}
+              >
+                <SelectTrigger className="w-full">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {serviceLines.map((line) => (
+                    <SelectItem key={line} value={line}>
+                      {line}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2">
+              <Label>Статус</Label>
+              <Select
+                items={[
+                  { value: "ACTIVE", label: "ACTIVE" },
+                  { value: "INACTIVE", label: "INACTIVE" },
+                ]}
+                value={editForm.status}
+                onValueChange={(value) => setEditForm((prev) => ({ ...prev, status: value as "ACTIVE" | "INACTIVE" }))}
+              >
+                <SelectTrigger className="w-full">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="ACTIVE">ACTIVE</SelectItem>
+                  <SelectItem value="INACTIVE">INACTIVE</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+          <DialogFooter>
+            <DialogClose render={<Button type="button" variant="outline" />}>Отмена</DialogClose>
+            <Button
+              disabled={!editForm.name || updateMutation.isPending}
+              onClick={() =>
+                editingPlan &&
+                updateMutation.mutate({
+                  id: editingPlan.id,
+                  body: { name: editForm.name, billingModel: editForm.billingModel, deviceLimit: Number(editForm.deviceLimit), status: editForm.status, serviceLine: editForm.serviceLine },
+                })
+              }
+            >
+              {updateMutation.isPending && <Spinner />}
+              Сохранить
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

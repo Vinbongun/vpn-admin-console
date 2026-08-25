@@ -581,6 +581,25 @@ export interface paths {
         patch: operations["updateAdminSubscription"];
         trace?: never;
     };
+    "/admin/v1/subscriptions/{subscriptionId}/extend": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                subscriptionId: string;
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** @description A lighter-weight counterpart to PATCH .../{subscriptionId} for the common "extend by N days" case (goodwill, compensation, testing) - no order/payment record is created. Extends from whichever is later, now or the current expiry, so an already-lapsed subscription starts counting from today rather than its old expiry date, and flips EXPIRED/PAST_DUE back to ACTIVE as part of the same call. Not available on a REVOKED subscription - reactivating one goes through PATCH .../{subscriptionId} instead. */
+        post: operations["extendAdminSubscription"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/admin/v1/subscriptions/{subscriptionId}/devices": {
         parameters: {
             query?: never;
@@ -829,6 +848,22 @@ export interface paths {
         options?: never;
         head?: never;
         patch?: never;
+        trace?: never;
+    };
+    "/admin/v1/plans/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch: operations["updateAdminPlan"];
         trace?: never;
     };
     "/admin/v1/plans/{id}/prices": {
@@ -1551,6 +1586,10 @@ export interface components {
             expiresAt?: string;
             reason: string;
         };
+        ExtendSubscription: {
+            days: number;
+            reason: string;
+        };
         ReasonInput: {
             reason: string;
         };
@@ -1708,6 +1747,8 @@ export interface components {
             billingModel: "DEVICE_PLAN" | "ACCOUNT_PLAN" | "FAMILY_PLAN";
             deviceLimit: number;
             status: string;
+            /** @enum {string} */
+            serviceLine: "MAIN" | "WHITELIST";
             price?: {
                 amount?: number;
                 currency?: string;
@@ -1896,6 +1937,13 @@ export interface components {
             succeeded: number;
             failed: number;
         };
+        /** @description Rolling windows, not calendar-aligned buckets: day = since start of today, week = last 7 days, month = last 30 days, year = last 365 days. Matches the same rolling-window convention already used by revenue.today/last7d/last30d on this same endpoint. */
+        NewCustomerWindowCounts: {
+            day: number;
+            week: number;
+            month: number;
+            year: number;
+        };
         DashboardOverview: {
             revenue: {
                 today: components["schemas"]["CurrencyAmount"][];
@@ -1920,6 +1968,10 @@ export interface components {
                 purchasedInactive: number;
                 expiredNoRenewal: number;
             };
+            /** @description New brand_memberships created per window (not deduplicated by customer_identity - a customer joining a second brand for the first time counts here too, consistent with every other brand-scoped card on this endpoint). */
+            newRegistrations: components["schemas"]["NewCustomerWindowCounts"];
+            /** @description brand_memberships whose FIRST-EVER PAID order falls in the window - a renewal on an already-paying membership is never counted a second time. */
+            newPayingCustomers: components["schemas"]["NewCustomerWindowCounts"];
         };
         DashboardPopularity: {
             /** @enum {string} */
@@ -3558,6 +3610,46 @@ export interface operations {
             };
         };
     };
+    extendAdminSubscription: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                subscriptionId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ExtendSubscription"];
+            };
+        };
+        responses: {
+            /** @description Subscription extended */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SubscriptionDetail"];
+                };
+            };
+            /** @description Subscription not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description The subscription is REVOKED and cannot be extended */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
     listAdminDevices: {
         parameters: {
             query?: never;
@@ -4227,6 +4319,12 @@ export interface operations {
                     /** @enum {string} */
                     billingModel: "DEVICE_PLAN" | "ACCOUNT_PLAN" | "FAMILY_PLAN";
                     deviceLimit: number;
+                    /**
+                     * @description Which parallel "service" this plan belongs to. Within one line, buying or renewing any plan supersedes the customer's existing subscription on that line instead of creating a second parallel one; different lines coexist independently. Purely billing/UI metadata - has no effect on what access is granted (that's entirely plan_endpoint_groups/profile_bindings).
+                     * @default MAIN
+                     * @enum {string}
+                     */
+                    serviceLine?: "MAIN" | "WHITELIST";
                 };
             };
         };
@@ -4249,6 +4347,48 @@ export interface operations {
             };
             /** @description Plan code already exists for this brand */
             409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    updateAdminPlan: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    name?: string;
+                    /** @enum {string} */
+                    billingModel?: "DEVICE_PLAN" | "ACCOUNT_PLAN" | "FAMILY_PLAN";
+                    deviceLimit?: number;
+                    /** @enum {string} */
+                    status?: "ACTIVE" | "INACTIVE";
+                    /** @enum {string} */
+                    serviceLine?: "MAIN" | "WHITELIST";
+                };
+            };
+        };
+        responses: {
+            /** @description Updated plan */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PlanSummary"];
+                };
+            };
+            /** @description Plan not found */
+            404: {
                 headers: {
                     [name: string]: unknown;
                 };

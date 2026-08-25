@@ -1,7 +1,8 @@
 "use client";
 
 import { useQuery } from "@tanstack/react-query";
-import { CalendarClock, CircleDollarSign, UserCheck, Users, UserX } from "lucide-react";
+import { CalendarClock, CircleDollarSign, UserCheck, UserPlus, Users, UserX } from "lucide-react";
+import { useState } from "react";
 import { adminApi } from "@/api/client";
 import { AppShell } from "@/components/app-shell";
 import { BrandFilter } from "@/components/brand-filter";
@@ -9,13 +10,23 @@ import { ErrorState } from "@/components/error-state";
 import { PageHeader } from "@/components/page-header";
 import { SectionHeader } from "@/components/section-header";
 import { StatCard } from "@/components/stat-card";
+import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { RetentionSection } from "@/features/retention/retention-section";
 import { useBrandFilter } from "@/hooks/use-brand-filter";
 import { can } from "@/lib/access-control";
 import { formatCurrencyAmounts } from "@/lib/format-currency";
 
+const newCustomerPeriods = [
+  { value: "day", label: "День" },
+  { value: "week", label: "Неделя" },
+  { value: "month", label: "Месяц" },
+  { value: "year", label: "Год" },
+] as const;
+type NewCustomerPeriod = (typeof newCustomerPeriods)[number]["value"];
+
 export function OverviewPage() {
   const { selected, setSelected, brandCodes } = useBrandFilter();
+  const [newCustomerPeriod, setNewCustomerPeriod] = useState<NewCustomerPeriod>("month");
   const staff = useQuery({ queryKey: ["staff-session"], queryFn: adminApi.getSession, retry: false });
   const mayView = can(staff.data, "finance.read");
 
@@ -52,6 +63,32 @@ export function OverviewPage() {
             <StatCard label="Всего" icon={Users} value={num(overview.data?.clients.total)} />
             <StatCard label="Платят" icon={UserCheck} value={num(overview.data?.clients.paying)} />
             <StatCard label="Не платят" icon={UserX} value={num(overview.data?.clients.notPaying)} />
+          </div>
+
+          <SectionHeader
+            title="Новые клиенты"
+            description="Регистрации и первые оплаты за выбранный период"
+            actions={
+              <ToggleGroup
+                variant="outline"
+                spacing={0}
+                value={[newCustomerPeriod]}
+                onValueChange={(values) => {
+                  const next = values[0];
+                  if (next === "day" || next === "week" || next === "month" || next === "year") setNewCustomerPeriod(next);
+                }}
+              >
+                {newCustomerPeriods.map((period) => (
+                  <ToggleGroupItem key={period.value} value={period.value}>
+                    {period.label}
+                  </ToggleGroupItem>
+                ))}
+              </ToggleGroup>
+            }
+          />
+          <div className="grid grid-cols-1 gap-4 @xl/main:grid-cols-2">
+            <StatCard label="Новые регистрации" icon={UserPlus} value={num(overview.data?.newRegistrations[newCustomerPeriod])} />
+            <StatCard label="Новые платящие клиенты" icon={UserCheck} value={num(overview.data?.newPayingCustomers[newCustomerPeriod])} />
           </div>
 
           <SectionHeader title="Скоро закончится" description="Активные и пробные подписки с истечением в ближайшее время" />

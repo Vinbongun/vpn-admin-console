@@ -32,6 +32,8 @@ import { CreateSubscriptionDialog } from "@/features/subscriptions/create-dialog
 import { SubscriptionTokenHistory } from "@/features/users/subscription-token-history";
 
 const liveStatuses = new Set(["PENDING", "TRIAL", "ACTIVE", "PAST_DUE", "SUSPENDED"]);
+const serviceLineOrder = ["MAIN", "WHITELIST"] as const;
+const noLineKey = "__NONE__";
 
 function toLocalDateTimeInput(date: Date) {
   const pad = (value: number) => String(value).padStart(2, "0");
@@ -47,6 +49,16 @@ function defaultIssueDates() {
 const hasLiveSubscription = (subscriptions: CustomerDetail["subscriptions"], brandCode: string) =>
   subscriptions.some((subscription) => subscription.brandCode === brandCode && liveStatuses.has(subscription.status));
 
+function groupByServiceLine<T>(items: T[], lineOf: (item: T) => string | undefined) {
+  const groups = new Map<string, T[]>();
+  for (const item of items) {
+    const key = lineOf(item) ?? noLineKey;
+    groups.set(key, [...(groups.get(key) ?? []), item]);
+  }
+  const ordered = [...serviceLineOrder, noLineKey].filter((key) => groups.has(key));
+  return ordered.map((key) => ({ line: key === noLineKey ? undefined : key, items: groups.get(key)! }));
+}
+
 export function CustomerDetailDialog({ customerId, onOpenChange }: { customerId: string | undefined; onOpenChange: (open: boolean) => void }) {
   const queryClient = useQueryClient();
   const [issuingMembershipId, setIssuingMembershipId] = useState<string>();
@@ -54,9 +66,12 @@ export function CustomerDetailDialog({ customerId, onOpenChange }: { customerId:
   const [membershipToggle, setMembershipToggle] = useState<{ id: string; brandName: string; nextStatus: "ACTIVE" | "SUSPENDED" }>();
   const [revokingSubscriptionId, setRevokingSubscriptionId] = useState<string>();
   const [revokeReason, setRevokeReason] = useState("");
+  const [extendingSubscriptionId, setExtendingSubscriptionId] = useState<string>();
+  const [extendForm, setExtendForm] = useState({ days: "7", reason: "" });
 
   const detail = useQuery({ queryKey: ["admin-customer", customerId], queryFn: () => adminApi.getCustomer(customerId!), enabled: Boolean(customerId), retry: false });
   const plans = useQuery({ queryKey: ["admin-plans", "customer-card"], queryFn: () => adminApi.listPlans({ page: 1, pageSize: 100, status: "ACTIVE" }), retry: false });
+  const allPlans = useQuery({ queryKey: ["admin-plans", "customer-card-all"], queryFn: () => adminApi.listPlans({ page: 1, pageSize: 100 }), retry: false });
 
   const refreshCustomer = () => Promise.all([queryClient.invalidateQueries({ queryKey: ["admin-customers"] }), queryClient.invalidateQueries({ queryKey: ["admin-customer", customerId] })]);
 
@@ -90,6 +105,16 @@ export function CustomerDetailDialog({ customerId, onOpenChange }: { customerId:
     },
     onError: () => toast.error("Не удалось отключить подписку."),
   });
+  const extendSubscriptionMutation = useMutation({
+    mutationFn: (input: { id: string; days: number; reason: string }) => adminApi.extendSubscription(input.id, { days: input.days, reason: input.reason }),
+    onSuccess: async () => {
+      setExtendingSubscriptionId(undefined);
+      setExtendForm({ days: "7", reason: "" });
+      toast.success("Подписка продлена.");
+      await refreshCustomer();
+    },
+    onError: () => toast.error("Не удалось продлить подписку."),
+  });
 
   const startIssuing = (membershipId: string) => {
     setIssuingMembershipId(membershipId);
@@ -98,7 +123,7 @@ export function CustomerDetailDialog({ customerId, onOpenChange }: { customerId:
 
   return (
     <Dialog open={Boolean(customerId)} onOpenChange={onOpenChange}>
-      <DialogContent className="flex max-h-[85vh] flex-col gap-0 overflow-hidden p-0 sm:max-w-lg">
+      <DialogContent className="flex max-h-[85vh] flex-col gap-0 overflow-hidden p-0 sm:max-w-3xl">
         {detail.isLoading ? (
           <div className="space-y-3 p-6">
             <Skeleton className="h-6 w-48" />
@@ -165,85 +190,137 @@ export function CustomerDetailDialog({ customerId, onOpenChange }: { customerId:
                           </div>
                         </div>
 
-                        <div className="mt-3 space-y-2">
+                        <div className="mt-3 space-y-3">
                           {brandSubscriptions.length === 0 ? (
                             <p className="text-xs text-muted-foreground">Подписок на этот бренд нет.</p>
                           ) : (
-                            brandSubscriptions.map((subscription) => (
-                              <div key={subscription.id} className="rounded-lg border p-3">
-                                <div className="flex items-center justify-between gap-2">
-                                  <div>
-                                    <p className="font-medium">{subscription.planName ?? subscription.planCode ?? "Без плана"}</p>
-                                    <p className="text-xs text-muted-foreground">
-                                      {new Date(subscription.startsAt).toLocaleDateString()} – {new Date(subscription.expiresAt).toLocaleDateString()}
-                                    </p>
-                                  </div>
-                                  <StatusBadge status={subscription.status} />
-                                </div>
-                                {subscription.status === "REVOKED" && (
-                                  <p className="mt-1 text-xs text-muted-foreground">Причина отзыва: {subscription.revokedReason || "не указана"}</p>
-                                )}
-                                <div className="mt-2 flex flex-wrap gap-1">
-                                  {subscription.endpointGroups.length === 0 ? (
-                                    <span className="text-xs text-muted-foreground">Групп доступа нет</span>
-                                  ) : (
-                                    subscription.endpointGroups.map((group) => (
-                                      <span key={group.id} className="rounded-full border px-2 py-0.5 text-xs text-muted-foreground">
-                                        {group.name}
-                                      </span>
-                                    ))
-                                  )}
-                                </div>
-                                {liveStatuses.has(subscription.status) && (
-                                  <div className="mt-3">
-                                    {revokingSubscriptionId === subscription.id ? (
-                                      <div className="flex flex-wrap items-center gap-2">
-                                        <Input
-                                          aria-label="Причина отключения"
-                                          placeholder="Причина отключения"
-                                          className="max-w-52"
-                                          value={revokeReason}
-                                          onChange={(event) => setRevokeReason(event.target.value)}
-                                        />
-                                        <ConfirmDialog
-                                          trigger={
-                                            <Button size="sm" variant="destructive" disabled={!revokeReason || revokeSubscriptionMutation.isPending}>
-                                              Отключить
-                                            </Button>
-                                          }
-                                          title="Отключить подписку?"
-                                          description={`Клиент немедленно потеряет доступ ко всем группам endpoint'ов этой подписки. Причина: «${revokeReason}».`}
-                                          confirmLabel="Отключить"
-                                          isPending={revokeSubscriptionMutation.isPending}
-                                          onConfirm={() => revokeSubscriptionMutation.mutate({ id: subscription.id, reason: revokeReason })}
-                                        />
-                                        <Button
-                                          size="sm"
-                                          variant="outline"
-                                          onClick={() => {
-                                            setRevokingSubscriptionId(undefined);
-                                            setRevokeReason("");
-                                          }}
-                                        >
-                                          Отмена
-                                        </Button>
+                            groupByServiceLine(
+                              brandSubscriptions,
+                              (subscription) => allPlans.data?.items.find((plan) => plan.brandCode === subscription.brandCode && plan.code === subscription.planCode)?.serviceLine,
+                            ).map((group) => (
+                              <div key={group.line ?? noLineKey}>
+                                <p className="mb-1.5 text-xs font-medium text-muted-foreground">Линейка: {group.line ?? "не определена"}</p>
+                                <div className="grid gap-2 sm:grid-cols-2">
+                                  {group.items.map((subscription) => (
+                                    <div key={subscription.id} className="rounded-lg border p-3">
+                                      <div className="flex items-center justify-between gap-2">
+                                        <div>
+                                          <p className="font-medium">{subscription.planName ?? subscription.planCode ?? "Без плана"}</p>
+                                          <p className="text-xs text-muted-foreground">
+                                            {new Date(subscription.startsAt).toLocaleDateString()} – {new Date(subscription.expiresAt).toLocaleDateString()}
+                                          </p>
+                                        </div>
+                                        <StatusBadge status={subscription.status} />
                                       </div>
-                                    ) : (
-                                      <Button
-                                        size="sm"
-                                        variant="outline"
-                                        onClick={() => {
-                                          setRevokingSubscriptionId(subscription.id);
-                                          setRevokeReason("");
-                                        }}
-                                      >
-                                        Отключить подписку
-                                      </Button>
-                                    )}
-                                  </div>
-                                )}
-                                <div className="mt-3">
-                                  <SubscriptionTokenHistory tokens={subscription.tokens} />
+                                      {subscription.status === "REVOKED" && (
+                                        <p className="mt-1 text-xs text-muted-foreground">Причина отзыва: {subscription.revokedReason || "не указана"}</p>
+                                      )}
+                                      <div className="mt-2 flex flex-wrap gap-1">
+                                        {subscription.endpointGroups.length === 0 ? (
+                                          <span className="text-xs text-muted-foreground">Групп доступа нет</span>
+                                        ) : (
+                                          subscription.endpointGroups.map((endpointGroup) => (
+                                            <span key={endpointGroup.id} className="rounded-full border px-2 py-0.5 text-xs text-muted-foreground">
+                                              {endpointGroup.name}
+                                            </span>
+                                          ))
+                                        )}
+                                      </div>
+                                      {liveStatuses.has(subscription.status) && (
+                                        <div className="mt-3">
+                                          {revokingSubscriptionId === subscription.id ? (
+                                            <div className="flex flex-wrap items-center gap-2">
+                                              <Input
+                                                aria-label="Причина отключения"
+                                                placeholder="Причина отключения"
+                                                className="max-w-52"
+                                                value={revokeReason}
+                                                onChange={(event) => setRevokeReason(event.target.value)}
+                                              />
+                                              <ConfirmDialog
+                                                trigger={
+                                                  <Button size="sm" variant="destructive" disabled={!revokeReason || revokeSubscriptionMutation.isPending}>
+                                                    Отключить
+                                                  </Button>
+                                                }
+                                                title="Отключить подписку?"
+                                                description={`Клиент немедленно потеряет доступ ко всем группам endpoint'ов этой подписки. Причина: «${revokeReason}».`}
+                                                confirmLabel="Отключить"
+                                                isPending={revokeSubscriptionMutation.isPending}
+                                                onConfirm={() => revokeSubscriptionMutation.mutate({ id: subscription.id, reason: revokeReason })}
+                                              />
+                                              <Button
+                                                size="sm"
+                                                variant="outline"
+                                                onClick={() => {
+                                                  setRevokingSubscriptionId(undefined);
+                                                  setRevokeReason("");
+                                                }}
+                                              >
+                                                Отмена
+                                              </Button>
+                                            </div>
+                                          ) : extendingSubscriptionId === subscription.id ? (
+                                            <div className="flex flex-wrap items-center gap-2">
+                                              <Input
+                                                aria-label="Дней"
+                                                type="number"
+                                                min={1}
+                                                placeholder="Дней"
+                                                className="w-20"
+                                                value={extendForm.days}
+                                                onChange={(event) => setExtendForm((value) => ({ ...value, days: event.target.value }))}
+                                              />
+                                              <Input
+                                                aria-label="Причина продления"
+                                                placeholder="Причина продления"
+                                                className="max-w-40"
+                                                value={extendForm.reason}
+                                                onChange={(event) => setExtendForm((value) => ({ ...value, reason: event.target.value }))}
+                                              />
+                                              <Button
+                                                size="sm"
+                                                disabled={!extendForm.days || Number(extendForm.days) <= 0 || !extendForm.reason || extendSubscriptionMutation.isPending}
+                                                onClick={() => extendSubscriptionMutation.mutate({ id: subscription.id, days: Number(extendForm.days), reason: extendForm.reason })}
+                                              >
+                                                {extendSubscriptionMutation.isPending && <Spinner />}
+                                                Продлить
+                                              </Button>
+                                              <Button size="sm" variant="outline" onClick={() => setExtendingSubscriptionId(undefined)}>
+                                                Отмена
+                                              </Button>
+                                            </div>
+                                          ) : (
+                                            <div className="flex flex-wrap gap-2">
+                                              <Button
+                                                size="sm"
+                                                variant="outline"
+                                                onClick={() => {
+                                                  setRevokingSubscriptionId(subscription.id);
+                                                  setRevokeReason("");
+                                                }}
+                                              >
+                                                Отключить подписку
+                                              </Button>
+                                              <Button
+                                                size="sm"
+                                                variant="outline"
+                                                onClick={() => {
+                                                  setExtendingSubscriptionId(subscription.id);
+                                                  setExtendForm({ days: "7", reason: "" });
+                                                }}
+                                              >
+                                                Продлить
+                                              </Button>
+                                            </div>
+                                          )}
+                                        </div>
+                                      )}
+                                      <div className="mt-3">
+                                        <SubscriptionTokenHistory tokens={subscription.tokens} />
+                                      </div>
+                                    </div>
+                                  ))}
                                 </div>
                               </div>
                             ))

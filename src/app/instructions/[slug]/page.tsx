@@ -19,7 +19,7 @@ export default async function InstructionPage({ params }: { params: Promise<{ sl
         <ArrowLeftIcon />
         Инструкции
       </Button>
-      <article className="prose prose-lg dark:prose-invert max-w-none">
+      <article className="md-article w-full">
         <ReactMarkdown remarkPlugins={[remarkGfm]} components={{ pre: CodeBlock }}>
           {instruction.content}
         </ReactMarkdown>
