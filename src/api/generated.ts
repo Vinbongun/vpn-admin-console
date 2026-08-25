@@ -1494,6 +1494,8 @@ export interface components {
              * @description When activeDeviceCount was last refreshed.
              */
             activeDeviceCountCheckedAt?: string | null;
+            /** @description Why a REVOKED subscription was revoked, shown to the customer. Null if none was recorded (subscriptions revoked before this field existed). */
+            revokedReason?: string | null;
         };
         SubscriptionDetail: components["schemas"]["SubscriptionSummary"] & {
             /** Format: uuid */
@@ -1591,6 +1593,14 @@ export interface components {
                 supportEmail: string | null;
                 termsUrl: string | null;
                 privacyUrl: string | null;
+                /** @description Shown to customers on the decoy subscription entries served for a lapsed/blocked subscription instead of real servers. */
+                siteUrl: string | null;
+                /** @description Sent as the Happ "profile-title" subscription header (falls back to the brand's name if unset). */
+                profileTitle: string | null;
+                /** @description Sent as the Happ "announce" subscription header, if set. */
+                announce: string | null;
+                /** @description Sent as the Happ "support-url" subscription header, if set. */
+                supportUrl: string | null;
             };
             /** Format: date-time */
             createdAt?: string;
@@ -3614,6 +3624,20 @@ export interface operations {
                         termsUrl?: string;
                         /** Format: uri */
                         privacyUrl?: string;
+                        /**
+                         * Format: uri
+                         * @description Shown to customers on the decoy subscription entries served for a lapsed/blocked subscription instead of real servers.
+                         */
+                        siteUrl?: string;
+                        /** @description Sent as the Happ "profile-title" subscription header (falls back to the brand's name if unset). Happ's own documented limit is 25 characters. */
+                        profileTitle?: string;
+                        /** @description Sent as the Happ "announce" subscription header, if set. */
+                        announce?: string;
+                        /**
+                         * Format: uri
+                         * @description Sent as the Happ "support-url" subscription header, if set (e.g. a Telegram support chat link).
+                         */
+                        supportUrl?: string;
                     };
                 };
             };
