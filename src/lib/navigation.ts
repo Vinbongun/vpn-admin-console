@@ -1,5 +1,6 @@
 import {
   Activity,
+  BookOpen,
   Building2,
   CircleDollarSign,
   FileClock,
@@ -48,4 +49,5 @@ export const navigation = [
   },
   { label: "Рефералы", href: "/referrals", icon: Gift, permission: "finance.read" },
   { label: "Аудит", href: "/audit", icon: FileClock, permission: "audit.read" },
+  { label: "Инструкции", href: "/instructions", icon: BookOpen },
 ] satisfies NavItem[];
