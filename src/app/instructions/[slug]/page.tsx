@@ -5,6 +5,7 @@ import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { AppShell } from "@/components/app-shell";
 import { Button } from "@/components/ui/button";
+import { CodeBlock } from "@/features/instructions/code-block";
 import { readInstruction } from "@/lib/instructions";
 
 export default async function InstructionPage({ params }: { params: Promise<{ slug: string }> }) {
@@ -18,8 +19,10 @@ export default async function InstructionPage({ params }: { params: Promise<{ sl
         <ArrowLeftIcon />
         Инструкции
       </Button>
-      <article className="prose prose-sm dark:prose-invert max-w-none">
-        <ReactMarkdown remarkPlugins={[remarkGfm]}>{instruction.content}</ReactMarkdown>
+      <article className="prose prose-lg dark:prose-invert max-w-none">
+        <ReactMarkdown remarkPlugins={[remarkGfm]} components={{ pre: CodeBlock }}>
+          {instruction.content}
+        </ReactMarkdown>
       </article>
     </AppShell>
   );
