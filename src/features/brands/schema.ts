@@ -35,6 +35,10 @@ export const brandPublicSchema = z.object({
   profileTitle: z.string().trim().max(25, "До 25 символов — ограничение Happ"),
   announce: z.string().trim().max(200, "До 200 символов"),
   supportUrl: z.string().trim(),
+  profileUpdateIntervalHours: z
+    .string()
+    .trim()
+    .refine((value) => value === "" || (Number.isInteger(Number(value)) && Number(value) >= 1 && Number(value) <= 24), "Целое число от 1 до 24"),
   decoyExpired: decoyTextListSchema,
   decoyBlocked: decoyTextListSchema,
 });
