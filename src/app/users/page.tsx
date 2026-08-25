@@ -282,6 +282,9 @@ export default function CustomersPage() {
                                     </div>
                                     <StatusBadge status={subscription.status} />
                                   </div>
+                                  {subscription.status === "REVOKED" && (
+                                    <p className="mt-1 text-xs text-muted-foreground">Причина отзыва: {subscription.revokedReason || "не указана"}</p>
+                                  )}
                                   <div className="mt-2 flex flex-wrap gap-1">
                                     {subscription.endpointGroups.length === 0 ? (
                                       <span className="text-xs text-muted-foreground">Групп доступа нет</span>

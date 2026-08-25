@@ -1561,6 +1561,8 @@ export interface components {
             startsAt: string;
             /** Format: date-time */
             expiresAt: string;
+            /** @description Why this subscription was revoked, if it was and a reason was recorded. Null if not REVOKED or if revoked before this field existed. */
+            revokedReason?: string | null;
             endpointGroups: {
                 /** Format: uuid */
                 id?: string;
