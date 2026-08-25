@@ -298,7 +298,7 @@ function PopularityCard() {
         </CardDescription>
       </CardHeader>
       <CardContent>
-        <div className="mb-4 grid gap-3 sm:max-w-md sm:grid-cols-2">
+        <div className="mb-4 flex flex-wrap items-center gap-3">
           <Select
             items={[
               { value: "assigned", label: "По назначению" },
@@ -307,7 +307,7 @@ function PopularityCard() {
             value={mode}
             onValueChange={(value) => setMode((value as "assigned" | "live") ?? "assigned")}
           >
-            <SelectTrigger aria-label="Режим">
+            <SelectTrigger aria-label="Режим" className="w-64">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
@@ -317,7 +317,7 @@ function PopularityCard() {
           </Select>
           {mode === "live" && (
             <Select items={[{ value: "7", label: "7 дней" }, { value: "30", label: "30 дней" }]} value={days} onValueChange={(value) => setDays(value ?? "7")}>
-              <SelectTrigger aria-label="Окно, дней">
+              <SelectTrigger aria-label="Окно, дней" className="w-28">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
@@ -341,7 +341,7 @@ function PopularityCard() {
               ) : (
                 <div className="space-y-2">
                   {servers.map((server, index) => (
-                    <div key={server.endpointId ?? index} className="flex items-center justify-between gap-2 rounded-lg border p-2.5 text-sm">
+                    <div key={server.endpointId ?? index} className="flex min-h-14 items-center justify-between gap-2 rounded-lg border p-2.5 text-sm">
                       <div className="min-w-0">
                         <p className="truncate font-medium">
                           <EndpointName name={server.name!} />
@@ -361,7 +361,7 @@ function PopularityCard() {
               ) : (
                 <div className="space-y-2">
                   {protocols.map((protocol) => (
-                    <div key={protocol.protocol} className="flex items-center justify-between gap-2 rounded-lg border p-2.5 text-sm">
+                    <div key={protocol.protocol} className="flex min-h-14 items-center justify-between gap-2 rounded-lg border p-2.5 text-sm">
                       <span className="font-medium">{protocol.protocol}</span>
                       <span className="shrink-0 font-medium tabular-nums">{countFor(protocol)}</span>
                     </div>
