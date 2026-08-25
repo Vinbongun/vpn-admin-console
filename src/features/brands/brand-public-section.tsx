@@ -2,7 +2,8 @@
 
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { useForm, useWatch } from "react-hook-form";
+import { PlusIcon, XIcon } from "lucide-react";
+import { useFieldArray, useForm, useWatch } from "react-hook-form";
 import { toast } from "sonner";
 import { adminApi, ApiError } from "@/api/client";
 import type { BrandDetail } from "@/api/types";
@@ -14,6 +15,85 @@ import { Input } from "@/components/ui/input";
 import { Spinner } from "@/components/ui/spinner";
 import { Textarea } from "@/components/ui/textarea";
 import { brandPublicSchema, type BrandPublicValues } from "@/features/brands/schema";
+
+function DecoyTextRow({
+  title,
+  index,
+  name,
+  form,
+  mayWrite,
+  onRemove,
+}: {
+  title: string;
+  index: number;
+  name: "decoyExpired" | "decoyBlocked";
+  form: ReturnType<typeof useForm<BrandPublicValues>>;
+  mayWrite: boolean;
+  onRemove: () => void;
+}) {
+  const value = useWatch({ control: form.control, name: `${name}.${index}.value` }) ?? "";
+
+  return (
+    <div className="flex items-start gap-2">
+      <Field className="flex-1" data-invalid={Boolean(form.formState.errors[name]?.[index]?.value)}>
+        <Input
+          aria-label={`${title} — подключение ${index + 1}`}
+          disabled={!mayWrite}
+          maxLength={60}
+          placeholder="Например: 🇫🇷 Ваша подписка закончилась"
+          {...form.register(`${name}.${index}.value`)}
+        />
+        <FieldError errors={[form.formState.errors[name]?.[index]?.value]} />
+      </Field>
+      <span className="mt-2 shrink-0 text-xs text-muted-foreground">{value.length} / 60</span>
+      {mayWrite && (
+        <Button type="button" variant="ghost" size="icon-sm" className="mt-0.5" onClick={onRemove}>
+          <XIcon />
+        </Button>
+      )}
+    </div>
+  );
+}
+
+function DecoyTextsList({
+  title,
+  description,
+  emptyHint,
+  name,
+  form,
+  mayWrite,
+}: {
+  title: string;
+  description: string;
+  emptyHint: string;
+  name: "decoyExpired" | "decoyBlocked";
+  form: ReturnType<typeof useForm<BrandPublicValues>>;
+  mayWrite: boolean;
+}) {
+  const { fields, append, remove } = useFieldArray({ control: form.control, name });
+
+  return (
+    <div className="flex flex-col gap-2 rounded-lg border p-3">
+      <div>
+        <p className="text-sm font-medium">{title}</p>
+        <p className="text-xs text-muted-foreground">{description}</p>
+      </div>
+      {fields.length === 0 && <p className="text-xs text-muted-foreground">{emptyHint}</p>}
+      {fields.map((field, index) => (
+        <DecoyTextRow key={field.id} title={title} index={index} name={name} form={form} mayWrite={mayWrite} onRemove={() => remove(index)} />
+      ))}
+      {mayWrite && fields.length < 10 && (
+        <Button type="button" variant="outline" size="sm" className="self-start" onClick={() => append({ value: "" })}>
+          <PlusIcon />
+          Добавить подключение
+        </Button>
+      )}
+      <FieldDescription>
+        Можно использовать <code>{"{site}"}</code> — подставится ссылка на сайт бренда из поля выше.
+      </FieldDescription>
+    </div>
+  );
+}
 
 export function BrandPublicSection({ brand, mayWrite }: { brand: BrandDetail; mayWrite: boolean }) {
   const queryClient = useQueryClient();
@@ -29,6 +109,8 @@ export function BrandPublicSection({ brand, mayWrite }: { brand: BrandDetail; ma
       profileTitle: brand.public.profileTitle ?? "",
       announce: brand.public.announce ?? "",
       supportUrl: brand.public.supportUrl ?? "",
+      decoyExpired: (brand.public.decoyTexts?.expired ?? []).map((value) => ({ value })),
+      decoyBlocked: (brand.public.decoyTexts?.blocked ?? []).map((value) => ({ value })),
     },
   });
   const profileTitle = useWatch({ control: form.control, name: "profileTitle" });
@@ -47,6 +129,10 @@ export function BrandPublicSection({ brand, mayWrite }: { brand: BrandDetail; ma
           profileTitle: values.profileTitle || undefined,
           announce: values.announce || undefined,
           supportUrl: values.supportUrl || undefined,
+          decoyTexts: {
+            expired: values.decoyExpired.map((entry) => entry.value.trim()).filter(Boolean),
+            blocked: values.decoyBlocked.map((entry) => entry.value.trim()).filter(Boolean),
+          },
         },
       }),
     onSuccess: async () => {
@@ -113,6 +199,22 @@ export function BrandPublicSection({ brand, mayWrite }: { brand: BrandDetail; ma
                 <FieldDescription>{announce.length} / 200</FieldDescription>
                 <FieldError errors={[form.formState.errors.announce]} />
               </Field>
+              <DecoyTextsList
+                title="Тексты при истечении подписки"
+                description="Подключения, которые клиент увидит вместо реальных серверов, когда его подписка закончилась (статус EXPIRED). Если не заполнить — будет показан текст по умолчанию."
+                emptyHint="Список пуст — будет показан текст по умолчанию."
+                name="decoyExpired"
+                form={form}
+                mayWrite={mayWrite}
+              />
+              <DecoyTextsList
+                title="Тексты при блокировке подписки"
+                description="Подключения при заблокированной подписке (REVOKED/SUSPENDED/PAST_DUE). Если не заполнить — будет показан текст по умолчанию."
+                emptyHint="Список пуст — будет показан текст по умолчанию."
+                name="decoyBlocked"
+                form={form}
+                mayWrite={mayWrite}
+              />
               {mayWrite && (
                 <Button disabled={mutation.isPending} type="submit" className="self-start">
                   {mutation.isPending && <Spinner />}
