@@ -32,6 +32,7 @@ import { Separator } from "@/components/ui/separator";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Spinner } from "@/components/ui/spinner";
 import { Switch } from "@/components/ui/switch";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { ErrorState } from "@/components/error-state";
 
 const liveStatuses = new Set(["PENDING", "TRIAL", "ACTIVE", "PAST_DUE", "SUSPENDED"]);
@@ -280,7 +281,16 @@ export default function CustomersPage() {
                                         {new Date(subscription.startsAt).toLocaleDateString()} – {new Date(subscription.expiresAt).toLocaleDateString()}
                                       </p>
                                     </div>
-                                    <StatusBadge status={subscription.status} />
+                                    {subscription.status === "REVOKED" ? (
+                                      <Tooltip>
+                                        <TooltipTrigger>
+                                          <StatusBadge status={subscription.status} className="cursor-help" />
+                                        </TooltipTrigger>
+                                        <TooltipContent>{subscription.revokedReason || "Причина не указана"}</TooltipContent>
+                                      </Tooltip>
+                                    ) : (
+                                      <StatusBadge status={subscription.status} />
+                                    )}
                                   </div>
                                   <div className="mt-2 flex flex-wrap gap-1">
                                     {subscription.endpointGroups.length === 0 ? (
