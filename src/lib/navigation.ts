@@ -31,6 +31,7 @@ export const navigation = [
       { label: "Панели", href: "/infrastructure#sources" },
       { label: "Серверы", href: "/infrastructure#endpoints" },
       { label: "Инциденты", href: "/infrastructure#incidents" },
+      { label: "Статистика", href: "/infrastructure#popularity" },
     ],
   },
   {
