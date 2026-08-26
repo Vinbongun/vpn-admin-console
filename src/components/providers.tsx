@@ -19,7 +19,15 @@ const authProvider = {
   check: async () => {
     if (!sessionTokens.getStaff()) return { authenticated: false, redirectTo: "/login" };
     try { await adminApi.getSession(); return { authenticated: true }; }
-    catch { sessionTokens.clearStaff(); return { authenticated: false, redirectTo: "/login" }; }
+    catch (error) {
+      // Only a genuine 401 means the session is actually invalid - a network blip or a
+      // transient backend error shouldn't wipe out an otherwise-valid staff session.
+      if (error instanceof ApiError && error.status === 401) {
+        sessionTokens.clearStaff();
+        return { authenticated: false, redirectTo: "/login" };
+      }
+      return { authenticated: true };
+    }
   },
   getIdentity: () => adminApi.getSession(),
   onError: async (error: unknown) => error instanceof ApiError && error.status === 401
@@ -29,5 +37,5 @@ const authProvider = {
 
 export function Providers({ children }: { children: React.ReactNode }) {
   const [queryClient] = useState(() => new QueryClient());
-  return <ThemeProvider><QueryClientProvider client={queryClient}><TooltipProvider><Suspense fallback={null}><Refine routerProvider={routerProvider} authProvider={authProvider} resources={[]}>{children}</Refine></Suspense><Toaster /></TooltipProvider></QueryClientProvider></ThemeProvider>;
+  return <ThemeProvider><QueryClientProvider client={queryClient}><TooltipProvider><Suspense fallback={null}><Refine routerProvider={routerProvider} authProvider={authProvider} resources={[]} options={{ disableRouteChangeHandler: true }}>{children}</Refine></Suspense><Toaster /></TooltipProvider></QueryClientProvider></ThemeProvider>;
 }

@@ -5,7 +5,7 @@ import { ChevronDownIcon, ChevronsUpDownIcon, ExternalLinkIcon, GaugeIcon, LogOu
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
-import { API_URL, adminApi } from "@/api/client";
+import { API_URL, adminApi, ApiError } from "@/api/client";
 import { sessionTokens } from "@/api/session";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
@@ -40,11 +40,21 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   const router = useRouter();
   const [isLoggingOut, setIsLoggingOut] = useState(false);
   const hasSession = Boolean(sessionTokens.getStaff());
-  const { data: staff, isError } = useQuery({ queryKey: ["staff-session"], queryFn: adminApi.getSession, enabled: hasSession, retry: false });
+  const { data: staff, error } = useQuery({
+    queryKey: ["staff-session"],
+    queryFn: adminApi.getSession,
+    enabled: hasSession,
+    // A genuine 401 means the session really is invalid - anything else (a network blip, a
+    // transient backend error) deserves a couple of retries rather than bouncing the user
+    // straight back to the login screen.
+    retry: (failureCount, error) => failureCount < 2 && !(error instanceof ApiError && error.status === 401),
+  });
+  const isUnauthorized = error instanceof ApiError && error.status === 401;
 
   useEffect(() => {
-    if (!hasSession || isError) router.replace(`/login?next=${encodeURIComponent(pathname)}`);
-  }, [hasSession, isError, pathname, router]);
+    if (isUnauthorized) sessionTokens.clearStaff();
+    if (!hasSession || isUnauthorized) router.replace(`/login?next=${encodeURIComponent(pathname)}`);
+  }, [hasSession, isUnauthorized, pathname, router]);
 
   const items = navigation.filter((item) => !item.permission || can(staff, item.permission));
   const current = navigation.find((item) => item.href === pathname);
