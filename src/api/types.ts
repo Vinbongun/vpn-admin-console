@@ -53,6 +53,9 @@ export type AdminInfrastructureEndpointQuery = NonNullable<operations["listInfra
 export type AdminInfrastructureIncidentQuery = NonNullable<operations["listInfrastructureIncidents"]["parameters"]["query"]>;
 export type AdminEndpointGroupQuery = NonNullable<operations["listEndpointGroups"]["parameters"]["query"]>;
 export type UpdateBrand = NonNullable<operations["updateAdminBrand"]["requestBody"]>["content"]["application/json"];
+// profileTitle accepts an explicit null too (to clear the override back to the brand-name default via the
+// backend's jsonb merge) - the generated type only allows string because the OpenAPI schema doesn't document
+// the null case. UpdateBrand itself is left matching the schema; callers that need to send null cast at the call site.
 export type CreateBrand = NonNullable<operations["createAdminBrand"]["requestBody"]>["content"]["application/json"];
 export type SetPlanPrice = NonNullable<operations["setPlanPrice"]["requestBody"]>["content"]["application/json"];
 export type CreatePlan = NonNullable<operations["createAdminPlan"]["requestBody"]>["content"]["application/json"];
@@ -85,6 +88,8 @@ export type AdminFinanceQuery = NonNullable<operations["getFinanceSummary"]["par
 export type AdminRetentionQuery = NonNullable<operations["getRetentionSummary"]["parameters"]["query"]>;
 export type AdminDashboardQuery = NonNullable<operations["getDashboardOverview"]["parameters"]["query"]>;
 export type AdminPopularityQuery = NonNullable<operations["getDashboardPopularity"]["parameters"]["query"]>;
+export type AcquisitionStatsRow = Schemas["AcquisitionStatsRow"];
+export type AdminAcquisitionQuery = NonNullable<operations["getAcquisitionStats"]["parameters"]["query"]>;
 
 export type PaymentSummary = Schemas["PaymentSummary"];
 export type PaymentPage = Schemas["PaymentPage"];

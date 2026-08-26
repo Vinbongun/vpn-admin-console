@@ -20,6 +20,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/s/{token}/wireguard/{endpointId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description Downloads one out-of-band (currently WireGuard) endpoint's credential file directly - never part of the base64/plain body above, since Happ and similar clients can't parse it. `endpointId` conventionally carries a literal `.conf` suffix (stripped server-side, not part of route matching) so the browser saves a sensibly-named file. */
+        get: operations["downloadWireGuardConfig"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/health/live": {
         parameters: {
             query?: never;
@@ -223,6 +240,23 @@ export interface paths {
         put?: never;
         /** @description Self-service reissue, scoped to a subscription owned by the calling customer. Revokes the previous active token (if any) - already-configured VPN clients using the old link stop working immediately, so the customer-portal should warn about this before calling. An initial token is also issued automatically the moment a purchase first succeeds (see POST /customer/v1/orders/{id}/confirm) - this endpoint is only for a deliberate reissue afterwards. */
         post: operations["rotateCustomerSubscriptionToken"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/customer/v1/subscriptions/trial/activate": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** @description Self-service trial: creates a TRIAL subscription on the brand's designated trial plan (a normal plan with isTrial=true) and issues its first token. Free - no order, payment intent, or ledger entry is created. At most one trial ever per brand membership, regardless of that trial's current status; rejected if an active (non-REVOKED) subscription already exists on the same serviceLine as the trial plan. */
+        post: operations["activateTrial"];
         delete?: never;
         options?: never;
         head?: never;
@@ -1013,6 +1047,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/admin/v1/acquisitions/stats": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description First-touch acquisition attribution (see CustomerOtpVerify's utm* fields), grouped by (utmSource, utmMedium, utmCampaign). The all-null group is organic/untagged signups - returned like any other row, not hidden. Conversion counting mirrors GET /admin/v1/dashboard/overview's newPayingCustomers: only a membership's first-ever PAID order counts, so renewals never inflate a channel's conversions. */
+        get: operations["getAcquisitionStats"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/admin/v1/dashboard/overview": {
         parameters: {
             query?: never;
@@ -1446,6 +1497,13 @@ export interface components {
         };
         CustomerOtpVerify: components["schemas"]["OtpVerify"] & {
             brandCode: string;
+            utmSource?: string;
+            utmMedium?: string;
+            utmCampaign?: string;
+            utmContent?: string;
+            utmTerm?: string;
+            /** @description First-touch acquisition attribution. Only ever written once, the first time this email creates a brand_membership - a returning customer logging in again never overwrites the membership's original attribution, even if these fields are present again (e.g. a stale browser cookie from an earlier visit). */
+            landingHostname?: string;
         };
         SessionToken: {
             accessToken: string;
@@ -1563,6 +1621,22 @@ export interface components {
             activeDeviceCountCheckedAt?: string | null;
             /** @description Why a REVOKED subscription was revoked, shown to the customer. Null if none was recorded (subscriptions revoked before this field existed). */
             revokedReason?: string | null;
+            /** @description Only populated by GET /customer/v1/subscriptions. Connections that can't go into the base64/plain subscription body at all (WireGuard today - Happ and similar apps don't parse it), delivered instead as a downloadable credential file + QR code. */
+            outOfBandConnections?: components["schemas"]["OutOfBandConnection"][];
+        };
+        OutOfBandConnection: {
+            /** Format: uuid */
+            endpointId: string;
+            protocol: string;
+            name: string;
+            countryCode: string;
+            /**
+             * Format: uri
+             * @description Downloads the credential file (e.g. a WireGuard .conf) directly.
+             */
+            downloadUrl: string;
+            /** @description A `data:image/png;base64,...` QR code encoding the same credential, ready to embed directly in an `<img>` tag - scanning it into the relevant app (e.g. the WireGuard app) has the same effect as importing the downloaded file. */
+            qrCodeDataUri: string;
         };
         SubscriptionDetail: components["schemas"]["SubscriptionSummary"] & {
             /** Format: uuid */
@@ -1702,6 +1776,10 @@ export interface components {
                     expired: string[];
                     blocked: string[];
                 };
+                /** @description White-label styling read by the customer-portal. */
+                theme: {
+                    primaryColor: string | null;
+                };
             };
             /** Format: date-time */
             createdAt?: string;
@@ -1749,6 +1827,7 @@ export interface components {
             status: string;
             /** @enum {string} */
             serviceLine: "MAIN" | "WHITELIST";
+            isTrial: boolean;
             price?: {
                 amount?: number;
                 currency?: string;
@@ -1943,6 +2022,21 @@ export interface components {
             week: number;
             month: number;
             year: number;
+        };
+        AcquisitionStatsRow: {
+            utmSource: string | null;
+            utmMedium: string | null;
+            utmCampaign: string | null;
+            /** @description True when all three utm* fields are null - an untagged/organic signup. */
+            isOrganic: boolean;
+            registrations: number;
+            /** @description Memberships in this group whose first-ever order reached PAID. */
+            conversions: number;
+            /** @description Revenue from those conversions' first paid order, split by currency. */
+            revenue: {
+                currency: string;
+                amount: number;
+            }[];
         };
         DashboardOverview: {
             revenue: {
@@ -2372,6 +2466,36 @@ export interface operations {
             };
         };
     };
+    downloadWireGuardConfig: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                token: string;
+                endpointId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The decrypted credential file (e.g. a WireGuard .conf), as plain text. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": string;
+                };
+            };
+            /** @description Token */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
     getLiveness: {
         parameters: {
             query?: never;
@@ -2713,6 +2837,54 @@ export interface operations {
             };
             /** @description Subscription not found (or does not belong to this customer) */
             404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    activateTrial: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    /** Format: uuid */
+                    brandMembershipId: string;
+                };
+            };
+        };
+        responses: {
+            /** @description New TRIAL subscription */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SubscriptionSummary"];
+                };
+            };
+            /** @description This brand has no trial plan configured */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Brand membership not found (or does not belong to this customer) */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description A trial was already used on this membership, or an active subscription already exists on this service line */
+            409: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -3948,6 +4120,11 @@ export interface operations {
                             /** @description Same as `expired`, for REVOKED/SUSPENDED/PAST_DUE. */
                             blocked?: string[];
                         };
+                        /** @description White-label styling read by the customer-portal. */
+                        theme?: {
+                            /** @description Hex color applied as the customer-portal's CSS primary-color variable. */
+                            primaryColor?: string;
+                        };
                     };
                 };
             };
@@ -4325,6 +4502,11 @@ export interface operations {
                      * @enum {string}
                      */
                     serviceLine?: "MAIN" | "WHITELIST";
+                    /**
+                     * @description Marks this plan as the brand's self-service trial plan (see POST /customer/v1/subscriptions/trial/activate). A brand with no isTrial=true plan simply has no trial - no separate brand-level toggle.
+                     * @default false
+                     */
+                    isTrial?: boolean;
                 };
             };
         };
@@ -4374,6 +4556,7 @@ export interface operations {
                     status?: "ACTIVE" | "INACTIVE";
                     /** @enum {string} */
                     serviceLine?: "MAIN" | "WHITELIST";
+                    isTrial?: boolean;
                 };
             };
         };
@@ -4680,6 +4863,36 @@ export interface operations {
                 content?: never;
             };
             /** @description subscriptions.read permission required */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    getAcquisitionStats: {
+        parameters: {
+            query?: {
+                /** @description Comma-separated brand codes; omit for all brands combined. */
+                brandCodes?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Acquisition stats by channel; requires finance.read */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AcquisitionStatsRow"][];
+                };
+            };
+            /** @description Missing finance.read permission */
             403: {
                 headers: {
                     [name: string]: unknown;
