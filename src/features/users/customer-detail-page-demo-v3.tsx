@@ -199,25 +199,6 @@ const payments: MockPayment[] = [
 
 const paymentIcon = { NEW: ShoppingCartIcon, RENEWAL: RefreshCcwIcon, REFUND: CreditCardIcon } as const;
 
-function IdLine({ subscription }: { subscription: MockSubscription }) {
-  return (
-    <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
-      <span>
-        ID подписки: <span className="font-mono">{subscription.id}</span>
-      </span>
-      <CopyButton value={subscription.id} />
-      <Tooltip>
-        <TooltipTrigger>
-          <InfoIcon className="size-3.5" />
-        </TooltipTrigger>
-        <TooltipContent>
-          Используется как идентификатор клиента в VPN-панели (3x-ui/Remnawave) — ищите по этому значению, если нужно найти клиента напрямую в панели.
-        </TooltipContent>
-      </Tooltip>
-    </div>
-  );
-}
-
 function ActionButtons({ subscription }: { subscription: MockSubscription }) {
   if (subscription.status === "REVOKED") return null;
   return (
@@ -232,52 +213,28 @@ function ActionButtons({ subscription }: { subscription: MockSubscription }) {
   );
 }
 
-/** Вариант A (Демон VPN) — компактный список пар «подпись: значение», без вложенных блоков. */
-function AccordionVariantList({ subscription }: { subscription: MockSubscription }) {
-  const activeToken = subscription.tokens.find((token) => token.status === "ACTIVE");
-  return (
-    <div className="flex flex-col gap-2.5 pb-3">
-      <p className="text-[10px] font-medium tracking-wide text-muted-foreground uppercase">Вариант A · список</p>
-      <IdLine subscription={subscription} />
-      {subscription.status === "REVOKED" && (
-        <p className="text-xs text-muted-foreground">Причина отзыва: {subscription.revokedReason || "не указана"}</p>
-      )}
-      <div className="flex items-start gap-2 text-xs">
-        <span className="shrink-0 text-muted-foreground">Группы доступа:</span>
-        {subscription.endpointGroups.length === 0 ? (
-          <span className="text-muted-foreground">нет</span>
-        ) : (
-          <div className="flex flex-wrap gap-1">
-            {subscription.endpointGroups.map((group) => (
-              <span key={group.id} className="rounded-full border px-2 py-0.5 text-muted-foreground">
-                {group.name}
-              </span>
-            ))}
-          </div>
-        )}
-      </div>
-      {activeToken?.subscriptionUrl && (
-        <div className="flex items-center gap-2 text-xs">
-          <span className="shrink-0 text-muted-foreground">Ссылка:</span>
-          <code className="flex-1 truncate rounded bg-muted px-1.5 py-1 font-mono">{activeToken.subscriptionUrl}</code>
-          <CopyButton value={activeToken.subscriptionUrl} />
-        </div>
-      )}
-      <ActionButtons subscription={subscription} />
-    </div>
-  );
-}
-
-/** Вариант B (Ангел VPN) — два раздельных суб-блока: метаданные слева, ссылка справа. */
-function AccordionVariantSplitPanels({ subscription }: { subscription: MockSubscription }) {
+function SubscriptionAccordion({ subscription }: { subscription: MockSubscription }) {
   const activeToken = subscription.tokens.find((token) => token.status === "ACTIVE");
   return (
     <div className="flex flex-col gap-3 pb-3">
-      <p className="text-[10px] font-medium tracking-wide text-muted-foreground uppercase">Вариант B · две панели</p>
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
         <div className="flex flex-col gap-2 rounded-lg border bg-muted/30 p-3">
           <p className="text-xs font-medium">Метаданные</p>
-          <IdLine subscription={subscription} />
+          <div>
+            <p className="mb-1 text-[11px] text-muted-foreground">ID подписки</p>
+            <div className="flex items-center gap-1.5">
+              <code className="flex-1 truncate rounded bg-muted px-2 py-1 font-mono text-xs">{subscription.id}</code>
+              <CopyButton value={subscription.id} />
+              <Tooltip>
+                <TooltipTrigger>
+                  <InfoIcon className="size-3.5 shrink-0 text-muted-foreground" />
+                </TooltipTrigger>
+                <TooltipContent>
+                  Используется как идентификатор клиента в VPN-панели (3x-ui/Remnawave) — ищите по этому значению, если нужно найти клиента напрямую в панели.
+                </TooltipContent>
+              </Tooltip>
+            </div>
+          </div>
           {subscription.status === "REVOKED" && (
             <p className="text-xs text-muted-foreground">Причина отзыва: {subscription.revokedReason || "не указана"}</p>
           )}
@@ -297,11 +254,11 @@ function AccordionVariantSplitPanels({ subscription }: { subscription: MockSubsc
           <p className="text-xs font-medium">Ссылка на подписку</p>
           {activeToken?.subscriptionUrl ? (
             <>
-              <code className="truncate rounded bg-muted px-1.5 py-1 font-mono text-xs">{activeToken.subscriptionUrl}</code>
-              <div className="flex items-center justify-between text-xs text-muted-foreground">
-                <span>выдан {new Date(activeToken.createdAt).toLocaleDateString()}</span>
+              <div className="flex items-center gap-1.5">
+                <code className="flex-1 truncate rounded bg-muted px-2 py-1 font-mono text-xs">{activeToken.subscriptionUrl}</code>
                 <CopyButton value={activeToken.subscriptionUrl} />
               </div>
+              <p className="text-xs text-muted-foreground">выдан {new Date(activeToken.createdAt).toLocaleDateString()}</p>
             </>
           ) : (
             <p className="text-xs text-muted-foreground">Ссылок пока не выдано.</p>
@@ -312,95 +269,6 @@ function AccordionVariantSplitPanels({ subscription }: { subscription: MockSubsc
     </div>
   );
 }
-
-/** Вариант C (Tiger VPN) — вертикальный таймлайн жизненного цикла подписки. */
-function AccordionVariantTimeline({ subscription }: { subscription: MockSubscription }) {
-  const activeToken = subscription.tokens.find((token) => token.status === "ACTIVE");
-  const events = [
-    { label: "Подписка создана", date: subscription.startsAt, tone: "bg-sky-500" },
-    ...(activeToken ? [{ label: `Ссылка выдана · ${activeToken.subscriptionUrl}`, date: activeToken.createdAt, tone: "bg-emerald-500" }] : []),
-    ...(activeToken?.lastUsedAt ? [{ label: "Последнее использование", date: activeToken.lastUsedAt, tone: "bg-emerald-500" }] : []),
-    ...(subscription.status === "REVOKED"
-      ? [{ label: `Отозвана${subscription.revokedReason ? ` · ${subscription.revokedReason}` : ""}`, date: subscription.expiresAt, tone: "bg-destructive" }]
-      : [{ label: "Истекает", date: subscription.expiresAt, tone: "bg-muted-foreground" }]),
-  ];
-  return (
-    <div className="flex flex-col gap-3 pb-3">
-      <p className="text-[10px] font-medium tracking-wide text-muted-foreground uppercase">Вариант C · таймлайн</p>
-      <IdLine subscription={subscription} />
-      <div className="flex flex-col">
-        {events.map((event, index) => (
-          <div key={event.label} className="flex gap-3">
-            <div className="flex flex-col items-center">
-              <span className={`mt-1 size-2 shrink-0 rounded-full ${event.tone}`} />
-              {index < events.length - 1 && <span className="w-px flex-1 bg-border" />}
-            </div>
-            <div className="min-w-0 pb-3">
-              <p className="truncate text-xs">{event.label}</p>
-              <p className="text-[11px] text-muted-foreground">{new Date(event.date).toLocaleString()}</p>
-            </div>
-          </div>
-        ))}
-      </div>
-      <div className="flex flex-wrap gap-1">
-        {subscription.endpointGroups.map((group) => (
-          <span key={group.id} className="rounded-full border px-2 py-0.5 text-xs text-muted-foreground">
-            {group.name}
-          </span>
-        ))}
-      </div>
-      <ActionButtons subscription={subscription} />
-    </div>
-  );
-}
-
-/** Вариант D (Falcon VPN) — сетка мини-плиток, как маленькие stat-карточки. */
-function AccordionVariantTiles({ subscription }: { subscription: MockSubscription }) {
-  const activeToken = subscription.tokens.find((token) => token.status === "ACTIVE");
-  return (
-    <div className="flex flex-col gap-3 pb-3">
-      <p className="text-[10px] font-medium tracking-wide text-muted-foreground uppercase">Вариант D · плитки</p>
-      <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
-        <div className="rounded-lg border p-2.5">
-          <p className="text-[11px] text-muted-foreground">ID подписки</p>
-          <div className="mt-1 flex items-center gap-1.5">
-            <span className="truncate font-mono text-xs">{subscription.id}</span>
-            <CopyButton value={subscription.id} />
-          </div>
-        </div>
-        <div className="rounded-lg border p-2.5">
-          <p className="text-[11px] text-muted-foreground">Группы доступа</p>
-          <p className="mt-1 text-xs">{subscription.endpointGroups.length === 0 ? "нет" : subscription.endpointGroups.map((g) => g.name).join(", ")}</p>
-        </div>
-        <div className="rounded-lg border p-2.5 sm:col-span-2">
-          <p className="text-[11px] text-muted-foreground">Активная ссылка</p>
-          {activeToken?.subscriptionUrl ? (
-            <div className="mt-1 flex items-center gap-1.5">
-              <code className="flex-1 truncate font-mono text-xs">{activeToken.subscriptionUrl}</code>
-              <CopyButton value={activeToken.subscriptionUrl} />
-            </div>
-          ) : (
-            <p className="mt-1 text-xs text-muted-foreground">Ссылок пока не выдано.</p>
-          )}
-        </div>
-        {subscription.status === "REVOKED" && (
-          <div className="rounded-lg border p-2.5 sm:col-span-2">
-            <p className="text-[11px] text-muted-foreground">Причина отзыва</p>
-            <p className="mt-1 text-xs">{subscription.revokedReason || "не указана"}</p>
-          </div>
-        )}
-      </div>
-      <ActionButtons subscription={subscription} />
-    </div>
-  );
-}
-
-const accordionVariantByBrand: Record<string, (props: { subscription: MockSubscription }) => React.ReactElement> = {
-  demo: AccordionVariantList,
-  demo2: AccordionVariantSplitPanels,
-  demo3: AccordionVariantTimeline,
-  demo4: AccordionVariantTiles,
-};
 
 function SubscriptionRow({ subscription }: { subscription: MockSubscription }) {
   const [open, setOpen] = useState(false);
@@ -422,10 +290,7 @@ function SubscriptionRow({ subscription }: { subscription: MockSubscription }) {
         <ChevronDownIcon className={`size-4 shrink-0 text-muted-foreground transition-transform ${open ? "rotate-180" : ""}`} />
       </CollapsibleTrigger>
       <CollapsibleContent>
-        {(() => {
-          const AccordionVariant = accordionVariantByBrand[subscription.brandCode] ?? AccordionVariantList;
-          return <AccordionVariant subscription={subscription} />;
-        })()}
+        <SubscriptionAccordion subscription={subscription} />
       </CollapsibleContent>
     </Collapsible>
   );
@@ -441,9 +306,9 @@ function MembershipRow({ membership }: { membership: MockMembership }) {
             <Tooltip>
               <TooltipTrigger
                 render={<a href={membership.portalUrl} target="_blank" rel="noreferrer" />}
-                className="inline-flex size-5 items-center justify-center rounded-md text-muted-foreground hover:bg-muted hover:text-foreground"
+                className="-translate-y-1 text-muted-foreground hover:text-foreground"
               >
-                <ExternalLinkIcon className="size-3" />
+                <ExternalLinkIcon className="size-2.5" />
               </TooltipTrigger>
               <TooltipContent>Открыть ЛК бренда</TooltipContent>
             </Tooltip>
@@ -573,8 +438,8 @@ export function CustomerDetailPageDemoV3() {
               <CardTitle>Бренды и подписки</CardTitle>
               <CardDescription>Поиск и фильтр по бренду — масштабируется на любое число брендов без потери в ширине</CardDescription>
             </div>
-            <div className="flex flex-wrap items-center gap-2">
-              <ToolbarSearch value={search} onChange={setSearch} placeholder="Поиск по тарифу или ID" className="w-auto max-w-80 flex-1" />
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <ToolbarSearch value={search} onChange={setSearch} placeholder="Поиск по тарифу или ID" className="w-auto max-w-80" />
               <ToggleGroup variant="outline" spacing={0} value={[brandFilter]} onValueChange={(values) => setBrandFilter(values[0] ?? "all")}>
                 <ToggleGroupItem value="all">Все</ToggleGroupItem>
                 {memberships.map((membership) => (
