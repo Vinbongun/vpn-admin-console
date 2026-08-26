@@ -253,7 +253,7 @@ function SubscriptionAccordion({ subscription }: { subscription: MockSubscriptio
   return (
     <div className="flex flex-col gap-3 pb-3">
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-        <div className="flex flex-col gap-2 rounded-lg border bg-muted/30 p-3">
+        <div className="flex flex-col gap-2 rounded-lg border bg-muted/30 p-4">
           <div className="space-y-1.5">
             <Label>ID подписки</Label>
             <div className="flex items-center gap-2">
@@ -279,7 +279,7 @@ function SubscriptionAccordion({ subscription }: { subscription: MockSubscriptio
             )}
           </div>
         </div>
-        <div className="flex flex-col gap-2 rounded-lg border bg-muted/30 p-3">
+        <div className="flex flex-col gap-2 rounded-lg border bg-muted/30 p-4">
           {activeToken?.subscriptionUrl ? (
             <>
               <div className="space-y-1.5">
