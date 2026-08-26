@@ -1,12 +1,13 @@
 "use client";
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { ExternalLinkIcon } from "lucide-react";
+import { ExternalLinkIcon, InfoIcon } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
 import { adminApi } from "@/api/client";
 import type { CustomerDetail } from "@/api/types";
 import { ConfirmDialog } from "@/components/confirm-dialog";
+import { CopyButton } from "@/components/copy-button";
 import { ErrorState } from "@/components/error-state";
 import { StatusBadge } from "@/components/status-badge";
 import {
@@ -28,6 +29,7 @@ import { Separator } from "@/components/ui/separator";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Spinner } from "@/components/ui/spinner";
 import { Switch } from "@/components/ui/switch";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { CreateSubscriptionDialog } from "@/features/subscriptions/create-dialog";
 import { SubscriptionTokenHistory } from "@/features/users/subscription-token-history";
 
@@ -211,6 +213,20 @@ export function CustomerDetailDialog({ customerId, onOpenChange }: { customerId:
                                           </p>
                                         </div>
                                         <StatusBadge status={subscription.status} />
+                                      </div>
+                                      <div className="mt-1.5 flex items-center gap-1.5 text-xs text-muted-foreground">
+                                        <span>
+                                          ID подписки: <span className="font-mono">{subscription.id}</span>
+                                        </span>
+                                        <CopyButton value={subscription.id} />
+                                        <Tooltip>
+                                          <TooltipTrigger>
+                                            <InfoIcon className="size-3.5" />
+                                          </TooltipTrigger>
+                                          <TooltipContent>
+                                            Используется как идентификатор клиента в VPN-панели (3x-ui/Remnawave) — ищите по этому значению, если нужно найти клиента напрямую в панели.
+                                          </TooltipContent>
+                                        </Tooltip>
                                       </div>
                                       {subscription.status === "REVOKED" && (
                                         <p className="mt-1 text-xs text-muted-foreground">Причина отзыва: {subscription.revokedReason || "не указана"}</p>
