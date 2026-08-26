@@ -6,7 +6,9 @@ import {
   CreditCardIcon,
   ExternalLinkIcon,
   GaugeIcon,
+  HashIcon,
   InfoIcon,
+  LinkIcon,
   MailIcon,
   RefreshCcwIcon,
   SendIcon,
@@ -78,6 +80,7 @@ type MockPayment = {
   amount: number;
   currency: string;
   kind: "NEW" | "RENEWAL" | "REFUND";
+  serviceLine: "MAIN" | "WHITELIST";
 };
 
 const mockToken = (id: string, prefix: string): MockToken => ({
@@ -207,11 +210,11 @@ const subscriptions: MockSubscription[] = [
 ];
 
 const payments: MockPayment[] = [
-  { id: "p1", title: "5 устройств · Демон VPN", category: "Продление", date: "Сегодня, 09:12", amount: 799, currency: "RUB", kind: "RENEWAL" },
-  { id: "p2", title: "10 устройств · Ангел VPN", category: "Новая подписка", date: "Вчера", amount: 1490, currency: "RUB", kind: "NEW" },
-  { id: "p3", title: "Whitelist-доступ · Ангел VPN", category: "Новая подписка", date: "20 авг", amount: 590, currency: "RUB", kind: "NEW" },
-  { id: "p4", title: "5 устройств · Демон VPN", category: "Возврат", date: "18 авг", amount: -799, currency: "RUB", kind: "REFUND" },
-  { id: "p5", title: "3 устройства · Falcon VPN", category: "Продление", date: "10 авг", amount: 599, currency: "RUB", kind: "RENEWAL" },
+  { id: "p1", title: "5 устройств · Демон VPN", category: "Продление", date: "Сегодня, 09:12", amount: 799, currency: "RUB", kind: "RENEWAL", serviceLine: "MAIN" },
+  { id: "p2", title: "10 устройств · Ангел VPN", category: "Новая подписка", date: "Вчера", amount: 1490, currency: "RUB", kind: "NEW", serviceLine: "MAIN" },
+  { id: "p3", title: "Whitelist-доступ · Ангел VPN", category: "Новая подписка", date: "20 авг", amount: 590, currency: "RUB", kind: "NEW", serviceLine: "WHITELIST" },
+  { id: "p4", title: "5 устройств · Демон VPN", category: "Возврат", date: "18 авг", amount: -799, currency: "RUB", kind: "REFUND", serviceLine: "MAIN" },
+  { id: "p5", title: "3 устройства · Falcon VPN", category: "Продление", date: "10 авг", amount: 599, currency: "RUB", kind: "RENEWAL", serviceLine: "MAIN" },
 ];
 
 const paymentIcon = { NEW: ShoppingCartIcon, RENEWAL: RefreshCcwIcon, REFUND: CreditCardIcon } as const;
@@ -251,19 +254,14 @@ function SubscriptionAccordion({ subscription }: { subscription: MockSubscriptio
     <div className="flex flex-col gap-3 pb-3">
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
         <div className="flex flex-col gap-2 rounded-lg border bg-muted/30 p-3">
-          <p className="text-xs font-medium">ID подписки</p>
-          <div>
-            <div className="flex items-center gap-1.5">
-              <code className="flex-1 truncate rounded bg-muted px-2 py-1 font-mono text-xs">{subscription.id}</code>
+          <div className="space-y-1.5">
+            <Label>ID подписки</Label>
+            <div className="flex items-center gap-2">
+              <div className="relative flex-1">
+                <HashIcon className="pointer-events-none absolute top-1/2 left-2.5 size-4 -translate-y-1/2 text-muted-foreground" />
+                <Input readOnly value={subscription.id} className="pl-8 font-mono text-xs" />
+              </div>
               <CopyButton value={subscription.id} />
-              <Tooltip>
-                <TooltipTrigger>
-                  <InfoIcon className="size-3.5 shrink-0 text-muted-foreground" />
-                </TooltipTrigger>
-                <TooltipContent>
-                  Используется как идентификатор клиента в VPN-панели (3x-ui/Remnawave) — ищите по этому значению, если нужно найти клиента напрямую в панели.
-                </TooltipContent>
-              </Tooltip>
             </div>
           </div>
           {subscription.status === "REVOKED" && (
@@ -282,17 +280,25 @@ function SubscriptionAccordion({ subscription }: { subscription: MockSubscriptio
           </div>
         </div>
         <div className="flex flex-col gap-2 rounded-lg border bg-muted/30 p-3">
-          <p className="text-xs font-medium">Ссылка на подписку</p>
           {activeToken?.subscriptionUrl ? (
             <>
-              <div className="flex items-center gap-1.5">
-                <code className="flex-1 truncate rounded bg-muted px-2 py-1 font-mono text-xs">{activeToken.subscriptionUrl}</code>
-                <CopyButton value={activeToken.subscriptionUrl} />
+              <div className="space-y-1.5">
+                <Label>Ссылка на подписку</Label>
+                <div className="flex items-center gap-2">
+                  <div className="relative flex-1">
+                    <LinkIcon className="pointer-events-none absolute top-1/2 left-2.5 size-4 -translate-y-1/2 text-muted-foreground" />
+                    <Input readOnly value={activeToken.subscriptionUrl} className="pl-8 font-mono text-xs" />
+                  </div>
+                  <CopyButton value={activeToken.subscriptionUrl} />
+                </div>
               </div>
               <span className="w-fit rounded-full border px-2 py-0.5 text-xs text-muted-foreground">выдан {new Date(activeToken.createdAt).toLocaleDateString("ru-RU")}</span>
             </>
           ) : (
-            <p className="text-xs text-muted-foreground">Ссылок пока не выдано.</p>
+            <>
+              <p className="text-xs font-medium">Ссылка на подписку</p>
+              <p className="text-xs text-muted-foreground">Ссылок пока не выдано.</p>
+            </>
           )}
         </div>
       </div>
@@ -371,6 +377,7 @@ export function CustomerDetailPageDemoV5() {
   );
 
   const totalRevenue = payments.reduce((sum, payment) => sum + payment.amount, 0);
+  const revenueByLine = (line: "MAIN" | "WHITELIST") => payments.filter((p) => p.serviceLine === line).reduce((sum, p) => sum + p.amount, 0);
   const deviceSubscriptions = subscriptions.filter((subscription) => subscription.status !== "REVOKED" && subscription.deviceLimit > 0);
   const totalConnected = deviceSubscriptions.reduce((sum, s) => sum + s.activeDeviceCount, 0);
   const totalDeviceLimit = deviceSubscriptions.reduce((sum, s) => sum + s.deviceLimit, 0);
@@ -421,6 +428,15 @@ export function CustomerDetailPageDemoV5() {
                   <span className="tabular-nums">{subscriptions.filter((s) => s.status === "ACTIVE").length}</span>
                 </div>
                 <Separator />
+                <div className="flex items-center justify-between">
+                  <span className="text-muted-foreground">Доход · MAIN</span>
+                  <span className="tabular-nums">{revenueByLine("MAIN").toLocaleString("ru-RU")} ₽</span>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span className="text-muted-foreground">Доход · WHITELIST</span>
+                  <span className="tabular-nums">{revenueByLine("WHITELIST").toLocaleString("ru-RU")} ₽</span>
+                </div>
+                <Separator />
                 <div className="flex items-center justify-between font-medium">
                   <span>Брендов</span>
                   <span className="tabular-nums">{memberships.length}</span>
@@ -431,16 +447,8 @@ export function CustomerDetailPageDemoV5() {
           </Card>
 
           <Card className="flex h-full flex-col">
-            <CardHeader className="flex flex-row items-center justify-between gap-2">
+            <CardHeader>
               <CardTitle>Членства в брендах</CardTitle>
-              <div className="flex flex-wrap gap-2">
-                <Button size="sm" variant="outline">
-                  Заблокировать везде
-                </Button>
-                <Button size="sm" variant="outline">
-                  Разблокировать везде
-                </Button>
-              </div>
             </CardHeader>
             <CardContent className="flex-1 divide-y">
               {memberships.map((membership) => (
@@ -514,16 +522,22 @@ export function CustomerDetailPageDemoV5() {
             <CardContent className="flex-1 space-y-4">
               <div className="space-y-1.5">
                 <Label htmlFor="contact-telegram">Telegram ID</Label>
-                <div className="relative">
-                  <SendIcon className="pointer-events-none absolute top-1/2 left-2.5 size-4 -translate-y-1/2 text-muted-foreground" />
-                  <Input id="contact-telegram" placeholder="Telegram ID клиента (необязательно)" className="pl-8" />
+                <div className="flex items-center gap-2">
+                  <div className="relative flex-1">
+                    <SendIcon className="pointer-events-none absolute top-1/2 left-2.5 size-4 -translate-y-1/2 text-muted-foreground" />
+                    <Input id="contact-telegram" defaultValue="@dedavpn" placeholder="Telegram ID клиента (необязательно)" className="pl-8" />
+                  </div>
+                  <CopyButton value="@dedavpn" />
                 </div>
               </div>
               <div className="space-y-1.5">
                 <Label htmlFor="contact-email">Email</Label>
-                <div className="relative">
-                  <MailIcon className="pointer-events-none absolute top-1/2 left-2.5 size-4 -translate-y-1/2 text-muted-foreground" />
-                  <Input id="contact-email" type="email" placeholder="Email клиента (необязательно)" className="pl-8" />
+                <div className="flex items-center gap-2">
+                  <div className="relative flex-1">
+                    <MailIcon className="pointer-events-none absolute top-1/2 left-2.5 size-4 -translate-y-1/2 text-muted-foreground" />
+                    <Input id="contact-email" type="email" defaultValue="deda@yandex.ru" placeholder="Email клиента (необязательно)" className="pl-8" />
+                  </div>
+                  <CopyButton value="deda@yandex.ru" />
                 </div>
               </div>
             </CardContent>
