@@ -215,7 +215,7 @@ function SubscriptionRow({ subscription }: { subscription: MockSubscription }) {
         <div className="min-w-0 flex-1">
           <p className="truncate font-medium">{subscription.planName}</p>
           <p className="truncate text-xs text-muted-foreground">
-            {subscription.brandName} · {new Date(subscription.startsAt).toLocaleDateString()} – {new Date(subscription.expiresAt).toLocaleDateString()}
+            {subscription.brandName} · {new Date(subscription.startsAt).toLocaleDateString("ru-RU")} – {new Date(subscription.expiresAt).toLocaleDateString("ru-RU")}
           </p>
         </div>
         <Badge variant="outline" className="hidden shrink-0 sm:inline-flex">
@@ -462,7 +462,7 @@ export function CustomerDetailPageDemoV2() {
                           )}
                         </div>
                         <p className="text-xs text-muted-foreground">
-                          {membership.brandCode} · рег. {new Date(membership.createdAt).toLocaleDateString()}
+                          {membership.brandCode} · рег. {new Date(membership.createdAt).toLocaleDateString("ru-RU")}
                         </p>
                       </div>
                     </div>

@@ -203,7 +203,7 @@ function SubscriptionCard({ subscription }: { subscription: MockSubscription }) 
         <div>
           <p className="font-medium">{subscription.planName}</p>
           <p className="text-xs text-muted-foreground">
-            {new Date(subscription.startsAt).toLocaleDateString()} – {new Date(subscription.expiresAt).toLocaleDateString()}
+            {new Date(subscription.startsAt).toLocaleDateString("ru-RU")} – {new Date(subscription.expiresAt).toLocaleDateString("ru-RU")}
           </p>
         </div>
         <StatusBadge status={subscription.status} />
@@ -260,7 +260,7 @@ function BrandBlock({ membership }: { membership: MockMembership }) {
         <div>
           <p className="font-medium">{membership.brandName}</p>
           <p className="text-xs text-muted-foreground">{membership.brandCode}</p>
-          <p className="text-xs text-muted-foreground">Регистрация: {new Date(membership.createdAt).toLocaleDateString()}</p>
+          <p className="text-xs text-muted-foreground">Регистрация: {new Date(membership.createdAt).toLocaleDateString("ru-RU")}</p>
           {membership.portalUrl && (
             <a href={membership.portalUrl} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 text-xs text-primary hover:underline">
               <ExternalLinkIcon className="size-3" />

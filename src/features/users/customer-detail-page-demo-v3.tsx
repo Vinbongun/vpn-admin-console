@@ -219,9 +219,8 @@ function SubscriptionAccordion({ subscription }: { subscription: MockSubscriptio
     <div className="flex flex-col gap-3 pb-3">
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
         <div className="flex flex-col gap-2 rounded-lg border bg-muted/30 p-3">
-          <p className="text-xs font-medium">Метаданные</p>
+          <p className="text-xs font-medium">ID подписки</p>
           <div>
-            <p className="mb-1 text-[11px] text-muted-foreground">ID подписки</p>
             <div className="flex items-center gap-1.5">
               <code className="flex-1 truncate rounded bg-muted px-2 py-1 font-mono text-xs">{subscription.id}</code>
               <CopyButton value={subscription.id} />
@@ -258,7 +257,7 @@ function SubscriptionAccordion({ subscription }: { subscription: MockSubscriptio
                 <code className="flex-1 truncate rounded bg-muted px-2 py-1 font-mono text-xs">{activeToken.subscriptionUrl}</code>
                 <CopyButton value={activeToken.subscriptionUrl} />
               </div>
-              <p className="text-xs text-muted-foreground">выдан {new Date(activeToken.createdAt).toLocaleDateString()}</p>
+              <span className="w-fit rounded-full border px-2 py-0.5 text-xs text-muted-foreground">выдан {new Date(activeToken.createdAt).toLocaleDateString("ru-RU")}</span>
             </>
           ) : (
             <p className="text-xs text-muted-foreground">Ссылок пока не выдано.</p>
@@ -278,7 +277,7 @@ function SubscriptionRow({ subscription }: { subscription: MockSubscription }) {
         <div className="min-w-0 flex-1">
           <p className="truncate font-medium">{subscription.planName}</p>
           <p className="truncate text-xs text-muted-foreground">
-            {subscription.brandName} · {new Date(subscription.startsAt).toLocaleDateString()} – {new Date(subscription.expiresAt).toLocaleDateString()}
+            {subscription.brandName} · {new Date(subscription.startsAt).toLocaleDateString("ru-RU")} – {new Date(subscription.expiresAt).toLocaleDateString("ru-RU")}
           </p>
         </div>
         <div className="hidden w-20 shrink-0 justify-center sm:flex">
@@ -315,7 +314,7 @@ function MembershipRow({ membership }: { membership: MockMembership }) {
           )}
         </div>
         <p className="truncate text-xs text-muted-foreground">
-          {membership.brandCode} · рег. {new Date(membership.createdAt).toLocaleDateString()}
+          {membership.brandCode} · рег. {new Date(membership.createdAt).toLocaleDateString("ru-RU")}
         </p>
       </div>
       <span className="hidden shrink-0 text-xs text-muted-foreground sm:inline">{membership.active ? "Активно" : "Приостановлено"}</span>
@@ -433,21 +432,23 @@ export function CustomerDetailPageDemoV3() {
         </div>
 
         <Card>
-          <CardHeader className="flex flex-col gap-3">
-            <div>
-              <CardTitle>Бренды и подписки</CardTitle>
-              <CardDescription>Поиск и фильтр по бренду — масштабируется на любое число брендов без потери в ширине</CardDescription>
-            </div>
-            <div className="flex flex-wrap items-center justify-between gap-2">
-              <ToolbarSearch value={search} onChange={setSearch} placeholder="Поиск по тарифу или ID" className="w-auto max-w-80" />
-              <ToggleGroup variant="outline" spacing={0} value={[brandFilter]} onValueChange={(values) => setBrandFilter(values[0] ?? "all")}>
-                <ToggleGroupItem value="all">Все</ToggleGroupItem>
-                {memberships.map((membership) => (
-                  <ToggleGroupItem key={membership.brandCode} value={membership.brandCode}>
-                    {membership.brandCode}
-                  </ToggleGroupItem>
-                ))}
-              </ToggleGroup>
+          <CardHeader>
+            <div className="flex flex-col gap-3">
+              <div>
+                <CardTitle>Бренды и подписки</CardTitle>
+                <CardDescription>Поиск и фильтр по бренду — масштабируется на любое число брендов без потери в ширине</CardDescription>
+              </div>
+              <div className="flex w-full flex-wrap items-center justify-between gap-2">
+                <ToolbarSearch value={search} onChange={setSearch} placeholder="Поиск по тарифу или ID" className="w-auto max-w-80" />
+                <ToggleGroup variant="outline" spacing={0} value={[brandFilter]} onValueChange={(values) => setBrandFilter(values[0] ?? "all")}>
+                  <ToggleGroupItem value="all">Все</ToggleGroupItem>
+                  {memberships.map((membership) => (
+                    <ToggleGroupItem key={membership.brandCode} value={membership.brandCode}>
+                      {membership.brandCode}
+                    </ToggleGroupItem>
+                  ))}
+                </ToggleGroup>
+              </div>
             </div>
           </CardHeader>
           <CardContent className="divide-y">
