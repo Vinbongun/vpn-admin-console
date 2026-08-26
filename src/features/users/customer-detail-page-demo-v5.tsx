@@ -507,7 +507,7 @@ export function CustomerDetailPageDemoV5() {
           <Card className="flex h-full flex-col">
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
-                <MailIcon className="size-4 text-emerald-500" />
+                <MailIcon className="size-4 text-muted-foreground" />
                 Контактная информация
               </CardTitle>
             </CardHeader>
