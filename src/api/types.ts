@@ -113,3 +113,21 @@ export type SetPaymentGatewayCredentials = operations["setPaymentGatewayCredenti
 export type CreatePaymentMethod = operations["createPaymentMethod"]["requestBody"]["content"]["application/json"];
 export type UpdatePaymentMethod = operations["updatePaymentMethod"]["requestBody"]["content"]["application/json"];
 export type ReplaceBrandPaymentMethods = operations["replaceBrandPaymentMethods"]["requestBody"]["content"]["application/json"];
+
+export type PlatformSettingKey =
+  | "rate_limit.login"
+  | "rate_limit.otp_request"
+  | "rate_limit.promo_code"
+  | "otp.expiry_seconds"
+  | "otp.max_attempts"
+  | "session.customer_lifetime_days"
+  | "session.staff_lifetime_hours"
+  | "device.active_window_seconds";
+export type RateLimitValue = { limit: number; windowSeconds: number };
+// The generated PlatformSetting.value is `unknown` (the schema documents the shape only in
+// prose) - narrow it here per-key: rate_limit.* is { limit, windowSeconds }, the rest are a bare integer.
+export type PlatformSetting = Omit<Schemas["PlatformSetting"], "key" | "value"> & {
+  key: PlatformSettingKey;
+  value: RateLimitValue | number;
+};
+export type UpdatePlatformSetting = { value: RateLimitValue | number };

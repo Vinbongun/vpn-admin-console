@@ -33,6 +33,8 @@ import type {
   ExtendSubscription,
   IssuedSubscriptionToken,
   PasswordLogin,
+  PlatformSetting,
+  PlatformSettingKey,
   RefundPayment,
   ReplaceBrandPaymentMethods,
   ReplaceEndpointGroupMembers,
@@ -54,6 +56,7 @@ import type {
   UpdatePaymentGateway,
   UpdatePaymentMethod,
   UpdatePlan,
+  UpdatePlatformSetting,
   UpdateReferralPartner,
   UpdateSubscription,
   UpsertPromoCode,
@@ -158,4 +161,7 @@ export const adminApi = {
   listBrandPaymentMethods: async (brandId: string) => unwrap(await client.GET("/admin/v1/brands/{id}/payment-methods", { params: { path: { id: brandId } }, headers: staffHeaders() })),
   replaceBrandPaymentMethods: async (brandId: string, body: ReplaceBrandPaymentMethods) =>
     unwrap(await client.PUT("/admin/v1/brands/{id}/payment-methods", { params: { path: { id: brandId } }, body, headers: staffHeaders() })),
+  listPlatformSettings: async () => (await unwrap(await client.GET("/admin/v1/platform-settings", { headers: staffHeaders() }))) as PlatformSetting[],
+  updatePlatformSetting: async (key: PlatformSettingKey, body: UpdatePlatformSetting) =>
+    (await unwrap(await client.PATCH("/admin/v1/platform-settings/{key}", { params: { path: { key } }, body, headers: staffHeaders() }))) as PlatformSetting,
 };
