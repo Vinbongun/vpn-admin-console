@@ -1146,6 +1146,38 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/admin/v1/platform-settings": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["listPlatformSettings"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/v1/platform-settings/{key}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch: operations["updatePlatformSetting"];
+        trace?: never;
+    };
     "/admin/v1/subscriptions/{subscriptionId}/tokens/rotate": {
         parameters: {
             query?: never;
@@ -2285,6 +2317,19 @@ export interface components {
             /** @description Why staff is creating this subscription manually (e.g. a gifted/comped subscription with no order behind it). Optional, but without it a manual gift leaves no trace in GET /admin/v1/customers/{id}/history - it's stored as the audit_events.reason on the resulting `subscription.created` event. */
             reason?: string;
         };
+        PlatformSetting: {
+            key: string;
+            /** @description Shape depends on key: rate_limit.* is { limit: integer, windowSeconds: integer }; the rest are a bare integer. */
+            value: unknown;
+            /** Format: date-time */
+            updatedAt: string;
+            /** Format: uuid */
+            updatedBy?: string | null;
+        };
+        UpdatePlatformSetting: {
+            /** @description Validated server-side against this key's bounds before being written - see GET /admin/v1/platform-settings for the current value/shape of each key. */
+            value: unknown;
+        };
         RotateSubscriptionToken: {
             /** Format: date-time */
             expiresAt?: string;
@@ -2532,7 +2577,7 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            /** @description Health-filtered non-cacheable subscription body. `sing-box` and `xray` return a JSON document `{ "outbounds": [...] }`; `mihomo` returns a YAML document `{ proxies: [...] }` - one entry per eligible endpoint, in each format's own schema. Endpoints using a transport the selected format does not support (XHTTP for all three structured formats currently) or a protocol the renderer does not yet cover are silently omitted rather than emitted as a broken entry. When `format` is omitted and the request's User-Agent looks like an ordinary browser (not a recognized VPN client), an HTML status page is returned instead of a subscription body, showing status/expiry/server count, a copyable subscription link, and each eligible server's own direct decrypted link - mirroring how panels like 3x-ui present their own subscription links to a browser versus a client app. Every endpoint name (here and in the subscription body itself) is prefixed with its country's flag emoji; the 3 healthiest/least- loaded endpoints within the subscription's own plan also get a rank number and a fire emoji ahead of the flag (e.g. "1. France Vless") and are sorted to the front of the list - purely cosmetic labeling/ordering of servers the subscription already has access to, granting no additional access. */
+            /** @description Health-filtered non-cacheable subscription body. `sing-box` and `xray` return a JSON document `{ "outbounds": [...] }`; `mihomo` returns a YAML document `{ proxies: [...] }` - one entry per eligible endpoint, in each format's own schema. VLESS/Trojan/Shadowsocks are covered by all three formats; Hysteria2 is covered by `sing-box`/`mihomo` only (Xray-core has no protocol for it - a separate binary/project). Endpoints using a transport the selected format does not support (XHTTP for all three structured formats currently) are silently omitted rather than emitted as a broken entry, same as any protocol not listed above. When `format` is omitted and the request's User-Agent looks like an ordinary browser (not a recognized VPN client), an HTML status page is returned instead of a subscription body, showing status/expiry/server count, a copyable subscription link, and each eligible server's own direct decrypted link - mirroring how panels like 3x-ui present their own subscription links to a browser versus a client app. Every endpoint name (here and in the subscription body itself) is prefixed with its country's flag emoji; the 3 healthiest/least- loaded endpoints within the subscription's own plan also get a rank number and a fire emoji ahead of the flag (e.g. "1. France Vless") and are sorted to the front of the list - purely cosmetic labeling/ordering of servers the subscription already has access to, granting no additional access. */
             200: {
                 headers: {
                     [name: string]: unknown;
@@ -2673,6 +2718,13 @@ export interface operations {
                 };
                 content?: never;
             };
+            /** @description Too many attempts for this email - rate-limited (5 per 15 minutes). */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
         };
     };
     requestCustomerOtp: {
@@ -2690,6 +2742,13 @@ export interface operations {
         responses: {
             /** @description Request accepted without account disclosure */
             201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Too many OTP requests for this email - rate-limited (3 per 10 minutes). */
+            429: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -2743,6 +2802,13 @@ export interface operations {
         responses: {
             /** @description Registration request accepted without account disclosure */
             201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Too many OTP requests for this email - rate-limited (3 per 10 minutes). Shared budget with /customer/v1/auth/otp/request - same underlying requestCustomerOtp call. */
+            429: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -3127,7 +3193,7 @@ export interface operations {
                     brandMembershipId: string;
                     /** Format: uuid */
                     planId: string;
-                    /** @description Applied immediately: the discount is computed and baked into this order's amount right away. An invalid, inactive, or wrong-brand code fails the request with 400 rather than silently proceeding at full price. */
+                    /** @description Applied immediately: the discount is computed and baked into this order's amount right away. An invalid, inactive, or wrong-brand code fails the request with 400 rather than silently proceeding at full price. Rate-limited to 5 failed attempts per 5 minutes per customer (429 if exceeded) - checked before the promo_codes lookup. */
                     promoCode?: string;
                 };
             };
@@ -3151,6 +3217,13 @@ export interface operations {
             };
             /** @description Invalid customer session */
             401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Too many failed promoCode attempts for this customer - rate-limited (5 per 5 minutes). */
+            429: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -3629,6 +3702,13 @@ export interface operations {
             };
             /** @description Invalid credentials */
             401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Too many attempts for this email - rate-limited (5 per 15 minutes). */
+            429: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -5143,6 +5223,81 @@ export interface operations {
                 content: {
                     "application/json": components["schemas"]["AuditEventPage"];
                 };
+            };
+        };
+    };
+    listPlatformSettings: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description All platform-wide (not per-brand) settings rows, one per key */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PlatformSetting"][];
+                };
+            };
+            /** @description Missing platform_settings.read permission */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    updatePlatformSetting: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description One of rate_limit.login, rate_limit.otp_request, rate_limit.promo_code, otp.expiry_seconds, otp.max_attempts, session.customer_lifetime_days, session.staff_lifetime_hours, device.active_window_seconds */
+                key: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": components["schemas"]["UpdatePlatformSetting"];
+            };
+        };
+        responses: {
+            /** @description The updated setting row; the write is also recorded as a platform_settings.updated audit event */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PlatformSetting"];
+                };
+            };
+            /** @description Value outside the allowed bounds for this key; message states the valid range/shape */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Missing platform_settings.write permission */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Unknown settings key */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
         };
     };

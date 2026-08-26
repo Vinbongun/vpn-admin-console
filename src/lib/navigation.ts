@@ -7,6 +7,7 @@ import {
   Gift,
   Megaphone,
   Network,
+  Settings,
   Users,
 } from "lucide-react";
 
@@ -67,6 +68,7 @@ export const navigation = [
     ],
   },
   { label: "Каналы привлечения", href: "/acquisitions", icon: Megaphone, permission: "finance.read" },
+  { label: "Настройки платформы", href: "/platform-settings", icon: Settings, permission: "platform_settings.read" },
   { label: "Аудит", href: "/audit", icon: FileClock, permission: "audit.read" },
   { label: "Инструкции", href: "/instructions", icon: BookOpen },
 ] satisfies NavItem[];
