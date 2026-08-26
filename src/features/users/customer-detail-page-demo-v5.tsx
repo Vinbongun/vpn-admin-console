@@ -387,27 +387,16 @@ export function CustomerDetailPageDemoV5() {
       </Alert>
 
       <div className="mx-auto flex w-full max-w-6xl flex-col gap-6">
-        <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border p-4">
-          <div className="flex items-center gap-3">
-            <Avatar size="lg">
-              <AvatarFallback>DY</AvatarFallback>
-            </Avatar>
-            <div>
-              <div className="flex items-center gap-2">
-                <h1 className="font-heading text-lg font-semibold tracking-tight">deda@yandex.ru</h1>
-                <StatusBadge status="ACTIVE" />
-              </div>
-              <p className="text-sm text-muted-foreground">095c7448-9ad5-426f-b998-b9e02fb75ad9 · клиент с 25.08.2026</p>
+        <div className="flex flex-wrap items-center gap-3 rounded-xl border p-4">
+          <Avatar size="lg">
+            <AvatarFallback>DY</AvatarFallback>
+          </Avatar>
+          <div>
+            <div className="flex items-center gap-2">
+              <h1 className="font-heading text-lg font-semibold tracking-tight">deda@yandex.ru</h1>
+              <StatusBadge status="ACTIVE" />
             </div>
-          </div>
-          <div className="flex flex-wrap gap-2">
-            <Button size="sm" variant="outline">
-              Заблокировать везде
-            </Button>
-            <Button size="sm" variant="outline">
-              Разблокировать везде
-            </Button>
-            <Button size="sm">Создать подписку</Button>
+            <p className="text-sm text-muted-foreground">095c7448-9ad5-426f-b998-b9e02fb75ad9 · клиент с 25.08.2026</p>
           </div>
         </div>
 
@@ -442,8 +431,16 @@ export function CustomerDetailPageDemoV5() {
           </Card>
 
           <Card className="flex h-full flex-col">
-            <CardHeader>
+            <CardHeader className="flex flex-row items-center justify-between gap-2">
               <CardTitle>Членства в брендах</CardTitle>
+              <div className="flex flex-wrap gap-2">
+                <Button size="sm" variant="outline">
+                  Заблокировать везде
+                </Button>
+                <Button size="sm" variant="outline">
+                  Разблокировать везде
+                </Button>
+              </div>
             </CardHeader>
             <CardContent className="flex-1 divide-y">
               {memberships.map((membership) => (
@@ -456,9 +453,12 @@ export function CustomerDetailPageDemoV5() {
         <Card>
           <CardHeader>
             <div className="flex flex-col gap-3">
-              <div>
-                <CardTitle>Бренды и подписки</CardTitle>
-                <CardDescription>Поиск и фильтр по бренду — масштабируется на любое число брендов без потери в ширине</CardDescription>
+              <div className="flex items-start justify-between gap-2">
+                <div>
+                  <CardTitle>Бренды и подписки</CardTitle>
+                  <CardDescription>Поиск и фильтр по бренду — масштабируется на любое число брендов без потери в ширине</CardDescription>
+                </div>
+                <Button size="sm">Создать подписку</Button>
               </div>
               <div className="flex w-full flex-wrap items-center justify-between gap-2">
                 <ToolbarSearch value={search} onChange={setSearch} placeholder="Поиск по тарифу или ID" className="w-auto max-w-80" />
