@@ -171,7 +171,7 @@ export function CustomerDetailDialog({ customerId, onOpenChange }: { customerId:
                             <p className="font-medium">{membership.brandName}</p>
                             <p className="text-xs text-muted-foreground">{membership.brandCode}</p>
                             {membership.createdAt && (
-                              <p className="text-xs text-muted-foreground">Регистрация: {new Date(membership.createdAt).toLocaleDateString()}</p>
+                              <p className="text-xs text-muted-foreground">Регистрация: {new Date(membership.createdAt).toLocaleDateString("ru-RU")}</p>
                             )}
                             {membership.portalUrl && (
                               <a href={membership.portalUrl} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 text-xs text-primary hover:underline">
@@ -209,7 +209,7 @@ export function CustomerDetailDialog({ customerId, onOpenChange }: { customerId:
                                         <div>
                                           <p className="font-medium">{subscription.planName ?? subscription.planCode ?? "Без плана"}</p>
                                           <p className="text-xs text-muted-foreground">
-                                            {new Date(subscription.startsAt).toLocaleDateString()} – {new Date(subscription.expiresAt).toLocaleDateString()}
+                                            {new Date(subscription.startsAt).toLocaleDateString("ru-RU")} – {new Date(subscription.expiresAt).toLocaleDateString("ru-RU")}
                                           </p>
                                         </div>
                                         <StatusBadge status={subscription.status} />
