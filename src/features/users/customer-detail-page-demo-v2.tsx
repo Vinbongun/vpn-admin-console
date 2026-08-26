@@ -1,6 +1,6 @@
 "use client";
 
-import { ChevronDownIcon, CreditCardIcon, ExternalLinkIcon, InfoIcon, RefreshCcwIcon, ShoppingCartIcon } from "lucide-react";
+import { ChevronDownIcon, ExternalLinkIcon, InfoIcon } from "lucide-react";
 import { useMemo, useState } from "react";
 import { AppShell } from "@/components/app-shell";
 import { CopyButton } from "@/components/copy-button";
@@ -8,6 +8,7 @@ import { ToolbarSearch } from "@/components/page-toolbar";
 import { StatusBadge } from "@/components/status-badge";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
@@ -40,6 +41,8 @@ type MockSubscription = {
   revokedReason: string | null;
   endpointGroups: { id: string; name: string }[];
   tokens: MockToken[];
+  activeDeviceCount: number;
+  deviceLimit: number;
 };
 
 type MockMembership = {
@@ -92,6 +95,8 @@ const subscriptions: MockSubscription[] = [
     revokedReason: null,
     endpointGroups: [{ id: "eg1", name: "22" }],
     tokens: [mockToken("t1", "sub_WCcaKvm")],
+    activeDeviceCount: 3,
+    deviceLimit: 5,
   },
   {
     id: "f75a39d1-bf1b-457f-b213-f08037167f43",
@@ -105,6 +110,8 @@ const subscriptions: MockSubscription[] = [
     revokedReason: "Вот так хочу",
     endpointGroups: [{ id: "eg2", name: "E2E Test Group" }],
     tokens: [],
+    activeDeviceCount: 0,
+    deviceLimit: 0,
   },
   {
     id: "b4c8f7b9-0b42-4b87-8683-fa0438151144",
@@ -118,6 +125,8 @@ const subscriptions: MockSubscription[] = [
     revokedReason: "Так хочу",
     endpointGroups: [{ id: "eg3", name: "E2E Test Group" }],
     tokens: [mockToken("t2", "sub_nbM9JfEp")],
+    activeDeviceCount: 0,
+    deviceLimit: 0,
   },
   {
     id: "c1d2e3f4-5678-49ab-9cde-0123456789ab",
@@ -131,6 +140,8 @@ const subscriptions: MockSubscription[] = [
     revokedReason: null,
     endpointGroups: [{ id: "eg5", name: "Основной пул" }],
     tokens: [mockToken("t4", "sub_qWeRtY12")],
+    activeDeviceCount: 4,
+    deviceLimit: 10,
   },
   {
     id: "d2e3f4a5-6789-4abc-9def-123456789abc",
@@ -144,6 +155,8 @@ const subscriptions: MockSubscription[] = [
     revokedReason: null,
     endpointGroups: [{ id: "eg6", name: "Whitelist-пул" }],
     tokens: [mockToken("t5", "sub_ZxCvBn34")],
+    activeDeviceCount: 1,
+    deviceLimit: 2,
   },
   {
     id: "e3f4a5b6-789a-4bcd-9ef0-23456789abcd",
@@ -157,6 +170,8 @@ const subscriptions: MockSubscription[] = [
     revokedReason: null,
     endpointGroups: [],
     tokens: [],
+    activeDeviceCount: 0,
+    deviceLimit: 1,
   },
   {
     id: "f4a5b6c7-89ab-4cde-9f01-3456789abcde",
@@ -170,6 +185,8 @@ const subscriptions: MockSubscription[] = [
     revokedReason: null,
     endpointGroups: [{ id: "eg7", name: "EU-пул" }],
     tokens: [mockToken("t6", "sub_Falcon01")],
+    activeDeviceCount: 2,
+    deviceLimit: 3,
   },
 ];
 
@@ -180,8 +197,6 @@ const payments: MockPayment[] = [
   { id: "p4", title: "5 устройств · Демон VPN", category: "Возврат", date: "18 авг", amount: -799, currency: "RUB", kind: "REFUND" },
   { id: "p5", title: "3 устройства · Falcon VPN", category: "Продление", date: "10 авг", amount: 599, currency: "RUB", kind: "RENEWAL" },
 ];
-
-const paymentIcon = { NEW: ShoppingCartIcon, RENEWAL: RefreshCcwIcon, REFUND: CreditCardIcon } as const;
 
 function initials(name: string) {
   return name
@@ -197,20 +212,19 @@ function SubscriptionRow({ subscription }: { subscription: MockSubscription }) {
   return (
     <Collapsible open={open} onOpenChange={setOpen}>
       <CollapsibleTrigger className="flex w-full items-center gap-3 py-3 text-left">
-        <Avatar size="sm" className="shrink-0">
-          <AvatarFallback>{initials(subscription.brandName)}</AvatarFallback>
-        </Avatar>
         <div className="min-w-0 flex-1">
           <p className="truncate font-medium">{subscription.planName}</p>
           <p className="truncate text-xs text-muted-foreground">
             {subscription.brandName} · {new Date(subscription.startsAt).toLocaleDateString()} – {new Date(subscription.expiresAt).toLocaleDateString()}
           </p>
         </div>
-        <span className="hidden shrink-0 rounded-full border px-2 py-0.5 text-xs text-muted-foreground sm:inline">{subscription.serviceLine}</span>
+        <Badge variant="outline" className="hidden shrink-0 sm:inline-flex">
+          {subscription.serviceLine}
+        </Badge>
         <StatusBadge status={subscription.status} className="shrink-0" />
         <ChevronDownIcon className={`size-4 shrink-0 text-muted-foreground transition-transform ${open ? "rotate-180" : ""}`} />
       </CollapsibleTrigger>
-      <CollapsibleContent className="pb-3 pl-11">
+      <CollapsibleContent className="pb-3">
         <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
           <span>
             ID подписки: <span className="font-mono">{subscription.id}</span>
@@ -250,7 +264,7 @@ function SubscriptionRow({ subscription }: { subscription: MockSubscription }) {
           </div>
         )}
         <div className="mt-3">
-          <SubscriptionTokenHistory tokens={subscription.tokens} />
+          <SubscriptionTokenHistory tokens={subscription.tokens} compact />
         </div>
       </CollapsibleContent>
     </Collapsible>
@@ -273,6 +287,9 @@ export function CustomerDetailPageDemoV2() {
   );
 
   const totalRevenue = payments.reduce((sum, payment) => sum + payment.amount, 0);
+  const deviceSubscriptions = subscriptions.filter((subscription) => subscription.status !== "REVOKED" && subscription.deviceLimit > 0);
+  const totalConnected = deviceSubscriptions.reduce((sum, s) => sum + s.activeDeviceCount, 0);
+  const totalDeviceLimit = deviceSubscriptions.reduce((sum, s) => sum + s.deviceLimit, 0);
 
   return (
     <AppShell>
@@ -280,7 +297,7 @@ export function CustomerDetailPageDemoV2() {
         <InfoIcon />
         <AlertTitle>Демо вёрстки, вариант 2 — не финальная страница</AlertTitle>
         <AlertDescription>
-          Другая концепция: без баннера/крупной аватарки, блоки «Выручка» и «История платежей» сверху, подписки — компактным раскрывающимся списком с поиском и фильтром по бренду вместо сетки карточек. Данные захардкожены, кнопки не работают.
+          Правки по замечаниям: колонка с устройствами и членствами справа, поиск и фильтр по бренду в один ряд, без иконок у подписок, отдельные колонки для линейки/статуса, карточки брендов и блок выручки переоформлены. Данные захардкожены, кнопки не работают.
         </AlertDescription>
       </Alert>
 
@@ -295,7 +312,7 @@ export function CustomerDetailPageDemoV2() {
                 <h1 className="font-heading text-lg font-semibold tracking-tight">deda@yandex.ru</h1>
                 <StatusBadge status="ACTIVE" />
               </div>
-              <p className="text-sm text-muted-foreground">095c7448-9ad5-426f-b998-b9e02fb75ad9</p>
+              <p className="text-sm text-muted-foreground">095c7448-9ad5-426f-b998-b9e02fb75ad9 · клиент с 25.08.2026</p>
             </div>
           </div>
           <div className="flex flex-wrap gap-2">
@@ -309,131 +326,154 @@ export function CustomerDetailPageDemoV2() {
           </div>
         </div>
 
-        <div className="grid grid-cols-1 gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.4fr)]">
-          <Card>
-            <CardContent className="flex flex-col gap-4">
-              <div>
-                <p className="text-sm text-muted-foreground">Всего принёс денег</p>
-                <p className="text-3xl font-semibold tabular-nums">{totalRevenue.toLocaleString("ru-RU")} ₽</p>
-              </div>
-              <Separator />
-              <div className="flex flex-col gap-2 text-sm">
-                <div className="flex items-center justify-between">
-                  <span className="text-muted-foreground">Платежей всего</span>
-                  <span className="tabular-nums">{payments.length}</span>
-                </div>
-                <div className="flex items-center justify-between">
-                  <span className="text-muted-foreground">Активных подписок</span>
-                  <span className="tabular-nums">{subscriptions.filter((s) => s.status === "ACTIVE").length}</span>
-                </div>
-                <div className="flex items-center justify-between">
-                  <span className="text-muted-foreground">Брендов</span>
-                  <span className="tabular-nums">{memberships.length}</span>
-                </div>
-                <div className="flex items-center justify-between">
-                  <span className="text-muted-foreground">Клиент с</span>
-                  <span>25.08.2026</span>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between">
-              <div>
-                <CardTitle>История платежей</CardTitle>
-                <CardDescription>Последние операции клиента по всем брендам</CardDescription>
-              </div>
-              <Button size="sm" variant="outline">
-                Все платежи
-              </Button>
-            </CardHeader>
-            <CardContent className="divide-y">
-              {payments.map((payment) => {
-                const Icon = paymentIcon[payment.kind];
-                return (
-                  <div key={payment.id} className="flex items-center gap-3 py-2.5 first:pt-0 last:pb-0">
-                    <div className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-muted">
-                      <Icon className="size-4 text-muted-foreground" />
-                    </div>
-                    <div className="min-w-0 flex-1">
-                      <p className="truncate text-sm font-medium">{payment.title}</p>
-                      <p className="text-xs text-muted-foreground">{payment.category}</p>
-                    </div>
-                    <span className="hidden shrink-0 text-xs text-muted-foreground sm:inline">{payment.date}</span>
-                    <span className={`shrink-0 text-sm font-medium tabular-nums ${payment.amount > 0 ? "text-emerald-500" : ""}`}>
-                      {payment.amount > 0 ? "+" : ""}
-                      {payment.amount.toLocaleString("ru-RU")} {payment.currency}
-                    </span>
-                  </div>
-                );
-              })}
-            </CardContent>
-          </Card>
-        </div>
-
-        <Card>
-          <CardHeader className="flex flex-col gap-3">
-            <div className="flex items-center justify-between">
-              <div>
-                <CardTitle>Бренды и подписки</CardTitle>
-                <CardDescription>Поиск и фильтр по бренду — масштабируется на любое число брендов без потери в ширине</CardDescription>
-              </div>
-            </div>
-            <div className="flex flex-wrap items-center gap-2">
-              <ToolbarSearch value={search} onChange={setSearch} placeholder="Поиск по тарифу или ID подписки" />
-              <ToggleGroup
-                variant="outline"
-                spacing={0}
-                value={[brandFilter]}
-                onValueChange={(values) => setBrandFilter(values[0] ?? "all")}
-              >
-                <ToggleGroupItem value="all">Все</ToggleGroupItem>
-                {memberships.map((membership) => (
-                  <ToggleGroupItem key={membership.brandCode} value={membership.brandCode}>
-                    {membership.brandCode}
-                  </ToggleGroupItem>
-                ))}
-              </ToggleGroup>
-            </div>
-          </CardHeader>
-          <CardContent className="divide-y">
-            {filtered.length === 0 ? (
-              <p className="py-6 text-center text-sm text-muted-foreground">Ничего не найдено.</p>
-            ) : (
-              filtered.map((subscription) => <SubscriptionRow key={subscription.id} subscription={subscription} />)
-            )}
-          </CardContent>
-        </Card>
-
-        <div>
-          <p className="mb-3 text-sm font-medium text-muted-foreground">Членства в брендах</p>
-          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-            {memberships.map((membership) => (
-              <div key={membership.id} className="flex items-center justify-between gap-3 rounded-lg border p-3">
-                <div className="flex items-center gap-3">
-                  <Avatar size="sm">
-                    <AvatarFallback>{initials(membership.brandName)}</AvatarFallback>
-                  </Avatar>
+        <div className="grid grid-cols-1 gap-6 lg:grid-cols-[minmax(0,1fr)_320px]">
+          <div className="flex min-w-0 flex-col gap-6">
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+              <Card className="rounded-2xl">
+                <CardContent className="flex flex-col gap-4">
                   <div>
-                    <p className="text-sm font-medium">{membership.brandName}</p>
-                    <p className="text-xs text-muted-foreground">
-                      {membership.brandCode} · рег. {new Date(membership.createdAt).toLocaleDateString()}
-                    </p>
-                    {membership.portalUrl && (
-                      <a href={membership.portalUrl} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 text-xs text-primary hover:underline">
-                        <ExternalLinkIcon className="size-3" />
-                        Открыть ЛК бренда
-                      </a>
-                    )}
+                    <p className="text-sm text-muted-foreground">Всего принёс денег</p>
+                    <p className="text-4xl font-semibold tracking-tight tabular-nums">{totalRevenue.toLocaleString("ru-RU")} ₽</p>
                   </div>
+                  <Badge variant="outline" className="w-fit gap-1.5">
+                    <span className="size-1.5 rounded-full bg-emerald-500" />
+                    Платящий клиент
+                  </Badge>
+                  <div className="flex flex-col gap-2 rounded-lg bg-muted/50 p-3 text-sm">
+                    <div className="flex items-center justify-between">
+                      <span className="text-muted-foreground">Платежей всего</span>
+                      <span className="tabular-nums">{payments.length}</span>
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <span className="text-muted-foreground">Активных подписок</span>
+                      <span className="tabular-nums">{subscriptions.filter((s) => s.status === "ACTIVE").length}</span>
+                    </div>
+                    <Separator />
+                    <div className="flex items-center justify-between font-medium">
+                      <span>Брендов</span>
+                      <span className="tabular-nums">{memberships.length}</span>
+                    </div>
+                  </div>
+                  <p className="text-xs text-muted-foreground italic">Учитывает оплаты по всем брендам клиента, без ручных корректировок и возвратов.</p>
+                </CardContent>
+              </Card>
+
+              <Card>
+                <CardHeader className="flex flex-row items-center justify-between">
+                  <div>
+                    <CardTitle>История платежей</CardTitle>
+                    <CardDescription>По всем брендам</CardDescription>
+                  </div>
+                  <Button size="sm" variant="outline">
+                    Все
+                  </Button>
+                </CardHeader>
+                <CardContent className="divide-y">
+                  {payments.map((payment) => (
+                    <div key={payment.id} className="flex items-center gap-3 py-2.5 first:pt-0 last:pb-0">
+                      <div className="min-w-0 flex-1">
+                        <p className="truncate text-sm font-medium">{payment.title}</p>
+                        <p className="text-xs text-muted-foreground">
+                          {payment.category} · {payment.date}
+                        </p>
+                      </div>
+                      <span className={`shrink-0 text-sm font-medium tabular-nums ${payment.amount > 0 ? "text-emerald-500" : ""}`}>
+                        {payment.amount > 0 ? "+" : ""}
+                        {payment.amount.toLocaleString("ru-RU")} {payment.currency}
+                      </span>
+                    </div>
+                  ))}
+                </CardContent>
+              </Card>
+            </div>
+
+            <Card>
+              <CardHeader className="flex flex-col gap-3">
+                <div>
+                  <CardTitle>Бренды и подписки</CardTitle>
+                  <CardDescription>Поиск и фильтр по бренду — масштабируется на любое число брендов без потери в ширине</CardDescription>
                 </div>
-                <div className="flex items-center gap-2">
-                  <span className="text-xs text-muted-foreground">{membership.active ? "Активно" : "Приостановлено"}</span>
-                  <Switch checked={membership.active} />
+                <div className="flex flex-wrap items-center gap-2">
+                  <ToolbarSearch value={search} onChange={setSearch} placeholder="Поиск по тарифу или ID" className="max-w-80" />
+                  <ToggleGroup variant="outline" spacing={0} value={[brandFilter]} onValueChange={(values) => setBrandFilter(values[0] ?? "all")}>
+                    <ToggleGroupItem value="all">Все</ToggleGroupItem>
+                    {memberships.map((membership) => (
+                      <ToggleGroupItem key={membership.brandCode} value={membership.brandCode}>
+                        {membership.brandCode}
+                      </ToggleGroupItem>
+                    ))}
+                  </ToggleGroup>
                 </div>
+              </CardHeader>
+              <CardContent className="divide-y">
+                {filtered.length === 0 ? (
+                  <p className="py-6 text-center text-sm text-muted-foreground">Ничего не найдено.</p>
+                ) : (
+                  filtered.map((subscription) => <SubscriptionRow key={subscription.id} subscription={subscription} />)
+                )}
+              </CardContent>
+            </Card>
+          </div>
+
+          <div className="flex flex-col gap-6">
+            <Card className="rounded-2xl">
+              <CardContent className="flex flex-col gap-4">
+                <div>
+                  <p className="text-sm text-muted-foreground">Устройства подключено</p>
+                  <p className="text-4xl font-semibold tracking-tight tabular-nums">
+                    {totalConnected} <span className="text-lg font-normal text-muted-foreground">из {totalDeviceLimit}</span>
+                  </p>
+                </div>
+                <div className="flex flex-col gap-2 rounded-lg bg-muted/50 p-3 text-sm">
+                  {deviceSubscriptions.map((subscription) => (
+                    <div key={subscription.id} className="flex items-center justify-between">
+                      <span className="truncate text-muted-foreground">{subscription.brandName}</span>
+                      <span className="shrink-0 tabular-nums">
+                        {subscription.activeDeviceCount} / {subscription.deviceLimit}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
+
+            <div>
+              <p className="mb-3 text-sm font-medium text-muted-foreground">Членства в брендах</p>
+              <div className="flex flex-col gap-3">
+                {memberships.map((membership) => (
+                  <div key={membership.id} className="flex items-center justify-between gap-3 rounded-lg border p-3">
+                    <div className="flex items-center gap-3">
+                      <Avatar size="sm">
+                        <AvatarFallback>{initials(membership.brandName)}</AvatarFallback>
+                      </Avatar>
+                      <div>
+                        <div className="flex items-center gap-1">
+                          <p className="text-sm font-medium">{membership.brandName}</p>
+                          {membership.portalUrl && (
+                            <Tooltip>
+                              <TooltipTrigger
+                                render={<a href={membership.portalUrl} target="_blank" rel="noreferrer" />}
+                                className="inline-flex size-5 items-center justify-center rounded-md text-muted-foreground hover:bg-muted hover:text-foreground"
+                              >
+                                <ExternalLinkIcon className="size-3" />
+                              </TooltipTrigger>
+                              <TooltipContent>Открыть ЛК бренда</TooltipContent>
+                            </Tooltip>
+                          )}
+                        </div>
+                        <p className="text-xs text-muted-foreground">
+                          {membership.brandCode} · рег. {new Date(membership.createdAt).toLocaleDateString()}
+                        </p>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <span className="text-xs text-muted-foreground">{membership.active ? "Активно" : "Приостановлено"}</span>
+                      <Switch checked={membership.active} />
+                    </div>
+                  </div>
+                ))}
               </div>
-            ))}
+            </div>
           </div>
         </div>
       </div>

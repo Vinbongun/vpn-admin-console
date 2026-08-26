@@ -11,7 +11,7 @@ function formatDate(value: string | null) {
   return value ? new Date(value).toLocaleString("ru-RU") : null;
 }
 
-function TokenRow({ token }: { token: SubscriptionTokenSummary }) {
+function TokenRow({ token, compact }: { token: SubscriptionTokenSummary; compact?: boolean }) {
   const dates = [
     `выдан ${formatDate(token.createdAt)}`,
     token.lastUsedAt && `использован ${formatDate(token.lastUsedAt)}`,
@@ -23,10 +23,12 @@ function TokenRow({ token }: { token: SubscriptionTokenSummary }) {
 
   return (
     <div className="rounded-md border p-2 text-xs">
-      <div className="flex items-center justify-between gap-2">
-        <span className="font-mono">{token.tokenPrefix}</span>
-        <StatusBadge status={token.status} />
-      </div>
+      {!compact && (
+        <div className="flex items-center justify-between gap-2">
+          <span className="font-mono">{token.tokenPrefix}</span>
+          <StatusBadge status={token.status} />
+        </div>
+      )}
       {token.status === "ACTIVE" && token.subscriptionUrl ? (
         <div className="mt-1.5 flex items-center gap-1.5">
           <code className="flex-1 truncate rounded bg-muted px-1.5 py-1">{token.subscriptionUrl}</code>
@@ -40,7 +42,7 @@ function TokenRow({ token }: { token: SubscriptionTokenSummary }) {
   );
 }
 
-export function SubscriptionTokenHistory({ tokens }: { tokens: SubscriptionTokenSummary[] }) {
+export function SubscriptionTokenHistory({ tokens, compact }: { tokens: SubscriptionTokenSummary[]; compact?: boolean }) {
   const [open, setOpen] = useState(false);
   if (tokens.length === 0) return <p className="text-xs text-muted-foreground">Ссылок пока не выдано.</p>;
 
@@ -49,7 +51,7 @@ export function SubscriptionTokenHistory({ tokens }: { tokens: SubscriptionToken
 
   return (
     <div className="space-y-2">
-      {activeToken && <TokenRow token={activeToken} />}
+      {activeToken && <TokenRow token={activeToken} compact={compact} />}
       {restTokens.length > 0 && (
         <>
           <Button type="button" size="sm" variant="ghost" className="h-auto p-0 text-xs text-muted-foreground" onClick={() => setOpen((value) => !value)}>
@@ -59,7 +61,7 @@ export function SubscriptionTokenHistory({ tokens }: { tokens: SubscriptionToken
           {open && (
             <div className="space-y-2">
               {restTokens.map((token) => (
-                <TokenRow key={token.id} token={token} />
+                <TokenRow key={token.id} token={token} compact={compact} />
               ))}
             </div>
           )}
