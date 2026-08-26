@@ -17,6 +17,7 @@ import {
   ShoppingCartIcon,
   TriangleAlertIcon,
   Undo2Icon,
+  UserCogIcon,
 } from "lucide-react";
 import Link from "next/link";
 import { useMemo, useState } from "react";
@@ -76,6 +77,7 @@ const trafficChartConfig = {
 } satisfies ChartConfig;
 
 const historyIconFor = (event: CustomerHistoryEvent) => {
+  if (event.kind === "AUDIT") return UserCogIcon;
   if (event.action === "REFUND") return Undo2Icon;
   if (event.action === "BONUS_CREDIT" || event.action === "REFERRAL_CREDIT" || event.action === "COMPENSATION_CREDIT") return GiftIcon;
   if (event.action === "RENEWAL") return RefreshCcwIcon;
@@ -84,15 +86,16 @@ const historyIconFor = (event: CustomerHistoryEvent) => {
 
 function HistoryRow({ event, icon: Icon }: { event: CustomerHistoryEvent; icon: LucideIcon }) {
   const isRefund = event.action === "REFUND";
+  const isAudit = event.kind === "AUDIT";
   return (
     <div className="flex items-center gap-3 py-2.5 first:pt-0 last:pb-0">
-      <div className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-muted">
-        <Icon className="size-4 text-muted-foreground" />
+      <div className={`flex size-9 shrink-0 items-center justify-center rounded-lg ${isAudit ? "bg-amber-500/10" : "bg-muted"}`}>
+        <Icon className={`size-4 ${isAudit ? "text-amber-500" : "text-muted-foreground"}`} />
       </div>
       <div className="min-w-0 flex-1">
         <p className="truncate text-sm font-medium">{event.description}</p>
         <p className="text-xs text-muted-foreground">
-          {event.brandCode ?? "—"} · {new Date(event.occurredAt).toLocaleString("ru-RU")}
+          {isAudit ? `Причина: ${event.reason}` : (event.brandName ?? "—")} · {new Date(event.occurredAt).toLocaleString("ru-RU")}
           {event.status && ` · ${event.status}`}
         </p>
       </div>
@@ -373,7 +376,7 @@ export function CustomerDetailPage({ customerId }: { customerId: string }) {
   const totalConnected = deviceGroups.some((g) => g.connected != null) ? deviceGroups.reduce((sum, g) => sum + (g.connected ?? 0), 0) : null;
   const totalDeviceLimit = deviceGroups.reduce((sum, g) => sum + g.limit, 0);
 
-  const historyEvents = (history.data?.events ?? []).filter((event) => event.kind === "ORDER" || event.kind === "LEDGER");
+  const historyEvents = history.data?.events ?? [];
 
   return (
     <AppShell>
@@ -451,7 +454,7 @@ export function CustomerDetailPage({ customerId }: { customerId: string }) {
               </CardHeader>
               <CardContent className="flex-1 divide-y">
                 {data.memberships.map((membership) => (
-                  <div key={membership.id} className="flex items-center gap-3 py-3">
+                  <div key={membership.brandId} className="flex items-center gap-3 py-3">
                     <div className="min-w-0 flex-1">
                       <div className="flex items-center gap-1">
                         <p className="truncate font-medium">{membership.brandName}</p>
@@ -472,13 +475,23 @@ export function CustomerDetailPage({ customerId }: { customerId: string }) {
                         {membership.createdAt && ` · рег. ${new Date(membership.createdAt).toLocaleDateString("ru-RU")}`}
                       </p>
                     </div>
-                    <span className="hidden shrink-0 text-xs text-muted-foreground sm:inline">{membership.status === "ACTIVE" ? "Активно" : "Приостановлено"}</span>
-                    <Switch
-                      checked={membership.status === "ACTIVE"}
-                      disabled={membershipMutation.isPending}
-                      className="shrink-0"
-                      onCheckedChange={(checked) => setMembershipToggle({ id: membership.id, brandName: membership.brandName, nextStatus: checked ? "ACTIVE" : "SUSPENDED" })}
-                    />
+                    {membership.id === null ? (
+                      <Badge variant="outline" className="shrink-0 text-muted-foreground">
+                        Не зарегистрирован
+                      </Badge>
+                    ) : (
+                      <>
+                        <span className="hidden shrink-0 text-xs text-muted-foreground sm:inline">{membership.status === "ACTIVE" ? "Активно" : "Приостановлено"}</span>
+                        <Switch
+                          checked={membership.status === "ACTIVE"}
+                          disabled={membershipMutation.isPending}
+                          className="shrink-0"
+                          onCheckedChange={(checked) =>
+                            setMembershipToggle({ id: membership.id as string, brandName: membership.brandName, nextStatus: checked ? "ACTIVE" : "SUSPENDED" })
+                          }
+                        />
+                      </>
+                    )}
                   </div>
                 ))}
               </CardContent>
@@ -493,7 +506,12 @@ export function CustomerDetailPage({ customerId }: { customerId: string }) {
                     <CardTitle>Бренды и подписки</CardTitle>
                     <CardDescription>Поиск и фильтр по бренду</CardDescription>
                   </div>
-                  <CreateSubscriptionDialog scopedCustomer={{ id: data.id, memberships: data.memberships.map((m) => ({ id: m.id, label: m.brandCode })) }} />
+                  <CreateSubscriptionDialog
+                    scopedCustomer={{
+                      id: data.id,
+                      memberships: data.memberships.filter((m) => m.id !== null).map((m) => ({ id: m.id as string, label: m.brandName })),
+                    }}
+                  />
                 </div>
                 <div className="flex w-full flex-wrap items-center justify-between gap-2">
                   <ToolbarSearch value={search} onChange={setSearch} placeholder="Поиск по тарифу или ID" className="w-auto max-w-80" />

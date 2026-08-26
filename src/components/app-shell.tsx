@@ -43,8 +43,8 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   const { data: staff, isError } = useQuery({ queryKey: ["staff-session"], queryFn: adminApi.getSession, enabled: hasSession, retry: false });
 
   useEffect(() => {
-    if (!hasSession || isError) router.replace("/login");
-  }, [hasSession, isError, router]);
+    if (!hasSession || isError) router.replace(`/login?next=${encodeURIComponent(pathname)}`);
+  }, [hasSession, isError, pathname, router]);
 
   const items = navigation.filter((item) => !item.permission || can(staff, item.permission));
   const current = navigation.find((item) => item.href === pathname);

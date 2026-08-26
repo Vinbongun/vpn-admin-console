@@ -1705,13 +1705,22 @@ export interface components {
             total: number;
         };
         BrandMembershipSummary: {
-            /** Format: uuid */
-            id: string;
+            /**
+             * Format: uuid
+             * @description Null on the single-customer detail response (GET /admin/v1/customers/{id}) when this brand has no membership row for this customer yet - that response lists every brand, not just ones the customer has joined, so the brand simply doesn't disappear from the card.
+             */
+            id: string | null;
             /** Format: uuid */
             brandId: string;
             brandCode: string;
             brandName: string;
+            /** @description A real brand_memberships.status (ACTIVE/SUSPENDED) when `id` is set, otherwise the synthetic value `NOT_REGISTERED` - not a real status stored anywhere. */
             status: string;
+            /**
+             * Format: date-time
+             * @description Null alongside a null `id` - nothing to date if there's no membership.
+             */
+            createdAt: string | null;
             /** @description This brand's customer-portal base URL, if configured - only present on the single-customer detail response (GET /admin/v1/customers/{id}), not the list. Not a deep link to this specific customer's own subscriptions page - portal sessions are per-customer, an admin cannot generate a link that logs the customer in. */
             portalUrl?: string | null;
         };
@@ -1803,6 +1812,8 @@ export interface components {
             /** Format: date-time */
             occurredAt: string;
             brandCode: string | null;
+            /** @description The brand's display name, for showing in a UI instead of the bare code - null for AUDIT events (not tied to one specific brand). */
+            brandName: string | null;
             /** @description Present for ORDER/LEDGER events, always RUB, null for AUDIT. */
             amount: number | null;
             currency: string | null;
@@ -1811,7 +1822,7 @@ export interface components {
             /** @description Order kind (NEW/RENEWAL) for ORDER events, ledger entry_type (PURCHASE/REFUND/BONUS_CREDIT/REFERRAL_CREDIT/COMPENSATION_CREDIT/ADJUSTMENT) for LEDGER events, or the audit action (e.g. "subscription.revoked") for AUDIT events. */
             action: string | null;
             description: string;
-            /** @description The staff-entered reason, if any - AUDIT events only. */
+            /** @description The staff-entered reason - AUDIT events only, always non-null (AUDIT events without a reason are filtered out server-side and never appear in this feed). */
             reason: string | null;
             /** @description STAFF/CUSTOMER/SYSTEM - AUDIT events only. */
             actorType: string | null;
@@ -2271,6 +2282,8 @@ export interface components {
             startsAt: string;
             /** Format: date-time */
             expiresAt: string;
+            /** @description Why staff is creating this subscription manually (e.g. a gifted/comped subscription with no order behind it). Optional, but without it a manual gift leaves no trace in GET /admin/v1/customers/{id}/history - it's stored as the audit_events.reason on the resulting `subscription.created` event. */
+            reason?: string;
         };
         RotateSubscriptionToken: {
             /** Format: date-time */
@@ -4011,7 +4024,7 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            /** @description Customer detail with brand memberships and subscriptions across all brands */
+            /** @description Customer detail with subscriptions across all brands. `memberships` lists every brand on the platform, not only ones this customer has joined - a brand with no membership row shows `status: "NOT_REGISTERED"` and null `id`/`createdAt` instead of being omitted. */
             200: {
                 headers: {
                     [name: string]: unknown;
@@ -4040,7 +4053,7 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            /** @description One merged, chronological feed of everything financial or reasoned that happened to this customer across all their brand memberships: orders (charges), ledger entries (refunds/bonus/referral/compensation credits, adjustments) and staff/system audit events tied to their subscriptions, memberships or identity (each with its `reason` when a staff member gave one - e.g. a manual subscription edit or revoke). */
+            /** @description One merged, chronological feed of everything financial or reasoned that happened to this customer across all their brand memberships: orders (charges), ledger entries (refunds/bonus/referral/compensation credits, adjustments) and staff/system audit events tied to their subscriptions, memberships or identity. Audit events are included only when a staff member gave a `reason` (a manual subscription create/extend/revoke) - noise like a bare token rotation is filtered out server-side, so every AUDIT-kind entry in this feed is guaranteed to carry a non-null `reason`. */
             200: {
                 headers: {
                     [name: string]: unknown;

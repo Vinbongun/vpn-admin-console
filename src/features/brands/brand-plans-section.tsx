@@ -8,8 +8,10 @@ import { adminApi, ApiError } from "@/api/client";
 import type { BrandDetail, PlanSummary } from "@/api/types";
 import { DataTable } from "@/components/data-table";
 import { SectionHeader } from "@/components/section-header";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Dialog, DialogClose, DialogContent, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -30,9 +32,9 @@ export function BrandPlansSection({ brand, mayWrite }: { brand: BrandDetail; may
   const [createOpen, setCreateOpen] = useState(false);
   const [priceEditingId, setPriceEditingId] = useState<string>();
   const [priceForm, setPriceForm] = useState<{ amount: string }>({ amount: "" });
-  const [newPlan, setNewPlan] = useState({ code: "", name: "", billingModel: "DEVICE_PLAN" as (typeof billingModels)[number], deviceLimit: "1", serviceLine: "MAIN" as (typeof serviceLines)[number] });
+  const [newPlan, setNewPlan] = useState({ code: "", name: "", billingModel: "DEVICE_PLAN" as (typeof billingModels)[number], deviceLimit: "1", serviceLine: "MAIN" as (typeof serviceLines)[number], isTrial: false });
   const [editingPlan, setEditingPlan] = useState<PlanSummary>();
-  const [editForm, setEditForm] = useState({ name: "", billingModel: "DEVICE_PLAN" as (typeof billingModels)[number], deviceLimit: "1", status: "ACTIVE" as "ACTIVE" | "INACTIVE", serviceLine: "MAIN" as (typeof serviceLines)[number] });
+  const [editForm, setEditForm] = useState({ name: "", billingModel: "DEVICE_PLAN" as (typeof billingModels)[number], deviceLimit: "1", status: "ACTIVE" as "ACTIVE" | "INACTIVE", serviceLine: "MAIN" as (typeof serviceLines)[number], isTrial: false });
   const plans = useQuery({ queryKey: ["admin-brand-plans", brand.id], queryFn: () => adminApi.listPlans({ brandCode: brand.code, pageSize: 100 }), retry: false });
 
   const priceMutation = useMutation({
@@ -45,9 +47,18 @@ export function BrandPlansSection({ brand, mayWrite }: { brand: BrandDetail; may
     onError: () => toast.error("Не удалось обновить цену."),
   });
   const createMutation = useMutation({
-    mutationFn: () => adminApi.createPlan({ brandId: brand.id, code: newPlan.code, name: newPlan.name, billingModel: newPlan.billingModel, deviceLimit: Number(newPlan.deviceLimit), serviceLine: newPlan.serviceLine }),
+    mutationFn: () =>
+      adminApi.createPlan({
+        brandId: brand.id,
+        code: newPlan.code,
+        name: newPlan.name,
+        billingModel: newPlan.billingModel,
+        deviceLimit: Number(newPlan.deviceLimit),
+        serviceLine: newPlan.serviceLine,
+        isTrial: newPlan.isTrial,
+      }),
     onSuccess: async () => {
-      setNewPlan({ code: "", name: "", billingModel: "DEVICE_PLAN", deviceLimit: "1", serviceLine: "MAIN" });
+      setNewPlan({ code: "", name: "", billingModel: "DEVICE_PLAN", deviceLimit: "1", serviceLine: "MAIN", isTrial: false });
       setCreateOpen(false);
       toast.success("Тариф создан.");
       await queryClient.invalidateQueries({ queryKey: ["admin-brand-plans", brand.id] });
@@ -55,8 +66,10 @@ export function BrandPlansSection({ brand, mayWrite }: { brand: BrandDetail; may
     onError: (error) => toast.error(error instanceof ApiError ? (error.status === 409 ? "Тариф с таким кодом уже существует у этого бренда." : apiErrorMessage(error)) : "Не удалось создать тариф."),
   });
   const updateMutation = useMutation({
-    mutationFn: (input: { id: string; body: { name: string; billingModel: (typeof billingModels)[number]; deviceLimit: number; status: "ACTIVE" | "INACTIVE"; serviceLine: (typeof serviceLines)[number] } }) =>
-      adminApi.updatePlan(input.id, input.body),
+    mutationFn: (input: {
+      id: string;
+      body: { name: string; billingModel: (typeof billingModels)[number]; deviceLimit: number; status: "ACTIVE" | "INACTIVE"; serviceLine: (typeof serviceLines)[number]; isTrial: boolean };
+    }) => adminApi.updatePlan(input.id, input.body),
     onSuccess: async () => {
       setEditingPlan(undefined);
       toast.success("Тариф обновлён.");
@@ -77,6 +90,7 @@ export function BrandPlansSection({ brand, mayWrite }: { brand: BrandDetail; may
       deviceLimit: String(plan.deviceLimit),
       status: plan.status === "INACTIVE" ? "INACTIVE" : "ACTIVE",
       serviceLine: plan.serviceLine,
+      isTrial: plan.isTrial,
     });
   };
 
@@ -89,6 +103,7 @@ export function BrandPlansSection({ brand, mayWrite }: { brand: BrandDetail; may
     ) },
     { accessorKey: "billingModel", header: "Модель" },
     { accessorKey: "serviceLine", header: "Линейка" },
+    { id: "isTrial", header: "Триал", cell: ({ row }) => (row.original.isTrial ? <Badge variant="outline">Триал</Badge> : "—") },
     { accessorKey: "deviceLimit", header: "Устройств" },
     { accessorKey: "status", header: "Статус" },
     { id: "price", header: "Цена", cell: ({ row }) => {
@@ -98,7 +113,7 @@ export function BrandPlansSection({ brand, mayWrite }: { brand: BrandDetail; may
           <Input aria-label="Сумма, ₽" className="w-24" value={priceForm.amount} onChange={(event) => setPriceForm({ amount: event.target.value })} />
         );
       }
-      return plan.price ? `${plan.price.amount} ${plan.price.currency}` : "—";
+      return plan.price ? `${plan.price.amount} ₽` : "—";
     } },
     ...(mayWrite
       ? [{
@@ -198,6 +213,15 @@ export function BrandPlansSection({ brand, mayWrite }: { brand: BrandDetail; may
                       </SelectContent>
                     </Select>
                   </div>
+                  <div className="flex flex-col gap-2 sm:col-span-2">
+                    <label className="flex items-start gap-2">
+                      <Checkbox checked={newPlan.isTrial} onCheckedChange={(checked) => setNewPlan((value) => ({ ...value, isTrial: checked === true }))} className="mt-0.5" />
+                      <span className="text-sm">Триальный тариф бренда</span>
+                    </label>
+                    <p className="text-xs text-muted-foreground">
+                      У бренда может быть только один активный триальный тариф — он используется для самостоятельного запуска триала клиентом.
+                    </p>
+                  </div>
                 </div>
                 <DialogFooter>
                   <DialogClose render={<Button type="button" variant="outline" />}>Отмена</DialogClose>
@@ -292,6 +316,15 @@ export function BrandPlansSection({ brand, mayWrite }: { brand: BrandDetail; may
                 </SelectContent>
               </Select>
             </div>
+            <div className="flex flex-col gap-2 sm:col-span-2">
+              <label className="flex items-start gap-2">
+                <Checkbox checked={editForm.isTrial} onCheckedChange={(checked) => setEditForm((value) => ({ ...value, isTrial: checked === true }))} className="mt-0.5" />
+                <span className="text-sm">Триальный тариф бренда</span>
+              </label>
+              <p className="text-xs text-muted-foreground">
+                У бренда может быть только один активный триальный тариф — он используется для самостоятельного запуска триала клиентом.
+              </p>
+            </div>
           </div>
           <DialogFooter>
             <DialogClose render={<Button type="button" variant="outline" />}>Отмена</DialogClose>
@@ -301,7 +334,14 @@ export function BrandPlansSection({ brand, mayWrite }: { brand: BrandDetail; may
                 editingPlan &&
                 updateMutation.mutate({
                   id: editingPlan.id,
-                  body: { name: editForm.name, billingModel: editForm.billingModel, deviceLimit: Number(editForm.deviceLimit), status: editForm.status, serviceLine: editForm.serviceLine },
+                  body: {
+                    name: editForm.name,
+                    billingModel: editForm.billingModel,
+                    deviceLimit: Number(editForm.deviceLimit),
+                    status: editForm.status,
+                    serviceLine: editForm.serviceLine,
+                    isTrial: editForm.isTrial,
+                  },
                 })
               }
             >

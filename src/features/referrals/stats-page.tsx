@@ -2,11 +2,14 @@
 
 import { useQuery } from "@tanstack/react-query";
 import type { ColumnDef } from "@tanstack/react-table";
+import { BookOpenIcon } from "lucide-react";
+import Link from "next/link";
 import { adminApi } from "@/api/client";
 import type { ReferralPartnerStats } from "@/api/types";
 import { AppShell } from "@/components/app-shell";
 import { DataTable } from "@/components/data-table";
 import { PageHeader } from "@/components/page-header";
+import { Button } from "@/components/ui/button";
 
 function formatMoney(value: number, currency: string | null) {
   return currency ? `${value.toFixed(2)} ${currency}` : "—";
@@ -26,7 +29,16 @@ export function ReferralsStatsPage() {
 
   return (
     <AppShell>
-      <PageHeader title="Рефералы" description="Статистика использования промокодов и начислений по партнёрам" />
+      <PageHeader
+        title="Рефералы"
+        description="Статистика использования промокодов и начислений по партнёрам"
+        actions={
+          <Button size="sm" variant="outline" render={<Link href="/instructions/utm-attribution" />} nativeButton={false}>
+            <BookOpenIcon />
+            Как работают UTM-метки
+          </Button>
+        }
+      />
       <DataTable
         columns={columns}
         data={stats.data ?? []}
