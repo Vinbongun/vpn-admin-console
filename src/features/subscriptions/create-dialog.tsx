@@ -37,7 +37,9 @@ export function CreateSubscriptionDialog({
 
   const membershipOptions: MembershipOption[] = scopedCustomer
     ? scopedCustomer.memberships
-    : (customers.data?.items.flatMap((customer) => customer.memberships.map((membership) => ({ id: membership.id, label: `${customer.email} · ${membership.brandCode}` }))) ?? []);
+    : (customers.data?.items.flatMap((customer) =>
+        customer.memberships.filter((membership) => membership.id !== null).map((membership) => ({ id: membership.id as string, label: `${customer.email} · ${membership.brandName}` })),
+      ) ?? []);
 
   const form = useForm<CreateSubscriptionValues>({ resolver: zodResolver(createSubscriptionSchema), defaultValues });
   const createMutation = useCreateSubscriptionMutation(() => {

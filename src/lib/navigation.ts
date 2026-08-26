@@ -21,7 +21,16 @@ type NavItem = {
 export const navigation = [
   { label: "Обзор", href: "/", icon: Gauge },
   { label: "Пользователи", href: "/users", icon: Users, permission: "customers.read" },
-  { label: "Бренды", href: "/brands", icon: Building2, permission: "brands.read" },
+  {
+    label: "Бренды",
+    href: "/brands",
+    icon: Building2,
+    permission: "brands.read",
+    items: [
+      { label: "Список", href: "/brands" },
+      { label: "Тарифы", href: "/brands/plans" },
+    ],
+  },
   {
     label: "Инфраструктура",
     href: "/infrastructure",
