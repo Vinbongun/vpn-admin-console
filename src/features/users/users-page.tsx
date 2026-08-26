@@ -21,7 +21,7 @@ const columns: ColumnDef<CustomerSummary>[] = [
   {
     id: "brands",
     header: "Бренды",
-    cell: ({ row }) => row.original.memberships.map((membership) => membership.brandCode).join(", ") || "—",
+    cell: ({ row }) => row.original.memberships.map((membership) => membership.brandName).join(", ") || "—",
   },
 ];
 

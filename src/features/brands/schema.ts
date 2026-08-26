@@ -32,6 +32,10 @@ export const brandPublicSchema = z.object({
   termsUrl: z.string().trim(),
   privacyUrl: z.string().trim(),
   siteUrl: z.string().trim(),
+});
+export type BrandPublicValues = z.infer<typeof brandPublicSchema>;
+
+export const brandHappSchema = z.object({
   profileTitle: z.string().trim().max(25, "До 25 символов — ограничение Happ"),
   announce: z.string().trim().max(200, "До 200 символов"),
   supportUrl: z.string().trim(),
@@ -42,4 +46,4 @@ export const brandPublicSchema = z.object({
   decoyExpired: decoyTextListSchema,
   decoyBlocked: decoyTextListSchema,
 });
-export type BrandPublicValues = z.infer<typeof brandPublicSchema>;
+export type BrandHappValues = z.infer<typeof brandHappSchema>;

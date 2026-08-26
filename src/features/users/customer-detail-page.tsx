@@ -4,6 +4,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   ArrowLeftIcon,
   ChevronDownIcon,
+  ClockIcon,
   ExternalLinkIcon,
   GaugeIcon,
   GiftIcon,
@@ -36,9 +37,9 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { type ChartConfig, ChartContainer, ChartTooltip, ChartTooltipContent } from "@/components/ui/chart";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
-import { Empty, EmptyDescription, EmptyHeader, EmptyMedia, EmptyTitle } from "@/components/ui/empty";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Separator } from "@/components/ui/separator";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Spinner } from "@/components/ui/spinner";
@@ -485,24 +486,26 @@ export function CustomerDetailPage({ customerId }: { customerId: string }) {
           </div>
 
           <Card>
-            <CardHeader className="flex flex-col gap-3">
-              <div className="flex items-start justify-between gap-2">
-                <div>
-                  <CardTitle>Бренды и подписки</CardTitle>
-                  <CardDescription>Поиск и фильтр по бренду</CardDescription>
+            <CardHeader>
+              <div className="flex w-full flex-col gap-3">
+                <div className="flex w-full items-start justify-between gap-2">
+                  <div>
+                    <CardTitle>Бренды и подписки</CardTitle>
+                    <CardDescription>Поиск и фильтр по бренду</CardDescription>
+                  </div>
+                  <CreateSubscriptionDialog scopedCustomer={{ id: data.id, memberships: data.memberships.map((m) => ({ id: m.id, label: m.brandCode })) }} />
                 </div>
-                <CreateSubscriptionDialog scopedCustomer={{ id: data.id, memberships: data.memberships.map((m) => ({ id: m.id, label: m.brandCode })) }} />
-              </div>
-              <div className="flex w-full flex-wrap items-center justify-between gap-2">
-                <ToolbarSearch value={search} onChange={setSearch} placeholder="Поиск по тарифу или ID" className="w-auto max-w-80" />
-                <ToggleGroup variant="outline" spacing={0} value={[brandFilter]} onValueChange={(values) => setBrandFilter(values[0] ?? "all")}>
-                  <ToggleGroupItem value="all">Все</ToggleGroupItem>
-                  {data.memberships.map((membership) => (
-                    <ToggleGroupItem key={membership.brandCode} value={membership.brandCode}>
-                      {membership.brandCode}
-                    </ToggleGroupItem>
-                  ))}
-                </ToggleGroup>
+                <div className="flex w-full flex-wrap items-center justify-between gap-2">
+                  <ToolbarSearch value={search} onChange={setSearch} placeholder="Поиск по тарифу или ID" className="w-auto max-w-80" />
+                  <ToggleGroup variant="outline" spacing={0} value={[brandFilter]} onValueChange={(values) => setBrandFilter(values[0] ?? "all")}>
+                    <ToggleGroupItem value="all">Все</ToggleGroupItem>
+                    {data.memberships.map((membership) => (
+                      <ToggleGroupItem key={membership.brandCode} value={membership.brandCode}>
+                        {membership.brandName}
+                      </ToggleGroupItem>
+                    ))}
+                  </ToggleGroup>
+                </div>
               </div>
             </CardHeader>
             <CardContent className="divide-y">
@@ -648,16 +651,53 @@ export function CustomerDetailPage({ customerId }: { customerId: string }) {
                   Трафик и лимиты
                 </CardTitle>
               </CardHeader>
-              <CardContent className="flex flex-1 items-center">
-                <Empty className="border-0 p-6">
-                  <EmptyHeader>
-                    <EmptyMedia variant="icon">
-                      <GaugeIcon />
-                    </EmptyMedia>
-                    <EmptyTitle>Скоро</EmptyTitle>
-                    <EmptyDescription>Лимиты трафика и стратегия сброса пока не хранятся в системе.</EmptyDescription>
-                  </EmptyHeader>
-                </Empty>
+              <CardContent className="flex flex-1 flex-col gap-4">
+                <div className="flex items-center gap-2 rounded-lg border border-amber-500/50 bg-amber-500/10 px-3 py-2 text-xs font-medium text-amber-600 dark:text-amber-400">
+                  <TriangleAlertIcon className="size-4 shrink-0" />
+                  Функция в разработке — лимиты и стратегия сброса пока нигде не сохраняются.
+                </div>
+                <div className="space-y-1.5">
+                  <Label htmlFor="traffic-limit">Лимит трафика</Label>
+                  <p className="text-xs text-muted-foreground">0 - неограниченно</p>
+                  <div className="flex gap-2">
+                    <div className="relative flex-1">
+                      <GaugeIcon className="pointer-events-none absolute top-1/2 left-2.5 size-4 -translate-y-1/2 text-muted-foreground" />
+                      <Input id="traffic-limit" type="number" min={0} defaultValue={0} className="pl-8" disabled />
+                    </div>
+                    <Select items={[{ value: "GiB", label: "GiB" }, { value: "TiB", label: "TiB" }]} defaultValue="GiB" disabled>
+                      <SelectTrigger className="w-24">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="GiB">GiB</SelectItem>
+                        <SelectItem value="TiB">TiB</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+                <div className="space-y-1.5">
+                  <Label htmlFor="traffic-reset">Стратегия сброса трафика</Label>
+                  <p className="text-xs text-muted-foreground">Как часто следует сбрасывать трафик пользователя</p>
+                  <Select
+                    items={[
+                      { value: "never", label: "Никогда не сбрасывать" },
+                      { value: "daily", label: "Каждый день" },
+                      { value: "monthly", label: "Каждый месяц" },
+                    ]}
+                    defaultValue="never"
+                    disabled
+                  >
+                    <SelectTrigger id="traffic-reset" className="w-full">
+                      <ClockIcon className="text-muted-foreground" />
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="never">Никогда не сбрасывать</SelectItem>
+                      <SelectItem value="daily">Каждый день</SelectItem>
+                      <SelectItem value="monthly">Каждый месяц</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
               </CardContent>
             </Card>
           </div>
