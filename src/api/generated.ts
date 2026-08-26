@@ -704,6 +704,22 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/admin/v1/customers/{customerId}/history": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["getAdminCustomerHistory"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/admin/v1/customers/{customerId}/status": {
         parameters: {
             query?: never;
@@ -718,6 +734,22 @@ export interface paths {
         options?: never;
         head?: never;
         patch: operations["updateAdminCustomerStatus"];
+        trace?: never;
+    };
+    "/admin/v1/customers/{customerId}/contact": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch: operations["updateAdminCustomerContact"];
         trace?: never;
     };
     "/admin/v1/brand-memberships/{membershipId}": {
@@ -1695,6 +1727,10 @@ export interface components {
             status: string;
             /** Format: date-time */
             createdAt: string;
+            /** @description Free-form support field set by staff via PATCH .../contact - not linked to any Telegram bot integration yet, purely a place to record it for support purposes. */
+            telegramId: string | null;
+            /** @description Free-form support notes about this customer, set by staff. */
+            notes: string | null;
             memberships: components["schemas"]["BrandMembershipSummary"][];
         };
         SubscriptionTokenSummary: {
@@ -1727,6 +1763,12 @@ export interface components {
             expiresAt: string;
             /** @description Why this subscription was revoked, if it was and a reason was recorded. Null if not REVOKED or if revoked before this field existed. */
             revokedReason?: string | null;
+            /** @description Recently-active client count from the last DeviceUsageService poll of the real control-plane panel (Remnawave/3x-ui) - null if never polled yet. */
+            activeDeviceCount?: number | null;
+            /** Format: date-time */
+            activeDeviceCountCheckedAt?: string | null;
+            /** @description The plan's device_limit at the time of this response. Null if the plan was deleted. */
+            deviceLimit?: number | null;
             endpointGroups: {
                 /** Format: uuid */
                 id?: string;
@@ -1736,8 +1778,47 @@ export interface components {
             /** @description Every subscription-URL token ever issued for this subscription, newest first - lets support staff find the link a customer was given without waiting for the customer to look it up themselves. */
             tokens: components["schemas"]["SubscriptionTokenSummary"][];
         };
+        CustomerRevenueByServiceLine: {
+            /** @enum {string} */
+            serviceLine: "MAIN" | "WHITELIST";
+            amount: number;
+        };
+        /** @description Computed server-side (not by the frontend) so the business rule - PAID orders only, no refunds, no manual ledger adjustments - lives in one place. */
+        CustomerSummaryTotals: {
+            totalRevenue: number;
+            /** @enum {string} */
+            currency: "RUB";
+            revenueByServiceLine: components["schemas"]["CustomerRevenueByServiceLine"][];
+            paymentsCount: number;
+            activeSubscriptionsCount: number;
+            brandsCount: number;
+        };
         CustomerDetail: components["schemas"]["CustomerSummary"] & {
+            summary: components["schemas"]["CustomerSummaryTotals"];
             subscriptions: components["schemas"]["CustomerSubscriptionSummary"][];
+        };
+        CustomerHistoryEvent: {
+            /** @enum {string} */
+            kind: "ORDER" | "LEDGER" | "AUDIT";
+            /** Format: date-time */
+            occurredAt: string;
+            brandCode: string | null;
+            /** @description Present for ORDER/LEDGER events, always RUB, null for AUDIT. */
+            amount: number | null;
+            currency: string | null;
+            /** @description Order status (PENDING/PAID/FAILED/CANCELLED/REFUNDED) - ORDER events only. */
+            status: string | null;
+            /** @description Order kind (NEW/RENEWAL) for ORDER events, ledger entry_type (PURCHASE/REFUND/BONUS_CREDIT/REFERRAL_CREDIT/COMPENSATION_CREDIT/ADJUSTMENT) for LEDGER events, or the audit action (e.g. "subscription.revoked") for AUDIT events. */
+            action: string | null;
+            description: string;
+            /** @description The staff-entered reason, if any - AUDIT events only. */
+            reason: string | null;
+            /** @description STAFF/CUSTOMER/SYSTEM - AUDIT events only. */
+            actorType: string | null;
+        };
+        CustomerHistory: {
+            /** @description Sorted newest-first, merged across ORDER/LEDGER/AUDIT. */
+            events: components["schemas"]["CustomerHistoryEvent"][];
         };
         CustomerPage: components["schemas"]["PageMetadata"] & {
             items: components["schemas"]["CustomerSummary"][];
@@ -3948,6 +4029,28 @@ export interface operations {
             };
         };
     };
+    getAdminCustomerHistory: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                customerId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description One merged, chronological feed of everything financial or reasoned that happened to this customer across all their brand memberships: orders (charges), ledger entries (refunds/bonus/referral/compensation credits, adjustments) and staff/system audit events tied to their subscriptions, memberships or identity (each with its `reason` when a staff member gave one - e.g. a manual subscription edit or revoke). */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CustomerHistory"];
+                };
+            };
+        };
+    };
     updateAdminCustomerStatus: {
         parameters: {
             query?: never;
@@ -3969,6 +4072,47 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content?: never;
+            };
+            /** @description Customer not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    updateAdminCustomerContact: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                customerId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    telegramId?: string;
+                    notes?: string;
+                };
+            };
+        };
+        responses: {
+            /** @description Support contact fields updated and audited. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /** Format: uuid */
+                        id: string;
+                        telegramId: string | null;
+                        notes: string | null;
+                    };
+                };
             };
             /** @description Customer not found */
             404: {
@@ -4592,7 +4736,6 @@ export interface operations {
             content: {
                 "application/json": {
                     amount: number;
-                    currency: string;
                     /**
                      * @description Subscription length a purchase/renewal of this plan grants.
                      * @default 30
@@ -4602,7 +4745,7 @@ export interface operations {
             };
         };
         responses: {
-            /** @description New price version recorded, effective immediately. Subscriptions created before this call keep referencing the price that was current when they were issued - this only ever adds a new row, it never rewrites history. */
+            /** @description New price version recorded, effective immediately, always in RUB (the platform's only currency - not client-settable). Subscriptions created before this call keep referencing the price that was current when they were issued - this only ever adds a new row, it never rewrites history. */
             201: {
                 headers: {
                     [name: string]: unknown;
@@ -4612,7 +4755,8 @@ export interface operations {
                         /** Format: uuid */
                         planId?: string;
                         amount?: number;
-                        currency?: string;
+                        /** @enum {string} */
+                        currency?: "RUB";
                         periodDays?: number;
                     };
                 };

@@ -29,14 +29,14 @@ export function BrandPlansSection({ brand, mayWrite }: { brand: BrandDetail; may
   const queryClient = useQueryClient();
   const [createOpen, setCreateOpen] = useState(false);
   const [priceEditingId, setPriceEditingId] = useState<string>();
-  const [priceForm, setPriceForm] = useState<{ amount: string; currency: string }>({ amount: "", currency: "USD" });
+  const [priceForm, setPriceForm] = useState<{ amount: string }>({ amount: "" });
   const [newPlan, setNewPlan] = useState({ code: "", name: "", billingModel: "DEVICE_PLAN" as (typeof billingModels)[number], deviceLimit: "1", serviceLine: "MAIN" as (typeof serviceLines)[number] });
   const [editingPlan, setEditingPlan] = useState<PlanSummary>();
   const [editForm, setEditForm] = useState({ name: "", billingModel: "DEVICE_PLAN" as (typeof billingModels)[number], deviceLimit: "1", status: "ACTIVE" as "ACTIVE" | "INACTIVE", serviceLine: "MAIN" as (typeof serviceLines)[number] });
   const plans = useQuery({ queryKey: ["admin-brand-plans", brand.id], queryFn: () => adminApi.listPlans({ brandCode: brand.code, pageSize: 100 }), retry: false });
 
   const priceMutation = useMutation({
-    mutationFn: (input: { id: string; amount: number; currency: string }) => adminApi.setPlanPrice(input.id, { amount: input.amount, currency: input.currency }),
+    mutationFn: (input: { id: string; amount: number }) => adminApi.setPlanPrice(input.id, { amount: input.amount }),
     onSuccess: async () => {
       setPriceEditingId(undefined);
       toast.success("Цена обновлена.");
@@ -67,7 +67,7 @@ export function BrandPlansSection({ brand, mayWrite }: { brand: BrandDetail; may
 
   const startPriceEdit = (plan: PlanSummary) => {
     setPriceEditingId(plan.id);
-    setPriceForm({ amount: plan.price ? String(plan.price.amount) : "", currency: plan.price?.currency ?? "USD" });
+    setPriceForm({ amount: plan.price ? String(plan.price.amount) : "" });
   };
   const startEdit = (plan: PlanSummary) => {
     setEditingPlan(plan);
@@ -95,10 +95,7 @@ export function BrandPlansSection({ brand, mayWrite }: { brand: BrandDetail; may
       const plan = row.original;
       if (priceEditingId === plan.id) {
         return (
-          <div className="flex gap-1">
-            <Input aria-label="Сумма" className="w-20" value={priceForm.amount} onChange={(event) => setPriceForm((value) => ({ ...value, amount: event.target.value }))} />
-            <Input aria-label="Валюта" className="w-16" value={priceForm.currency} onChange={(event) => setPriceForm((value) => ({ ...value, currency: event.target.value }))} />
-          </div>
+          <Input aria-label="Сумма, ₽" className="w-24" value={priceForm.amount} onChange={(event) => setPriceForm({ amount: event.target.value })} />
         );
       }
       return plan.price ? `${plan.price.amount} ${plan.price.currency}` : "—";
@@ -112,7 +109,7 @@ export function BrandPlansSection({ brand, mayWrite }: { brand: BrandDetail; may
             if (priceEditingId === plan.id) {
               return (
                 <div className="flex justify-end gap-2">
-                  <Button size="sm" disabled={priceMutation.isPending} onClick={() => priceMutation.mutate({ id: plan.id, amount: Number(priceForm.amount), currency: priceForm.currency })}>
+                  <Button size="sm" disabled={priceMutation.isPending} onClick={() => priceMutation.mutate({ id: plan.id, amount: Number(priceForm.amount) })}>
                     {priceMutation.isPending && <Spinner />}
                     Сохранить
                   </Button>
