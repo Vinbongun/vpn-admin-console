@@ -409,7 +409,7 @@ export function CustomerDetailPageDemoV3() {
               <CardDescription>Поиск и фильтр по бренду — масштабируется на любое число брендов без потери в ширине</CardDescription>
             </div>
             <div className="flex flex-wrap items-center gap-2">
-              <ToolbarSearch value={search} onChange={setSearch} placeholder="Поиск по тарифу или ID" className="max-w-80" />
+              <ToolbarSearch value={search} onChange={setSearch} placeholder="Поиск по тарифу или ID" className="w-auto max-w-80 flex-1" />
               <ToggleGroup variant="outline" spacing={0} value={[brandFilter]} onValueChange={(values) => setBrandFilter(values[0] ?? "all")}>
                 <ToggleGroupItem value="all">Все</ToggleGroupItem>
                 {memberships.map((membership) => (
