@@ -2,6 +2,7 @@ import createClient from "openapi-fetch";
 import type { paths } from "@/api/generated";
 import { sessionTokens } from "@/api/session";
 import type {
+  AdminAcquisitionQuery,
   AdminAuditQuery,
   AdminCustomerQuery,
   AdminDashboardQuery,
@@ -123,6 +124,7 @@ export const adminApi = {
   getRetentionSummary: async (query: AdminRetentionQuery = {}) => unwrap(await client.GET("/admin/v1/retention/summary", { params: { query }, headers: staffHeaders() })),
   getDashboardOverview: async (query: AdminDashboardQuery = {}) => unwrap(await client.GET("/admin/v1/dashboard/overview", { params: { query }, headers: staffHeaders() })),
   getDashboardPopularity: async (query: AdminPopularityQuery = {}) => unwrap(await client.GET("/admin/v1/dashboard/popularity", { params: { query }, headers: staffHeaders() })),
+  getAcquisitionStats: async (query: AdminAcquisitionQuery = {}) => unwrap(await client.GET("/admin/v1/acquisitions/stats", { params: { query }, headers: staffHeaders() })),
   listDevices: async (subscriptionId: string) => unwrap(await client.GET("/admin/v1/subscriptions/{subscriptionId}/devices", { params: { path: { subscriptionId } }, headers: staffHeaders() })),
   removeDevice: async (subscriptionId: string, deviceId: string) => unwrap<void>(await client.DELETE("/admin/v1/subscriptions/{subscriptionId}/devices/{deviceId}", { params: { path: { subscriptionId, deviceId } }, headers: staffHeaders() })),
   listReferralPartners: async (query: AdminReferralPartnerQuery = {}) => unwrap(await client.GET("/admin/v1/referral-partners", { params: { query }, headers: staffHeaders() })),

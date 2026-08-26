@@ -127,7 +127,10 @@ export function BrandPublicSection({ brand, mayWrite }: { brand: BrandDetail; ma
           termsUrl: values.termsUrl || undefined,
           privacyUrl: values.privacyUrl || undefined,
           siteUrl: values.siteUrl || undefined,
-          profileTitle: values.profileTitle || undefined,
+          // An explicit null (not an omitted key) is what tells the backend's jsonb merge to actually clear a
+          // previously-set profileTitle back to the brand-name default - omitting the key would leave the old
+          // value untouched. Cast past the generated type, which only documents the string case.
+          profileTitle: (values.profileTitle || null) as string | undefined,
           announce: values.announce || undefined,
           supportUrl: values.supportUrl || undefined,
           ...(values.profileUpdateIntervalHours ? { profileUpdateIntervalHours: Number(values.profileUpdateIntervalHours) } : {}),

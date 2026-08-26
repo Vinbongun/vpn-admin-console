@@ -5,6 +5,7 @@ import {
   FileClock,
   Gauge,
   Gift,
+  Megaphone,
   Network,
   Users,
 } from "lucide-react";
@@ -56,6 +57,7 @@ export const navigation = [
       { label: "Список рефералов", href: "/referrals/partners" },
     ],
   },
+  { label: "Каналы привлечения", href: "/acquisitions", icon: Megaphone, permission: "finance.read" },
   { label: "Аудит", href: "/audit", icon: FileClock, permission: "audit.read" },
   { label: "Инструкции", href: "/instructions", icon: BookOpen },
 ] satisfies NavItem[];
