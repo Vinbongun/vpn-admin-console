@@ -13,7 +13,7 @@ import { PageToolbar } from "@/components/page-toolbar";
 import { StatusBadge } from "@/components/status-badge";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Select, SelectContent, SelectGroup, SelectItem, SelectLabel, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 const pageSize = 25;
 
@@ -86,12 +86,15 @@ export function PlansOverviewPage() {
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="all">Все бренды</SelectItem>
-            {brands.data?.map((brand) => (
-              <SelectItem key={brand.id} value={brand.id}>
-                {brand.name}
-              </SelectItem>
-            ))}
+            <SelectGroup>
+              <SelectLabel>Бренд</SelectLabel>
+              <SelectItem value="all">Все бренды</SelectItem>
+              {brands.data?.map((brand) => (
+                <SelectItem key={brand.id} value={brand.id}>
+                  {brand.name}
+                </SelectItem>
+              ))}
+            </SelectGroup>
           </SelectContent>
         </Select>
         <Select
@@ -110,9 +113,12 @@ export function PlansOverviewPage() {
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="all">Все статусы</SelectItem>
-            <SelectItem value="ACTIVE">ACTIVE</SelectItem>
-            <SelectItem value="ARCHIVED">ARCHIVED</SelectItem>
+            <SelectGroup>
+              <SelectLabel>Статус</SelectLabel>
+              <SelectItem value="all">Все статусы</SelectItem>
+              <SelectItem value="ACTIVE">ACTIVE</SelectItem>
+              <SelectItem value="ARCHIVED">ARCHIVED</SelectItem>
+            </SelectGroup>
           </SelectContent>
         </Select>
       </PageToolbar>

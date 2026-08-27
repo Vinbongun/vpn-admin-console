@@ -11,7 +11,7 @@ import { Button } from "@/components/ui/button";
 import { Dialog, DialogClose, DialogContent, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Field, FieldError, FieldGroup, FieldLabel } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Select, SelectContent, SelectGroup, SelectItem, SelectLabel, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Spinner } from "@/components/ui/spinner";
 import { gatewayStatuses, paymentMethodSchema, updateMethodSchema, type PaymentMethodValues, type UpdateMethodValues } from "@/features/payments/schema";
 
@@ -129,11 +129,14 @@ function EditMethodDialog({ gatewayId, method }: { gatewayId: string; method: Pa
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                      {gatewayStatuses.map((value) => (
-                        <SelectItem key={value} value={value}>
-                          {value}
-                        </SelectItem>
-                      ))}
+                      <SelectGroup>
+                        <SelectLabel>Статус</SelectLabel>
+                        {gatewayStatuses.map((value) => (
+                          <SelectItem key={value} value={value}>
+                            {value}
+                          </SelectItem>
+                        ))}
+                      </SelectGroup>
                     </SelectContent>
                   </Select>
                   <p className="text-xs text-muted-foreground">Настоящего удаления нет — «Отключить» это статус INACTIVE.</p>

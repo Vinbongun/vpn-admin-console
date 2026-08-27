@@ -13,7 +13,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Field, FieldLabel } from "@/components/ui/field";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Select, SelectContent, SelectGroup, SelectItem, SelectLabel, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Spinner } from "@/components/ui/spinner";
 import { StatusBadge } from "@/components/status-badge";
 
@@ -96,11 +96,14 @@ function PaymentMethodsBody({ brandId, allMethods, current, mayWrite }: { brandI
               <SelectValue placeholder="Выберите способ по умолчанию…" />
             </SelectTrigger>
             <SelectContent>
-              {selectedMethods.map((method) => (
-                <SelectItem key={method.id} value={method.id}>
-                  {method.name} ({method.gatewayName})
-                </SelectItem>
-              ))}
+              <SelectGroup>
+                <SelectLabel>Способ по умолчанию</SelectLabel>
+                {selectedMethods.map((method) => (
+                  <SelectItem key={method.id} value={method.id}>
+                    {method.name} ({method.gatewayName})
+                  </SelectItem>
+                ))}
+              </SelectGroup>
             </SelectContent>
           </Select>
         </Field>

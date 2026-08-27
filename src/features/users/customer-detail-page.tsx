@@ -40,7 +40,7 @@ import { type ChartConfig, ChartContainer, ChartTooltip, ChartTooltipContent } f
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Select, SelectContent, SelectGroup, SelectItem, SelectLabel, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Separator } from "@/components/ui/separator";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Spinner } from "@/components/ui/spinner";
@@ -687,8 +687,11 @@ export function CustomerDetailPage({ customerId }: { customerId: string }) {
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="GiB">GiB</SelectItem>
-                        <SelectItem value="TiB">TiB</SelectItem>
+                        <SelectGroup>
+                          <SelectLabel>Единица</SelectLabel>
+                          <SelectItem value="GiB">GiB</SelectItem>
+                          <SelectItem value="TiB">TiB</SelectItem>
+                        </SelectGroup>
                       </SelectContent>
                     </Select>
                   </div>
@@ -710,9 +713,12 @@ export function CustomerDetailPage({ customerId }: { customerId: string }) {
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="never">Никогда не сбрасывать</SelectItem>
-                      <SelectItem value="daily">Каждый день</SelectItem>
-                      <SelectItem value="monthly">Каждый месяц</SelectItem>
+                      <SelectGroup>
+                        <SelectLabel>Стратегия сброса трафика</SelectLabel>
+                        <SelectItem value="never">Никогда не сбрасывать</SelectItem>
+                        <SelectItem value="daily">Каждый день</SelectItem>
+                        <SelectItem value="monthly">Каждый месяц</SelectItem>
+                      </SelectGroup>
                     </SelectContent>
                   </Select>
                 </div>

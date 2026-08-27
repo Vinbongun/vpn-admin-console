@@ -11,7 +11,7 @@ import { PageHeader } from "@/components/page-header";
 import { PageToolbar, ToolbarSearch } from "@/components/page-toolbar";
 import { StatusBadge } from "@/components/status-badge";
 import { Button } from "@/components/ui/button";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Select, SelectContent, SelectGroup, SelectItem, SelectLabel, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { PromoCodeDialog } from "@/features/referrals/promo-code-dialog";
 import { can } from "@/lib/access-control";
 
@@ -88,12 +88,15 @@ export function PromoCodesPage() {
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="all">Все бренды</SelectItem>
-            {brands.data?.map((brand) => (
-              <SelectItem key={brand.id} value={brand.id}>
-                {brand.name}
-              </SelectItem>
-            ))}
+            <SelectGroup>
+              <SelectLabel>Бренд</SelectLabel>
+              <SelectItem value="all">Все бренды</SelectItem>
+              {brands.data?.map((brand) => (
+                <SelectItem key={brand.id} value={brand.id}>
+                  {brand.name}
+                </SelectItem>
+              ))}
+            </SelectGroup>
           </SelectContent>
         </Select>
         <Select
@@ -105,12 +108,15 @@ export function PromoCodesPage() {
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="all">Все партнёры</SelectItem>
-            {partners.data?.map((partner) => (
-              <SelectItem key={partner.id} value={partner.id}>
-                {partner.name}
-              </SelectItem>
-            ))}
+            <SelectGroup>
+              <SelectLabel>Партнёр</SelectLabel>
+              <SelectItem value="all">Все партнёры</SelectItem>
+              {partners.data?.map((partner) => (
+                <SelectItem key={partner.id} value={partner.id}>
+                  {partner.name}
+                </SelectItem>
+              ))}
+            </SelectGroup>
           </SelectContent>
         </Select>
         <Select
@@ -126,9 +132,12 @@ export function PromoCodesPage() {
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="all">Все статусы</SelectItem>
-            <SelectItem value="ACTIVE">ACTIVE</SelectItem>
-            <SelectItem value="INACTIVE">INACTIVE</SelectItem>
+            <SelectGroup>
+              <SelectLabel>Статус</SelectLabel>
+              <SelectItem value="all">Все статусы</SelectItem>
+              <SelectItem value="ACTIVE">ACTIVE</SelectItem>
+              <SelectItem value="INACTIVE">INACTIVE</SelectItem>
+            </SelectGroup>
           </SelectContent>
         </Select>
       </PageToolbar>

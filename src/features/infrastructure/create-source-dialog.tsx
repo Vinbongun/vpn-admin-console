@@ -11,7 +11,7 @@ import { Button } from "@/components/ui/button";
 import { Dialog, DialogClose, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Field, FieldError, FieldGroup, FieldLabel } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Select, SelectContent, SelectGroup, SelectItem, SelectLabel, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Spinner } from "@/components/ui/spinner";
 import { CredentialsFields } from "@/features/infrastructure/credentials-fields";
 import { createSourceSchema, providerTypes, sourceStatuses, type CreateSourceValues } from "@/features/infrastructure/schema";
@@ -89,11 +89,14 @@ export function CreateSourceDialog() {
                       <SelectValue placeholder="Выберите провайдера…" />
                     </SelectTrigger>
                     <SelectContent>
-                      {providerTypes.map((value) => (
-                        <SelectItem key={value} value={value}>
-                          {value}
-                        </SelectItem>
-                      ))}
+                      <SelectGroup>
+                        <SelectLabel>Тип провайдера</SelectLabel>
+                        {providerTypes.map((value) => (
+                          <SelectItem key={value} value={value}>
+                            {value}
+                          </SelectItem>
+                        ))}
+                      </SelectGroup>
                     </SelectContent>
                   </Select>
                   <FieldError errors={[fieldState.error]} />
@@ -111,11 +114,14 @@ export function CreateSourceDialog() {
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                      {sourceStatuses.map((value) => (
-                        <SelectItem key={value} value={value}>
-                          {value}
-                        </SelectItem>
-                      ))}
+                      <SelectGroup>
+                        <SelectLabel>Статус</SelectLabel>
+                        {sourceStatuses.map((value) => (
+                          <SelectItem key={value} value={value}>
+                            {value}
+                          </SelectItem>
+                        ))}
+                      </SelectGroup>
                     </SelectContent>
                   </Select>
                 </Field>

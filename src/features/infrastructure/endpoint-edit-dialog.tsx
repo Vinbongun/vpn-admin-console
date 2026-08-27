@@ -13,7 +13,7 @@ import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogClose, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Field, FieldError, FieldGroup, FieldLabel } from "@/components/ui/field";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Select, SelectContent, SelectGroup, SelectItem, SelectLabel, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Spinner } from "@/components/ui/spinner";
 import { Textarea } from "@/components/ui/textarea";
 import { healthStatuses, updateEndpointSchema, type UpdateEndpointValues } from "@/features/infrastructure/schema";
@@ -110,11 +110,14 @@ function EndpointEditBody({ endpoint, mayWrite, onClose }: { endpoint: Infrastru
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    {healthStatuses.map((value) => (
-                      <SelectItem key={value} value={value}>
-                        {value}
-                      </SelectItem>
-                    ))}
+                    <SelectGroup>
+                      <SelectLabel>Здоровье</SelectLabel>
+                      {healthStatuses.map((value) => (
+                        <SelectItem key={value} value={value}>
+                          {value}
+                        </SelectItem>
+                      ))}
+                    </SelectGroup>
                   </SelectContent>
                 </Select>
                 <FieldError errors={[fieldState.error]} />

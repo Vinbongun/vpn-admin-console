@@ -11,7 +11,7 @@ import { Button } from "@/components/ui/button";
 import { Dialog, DialogClose, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Field, FieldError, FieldGroup, FieldLabel } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Select, SelectContent, SelectGroup, SelectItem, SelectLabel, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Spinner } from "@/components/ui/spinner";
 import { CredentialsEditor, credentialsToRecord, type CredentialPair } from "@/features/payments/credentials-editor";
 import { createGatewaySchema, gatewayStatuses, type CreateGatewayValues } from "@/features/payments/schema";
@@ -94,11 +94,14 @@ export function CreateGatewayDialog() {
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                      {gatewayStatuses.map((value) => (
-                        <SelectItem key={value} value={value}>
-                          {value}
-                        </SelectItem>
-                      ))}
+                      <SelectGroup>
+                        <SelectLabel>Статус</SelectLabel>
+                        {gatewayStatuses.map((value) => (
+                          <SelectItem key={value} value={value}>
+                            {value}
+                          </SelectItem>
+                        ))}
+                      </SelectGroup>
                     </SelectContent>
                   </Select>
                 </Field>

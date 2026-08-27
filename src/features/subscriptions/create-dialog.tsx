@@ -10,7 +10,7 @@ import { Button } from "@/components/ui/button";
 import { Dialog, DialogClose, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Field, FieldError, FieldGroup, FieldLabel } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Select, SelectContent, SelectGroup, SelectItem, SelectLabel, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Spinner } from "@/components/ui/spinner";
 import { useCreateSubscriptionMutation } from "@/features/subscriptions/queries";
 import { createSubscriptionSchema, type CreateSubscriptionValues } from "@/features/subscriptions/schema";
@@ -91,11 +91,14 @@ export function CreateSubscriptionDialog({
                       <SelectValue placeholder="Выберите привязку к бренду" />
                     </SelectTrigger>
                     <SelectContent>
-                      {membershipOptions.map((option) => (
-                        <SelectItem key={option.id} value={option.id}>
-                          {option.label}
-                        </SelectItem>
-                      ))}
+                      <SelectGroup>
+                        <SelectLabel>Привязка к бренду</SelectLabel>
+                        {membershipOptions.map((option) => (
+                          <SelectItem key={option.id} value={option.id}>
+                            {option.label}
+                          </SelectItem>
+                        ))}
+                      </SelectGroup>
                     </SelectContent>
                   </Select>
                   <FieldError errors={[fieldState.error]} />
@@ -118,12 +121,15 @@ export function CreateSubscriptionDialog({
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="none">Без тарифа</SelectItem>
-                        {plans.data?.items.map((plan) => (
-                          <SelectItem key={plan.id} value={plan.id}>
-                            {plan.brandCode} · {plan.name}
-                          </SelectItem>
-                        ))}
+                        <SelectGroup>
+                          <SelectLabel>Тариф</SelectLabel>
+                          <SelectItem value="none">Без тарифа</SelectItem>
+                          {plans.data?.items.map((plan) => (
+                            <SelectItem key={plan.id} value={plan.id}>
+                              {plan.brandCode} · {plan.name}
+                            </SelectItem>
+                          ))}
+                        </SelectGroup>
                       </SelectContent>
                     </Select>
                   </Field>
@@ -148,9 +154,12 @@ export function CreateSubscriptionDialog({
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="PENDING">PENDING</SelectItem>
-                        <SelectItem value="TRIAL">TRIAL</SelectItem>
-                        <SelectItem value="ACTIVE">ACTIVE</SelectItem>
+                        <SelectGroup>
+                          <SelectLabel>Статус</SelectLabel>
+                          <SelectItem value="PENDING">PENDING</SelectItem>
+                          <SelectItem value="TRIAL">TRIAL</SelectItem>
+                          <SelectItem value="ACTIVE">ACTIVE</SelectItem>
+                        </SelectGroup>
                       </SelectContent>
                     </Select>
                   </Field>
