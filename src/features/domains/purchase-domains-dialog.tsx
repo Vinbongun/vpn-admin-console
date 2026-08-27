@@ -35,7 +35,7 @@ const emptyRow: Row = { fqdn: "", costCents: "" };
 
 export function PurchaseDomainsDialog({ onPurchased }: { onPurchased: () => void }) {
   const [open, setOpen] = useState(false);
-  const [registrarAccountId, setRegistrarAccountId] = useState<string>();
+  const [registrarAccountId, setRegistrarAccountId] = useState("");
   const [rows, setRows] = useState<Row[]>([{ ...emptyRow }]);
   const [dryRunResults, setDryRunResults] = useState<PurchaseBatchItemResult[]>();
   const [finalResults, setFinalResults] = useState<PurchaseBatchItemResult[]>();
@@ -43,7 +43,7 @@ export function PurchaseDomainsDialog({ onPurchased }: { onPurchased: () => void
   const accounts = useQuery({ queryKey: ["admin-domain-registrar-accounts"], queryFn: adminApi.listDomainRegistrarAccounts, retry: false, enabled: open });
 
   const reset = () => {
-    setRegistrarAccountId(undefined);
+    setRegistrarAccountId("");
     setRows([{ ...emptyRow }]);
     setDryRunResults(undefined);
     setFinalResults(undefined);
@@ -55,7 +55,7 @@ export function PurchaseDomainsDialog({ onPurchased }: { onPurchased: () => void
   const purchaseMutation = useMutation({
     mutationFn: (dryRun: boolean) =>
       adminApi.purchaseDomains({
-        registrarAccountId: registrarAccountId!,
+        registrarAccountId,
         domains: validRows.map((row) => ({ fqdn: row.fqdn.trim(), expectedCostCents: Number(row.costCents) || 0 })),
         dryRun,
       }),
@@ -128,7 +128,7 @@ export function PurchaseDomainsDialog({ onPurchased }: { onPurchased: () => void
                 <Select
                   items={accounts.data.map((account) => ({ value: account.id, label: `${account.code} · ${account.environment}` }))}
                   value={registrarAccountId}
-                  onValueChange={(value) => setRegistrarAccountId(value ?? undefined)}
+                  onValueChange={(value) => setRegistrarAccountId(value ?? "")}
                 >
                   <SelectTrigger className="w-full">
                     <SelectValue placeholder="Выберите аккаунт" />
