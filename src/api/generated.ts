@@ -1224,7 +1224,25 @@ export interface paths {
         delete?: never;
         options?: never;
         head?: never;
-        patch?: never;
+        /** @description Staff-only local metadata, currently just internalLabel - never sent to the registrar/ WHOIS/DNS. Lets staff map an intentionally bland-looking fqdn back to which panel/location it actually is, without the domain name itself giving that away. */
+        patch: operations["updateDomainMetadata"];
+        trace?: never;
+    };
+    "/admin/v1/domains/{id}/dns-mode": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /** @description Enables/disables Porkbun DNS management for this domain - reuses the same registrar account's credentials (Porkbun DNS shares auth with the registrar API). Until enabled, dns-records operations below report 501. */
+        patch: operations["setDomainDnsMode"];
         trace?: never;
     };
     "/admin/v1/domains/{id}/dns-records": {
@@ -1234,9 +1252,127 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
+        /** @description For dns_mode = MANAGED domains, fetches live from Porkbun DNS and upserts into the local cache (domain_dns_records) before returning it. For UNMANAGED domains, returns whatever's in the local cache (always empty in practice, since nothing writes to it before MANAGED). */
         get: operations["listDomainDnsRecords"];
         put?: never;
         post: operations["createDomainDnsRecord"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/v1/domains/{id}/dns-records/{recordId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete: operations["deleteDomainDnsRecord"];
+        options?: never;
+        head?: never;
+        patch: operations["updateDomainDnsRecord"];
+        trace?: never;
+    };
+    "/admin/v1/domains/check-availability": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** @description Lets the purchase wizard show the registrar's real quoted price up front instead of asking staff to guess `expectedCostCents` blind - checks each fqdn against the registrar (batching several candidate names in one call), never aborts the whole batch for one domain's failure. */
+        post: operations["checkDomainAvailability"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/v1/domains/generate-candidates": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** @description Local, no registrar calls - wordlist+suffix combinations (never random meaningless strings), checked against a curated denylist so nothing hints at node/protocol/vpn/proxy/ tunnel/server. Check real availability/price separately via check-availability. */
+        post: operations["generateDomainCandidates"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/v1/domains/zone-pricing/sync": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** @description One bulk call to the registrar's own pricing list (e.g. Porkbun's /pricing/get, ~900 TLDs) - never checks zones one at a time. Never resets requiresVerification/ verificationNote - only price/specialType/syncedAt are touched by this upsert. */
+        post: operations["syncZonePricing"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/v1/domains/zone-pricing": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["listZonePricing"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/v1/domains/zone-pricing/{tld}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /** @description Manual override, always available - requiresVerification is either set by hand here, or auto-set by POST .../check-requirements when the registrar reports a real signal. This endpoint can also clear an auto-set flag if the owner decides it doesn't apply. */
+        patch: operations["updateZonePricing"];
+        trace?: never;
+    };
+    "/admin/v1/domains/zone-pricing/{tld}/check-requirements": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** @description Per-zone, on-demand only - never run automatically across the whole catalog (that would be hundreds of separate registrar calls). If the registrar reports requiresValidatedAddress: true, requires_verification is set automatically with a note showing the source; a false or absent signal never overwrites an existing flag (it may have been set manually for a registrar with no such signal available). */
+        post: operations["checkZoneRequirements"];
         delete?: never;
         options?: never;
         head?: never;
@@ -1333,6 +1469,170 @@ export interface paths {
         get?: never;
         put?: never;
         post: operations["archiveDomain"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/v1/vps-instances": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["listVpsInstances"];
+        put?: never;
+        /** @description Manual registration only (provider_type is always MANUAL today - the field exists so a real hosting-provider API can be added later without a schema change). The SSH credential is stored via SecretStorage and never returned in any response. */
+        post: operations["registerVpsInstance"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/v1/vps-instances/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["getVpsInstance"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/v1/vps-instances/{id}/bootstrap": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["bootstrapVpsInstance"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/v1/vps-instances/{id}/test": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["testVpsInstance"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/v1/vps-instances/{id}/health-check": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["healthCheckVpsInstance"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/v1/vps-instances/{id}/update": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["updateVpsInstance"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/v1/vps-instances/{id}/backup": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["backupVpsInstance"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/v1/vps-instances/{id}/start": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** @description SSH-level start of whatever's running on the box (Docker containers) - never touches the VPS's power state at a hosting-provider level (no such API is integrated). Fully reversible; only needs a normal confirm dialog in the UI. */
+        post: operations["startVpsServices"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/v1/vps-instances/{id}/stop": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** @description Same as start, in reverse. Only needs a normal confirm dialog in the UI. */
+        post: operations["stopVpsServices"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/v1/vps-instances/{id}/decommission": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** @description Requires vps.decommission in addition to vps.write (SUPER_ADMIN only by default). The UI must require typing the host/IP to confirm before calling this, mirroring the confirm_decommission=true safety gate at the Ansible layer. */
+        post: operations["decommissionVpsInstance"];
         delete?: never;
         options?: never;
         head?: never;
@@ -1463,6 +1763,73 @@ export interface paths {
         put?: never;
         /** @description Claims and processes one pending provisioning job (PROVISION or REVOKE), if any. Intended to be called repeatedly by an external worker/cron; retries and backoff are tracked in provisioning_jobs and do not need external scheduling logic. */
         post: operations["runNextProvisioningJob"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/internal/v1/vps-automation/claim-next": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** @description Claims one PENDING vps_automation_jobs row (FOR UPDATE SKIP LOCKED), returning what a runner needs to execute it via Ansible: host/port/user, never any secret material - the runner holds its own SSH key locally. Deliberately a separate queue/table from provisioning_jobs, not shared processing code. */
+        post: operations["claimNextVpsAutomationJob"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/internal/v1/vps-automation/jobs/{id}/report": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["reportVpsAutomationJob"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/internal/v1/vps-automation/enqueue-health-checks": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** @description Enqueues a HEALTH_CHECK job for every ACTIVE, non-archived VPS instance. Called by a frequent (~10-15min) scheduler. */
+        post: operations["enqueueVpsHealthChecks"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/internal/v1/vps-automation/enqueue-tests": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** @description Enqueues a TEST job for every ACTIVE, non-archived VPS instance. Called by an infrequent (~daily) scheduler - test-server is heavier. */
+        post: operations["enqueueVpsTests"];
         delete?: never;
         options?: never;
         head?: never;
@@ -2518,10 +2885,15 @@ export interface components {
             /** @enum {string} */
             status: "PENDING" | "ACTIVE" | "EXPIRED" | "ARCHIVED";
             /**
-             * @description Always UNMANAGED in this release - no DnsProvider is wired up yet.
+             * @description MANAGED once PATCH .../dns-mode enables Porkbun DNS for this domain - toggled via dnsProviderId, not directly.
              * @enum {string}
              */
             dnsMode: "UNMANAGED" | "MANAGED";
+            /**
+             * Format: uuid
+             * @description Set to the registrar account id when dns_mode = MANAGED (Porkbun DNS reuses the registrar's own credentials).
+             */
+            dnsProviderId?: string | null;
             autoRenew: boolean;
             /** Format: date-time */
             expiresAt?: string | null;
@@ -2534,6 +2906,40 @@ export interface components {
             archivedAt?: string | null;
             /** Format: date-time */
             createdAt?: string;
+            /** @description Staff-only local label, never sent to the registrar/WHOIS/DNS. */
+            internalLabel?: string | null;
+        };
+        DomainDnsRecord: {
+            /**
+             * Format: uuid
+             * @description Local cache row id - use this in update/delete URLs.
+             */
+            id: string;
+            /** @enum {string} */
+            type: "A" | "AAAA" | "CNAME" | "TXT" | "MX" | "NS" | "SRV";
+            /**
+             * @description Full record name including the zone.
+             * @example www.example.com
+             */
+            name: string;
+            content: string;
+            ttl: number;
+            /** @description Porkbun's own record id. */
+            providerRecordRef?: string | null;
+            /** @enum {string} */
+            syncStatus: "LOCAL_ONLY" | "SYNCED" | "SYNC_FAILED" | "PENDING_DELETE";
+        };
+        DomainDnsRecordInput: {
+            /** @enum {string} */
+            type: "A" | "AAAA" | "CNAME" | "TXT" | "MX" | "NS" | "SRV";
+            /**
+             * @description Full record name including the zone.
+             * @example www.example.com
+             */
+            name: string;
+            content: string;
+            /** @default 300 */
+            ttl: number;
         };
         /** @description Never includes secret_ref or any credential material. */
         RegistrarAccountSummary: {
@@ -2547,6 +2953,24 @@ export interface components {
             environment: "sandbox" | "production";
             /** @example ACTIVE */
             status: string;
+        };
+        ZonePricing: {
+            /** @example de */
+            tld: string;
+            /** Format: uuid */
+            registrarAccountId: string;
+            registrationPriceCents: number;
+            renewalPriceCents: number;
+            transferPriceCents: number;
+            /** @description registrationPriceCents + renewalPriceCents * 2 - assumes annual renewal over 3 years. */
+            threeYearTcoCents: number;
+            /** @description Registrar-specific marker */
+            specialType?: string | null;
+            /** @description Manually curated (or auto-set by POST .../check-requirements when the registrar reports a real signal) - never silently inferred elsewhere. */
+            requiresVerification: boolean;
+            verificationNote?: string | null;
+            /** Format: date-time */
+            syncedAt?: string;
         };
         PurchaseDomainItem: {
             fqdn: string;
@@ -2576,6 +3000,98 @@ export interface components {
             succeeded: number;
             failed: number;
             results: components["schemas"]["PurchaseBatchItemResult"][];
+        };
+        VpsInstance: {
+            /** Format: uuid */
+            id: string;
+            /**
+             * @description Always MANUAL today - field exists so a real hosting-provider API can be added later.
+             * @example MANUAL
+             */
+            provider_type: string;
+            code: string;
+            /** @description IP address */
+            host: string;
+            ssh_port: number;
+            ssh_user: string;
+            /** @enum {string} */
+            status: "PENDING" | "ACTIVE" | "UNREACHABLE" | "DECOMMISSIONED";
+            /**
+             * Format: uuid
+             * @description One-to-one with a panel (control_plane_source) - each panel instance runs on exactly one VPS.
+             */
+            control_plane_source_id?: string | null;
+            /** Format: date-time */
+            last_health_check_at?: string | null;
+            /** Format: date-time */
+            archived_at?: string | null;
+            /** Format: date-time */
+            created_at: string;
+            /** Format: date-time */
+            updated_at: string;
+        };
+        VpsDeployedProtocol: {
+            protocolCode?: string;
+            /**
+             * @description How a panel-less protocol on this VPS is managed - never through a control_plane_source.
+             * @example ANSIBLE_CLI
+             */
+            deploymentMethod?: string;
+            status?: string;
+        };
+        VpsAutomationReportSummary: {
+            /** @enum {string} */
+            jobType?: "BOOTSTRAP" | "TEST" | "HEALTH_CHECK" | "UPDATE" | "BACKUP" | "DECOMMISSION" | "START_SERVICES" | "STOP_SERVICES";
+            /** @description Raw JSON as written by the matching Ansible role. */
+            reportPayload?: Record<string, never>;
+            /** Format: date-time */
+            createdAt?: string;
+        };
+        VpsInstanceDetail: components["schemas"]["VpsInstance"] & {
+            panel_code?: string | null;
+            panel_provider_type?: string | null;
+            /** @description The fqdn of the domain linked to this VPS's panel, if any (joined via control_plane_source_id). */
+            domain_fqdn?: string | null;
+            deployed_protocols?: components["schemas"]["VpsDeployedProtocol"][];
+            /** @description Latest report per job_type, not full history. */
+            latest_reports?: components["schemas"]["VpsAutomationReportSummary"][];
+        };
+        RegisterVpsInstance: {
+            code: string;
+            host: string;
+            /** @default 22 */
+            sshPort: number;
+            sshUser: string;
+            /** @description SSH private key (or, for first-contact-only flows, a password) - stored via SecretStorage, never returned. */
+            sshCredential: string;
+            /** Format: uuid */
+            controlPlaneSourceId?: string;
+        };
+        VpsAutomationJobRef: {
+            /** Format: uuid */
+            jobId: string;
+            /** @enum {string} */
+            status: "PENDING" | "PROCESSING" | "SUCCEEDED" | "FAILED";
+        };
+        ClaimedVpsAutomationJob: {
+            claimed: boolean;
+            /** Format: uuid */
+            jobId?: string;
+            /** Format: uuid */
+            vpsInstanceId?: string;
+            host?: string;
+            sshPort?: number;
+            sshUser?: string;
+            /** @enum {string} */
+            jobType?: "BOOTSTRAP" | "TEST" | "HEALTH_CHECK" | "UPDATE" | "BACKUP" | "DECOMMISSION" | "START_SERVICES" | "STOP_SERVICES";
+            extraParams?: Record<string, never> | null;
+        };
+        VpsAutomationJobReport: {
+            /** @enum {string} */
+            status: "SUCCEEDED" | "FAILED";
+            /** @description Raw JSON content of the Ansible role's report file. */
+            reportPayload?: Record<string, never>;
+            errorMessage?: string;
         };
         RotateSubscriptionToken: {
             /** Format: date-time */
@@ -5646,6 +6162,85 @@ export interface operations {
             };
         };
     };
+    updateDomainMetadata: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": {
+                    internalLabel?: string;
+                };
+            };
+        };
+        responses: {
+            /** @description Updated domain */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Domain"];
+                };
+            };
+            /** @description Missing domains.write permission */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    setDomainDnsMode: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": {
+                    enabled: boolean;
+                };
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        ok?: boolean;
+                    };
+                };
+            };
+            /** @description Missing domains.write permission */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Domain not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
     listDomainDnsRecords: {
         parameters: {
             query?: never;
@@ -5657,13 +6252,13 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            /** @description Locally cached DNS records for this domain. Always empty/stale until a DnsProvider is wired up for dns_mode = MANAGED - this is a local cache, never the authoritative source. */
+            /** @description DNS records (live-synced for MANAGED domains) */
             200: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": Record<string, never>[];
+                    "application/json": components["schemas"]["DomainDnsRecord"][];
                 };
             };
         };
@@ -5677,10 +6272,316 @@ export interface operations {
             };
             cookie?: never;
         };
+        requestBody?: {
+            content: {
+                "application/json": components["schemas"]["DomainDnsRecordInput"];
+            };
+        };
+        responses: {
+            /** @description Created (only once dns_mode = MANAGED) */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DomainDnsRecord"];
+                };
+            };
+            /** @description dns_mode is UNMANAGED for this domain (no DnsProvider enabled) - the platform reports this honestly rather than faking success. Call PATCH .../dns-mode first. */
+            501: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    deleteDomainDnsRecord: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+                recordId: string;
+            };
+            cookie?: never;
+        };
         requestBody?: never;
         responses: {
-            /** @description No DnsProvider is configured yet for any domain (dns_mode is always UNMANAGED in this release) - the platform reports this honestly rather than faking success. */
+            /** @description Deleted */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        ok?: boolean;
+                    };
+                };
+            };
+            /** @description dns_mode is UNMANAGED for this domain */
             501: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    updateDomainDnsRecord: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+                recordId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": components["schemas"]["DomainDnsRecordInput"];
+            };
+        };
+        responses: {
+            /** @description Updated */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DomainDnsRecord"];
+                };
+            };
+            /** @description dns_mode is UNMANAGED for this domain */
+            501: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    checkDomainAvailability: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": {
+                    /** Format: uuid */
+                    registrarAccountId: string;
+                    fqdns: string[];
+                };
+            };
+        };
+        responses: {
+            /** @description Per-domain availability/price (or errorMessage if that domain's check failed) */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        fqdn: string;
+                        available: boolean;
+                        premium: boolean;
+                        priceCents?: number;
+                        currency?: string;
+                        errorMessage?: string;
+                    }[];
+                };
+            };
+            /** @description Missing domains.read permission */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    generateDomainCandidates: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": {
+                    tlds: string[];
+                    count: number;
+                };
+            };
+        };
+        responses: {
+            /** @description Candidate fqdns (not yet checked for real availability) */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        fqdns: string[];
+                    };
+                };
+            };
+        };
+    };
+    syncZonePricing: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": {
+                    /** Format: uuid */
+                    registrarAccountId: string;
+                };
+            };
+        };
+        responses: {
+            /** @description Count of TLDs synced */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        synced?: number;
+                    };
+                };
+            };
+            /** @description Missing domains.write permission */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    listZonePricing: {
+        parameters: {
+            query: {
+                registrarAccountId: string;
+                sortBy?: "tld" | "registrationPriceCents" | "renewalPriceCents" | "threeYearTco";
+                order?: "asc" | "desc";
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The local zone-pricing catalog for this registrar account */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ZonePricing"][];
+                };
+            };
+            /** @description Missing domains.read permission */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    updateZonePricing: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                tld: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": {
+                    /** Format: uuid */
+                    registrarAccountId: string;
+                    requiresVerification: boolean;
+                    verificationNote?: string;
+                };
+            };
+        };
+        responses: {
+            /** @description Updated zone-pricing row */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ZonePricing"];
+                };
+            };
+            /** @description Missing domains.write permission */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description No zone-pricing row for this tld/registrarAccountId */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    checkZoneRequirements: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                tld: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": {
+                    /** Format: uuid */
+                    registrarAccountId: string;
+                };
+            };
+        };
+        responses: {
+            /** @description Raw reference fields from the registrar, plus whether this call auto-flagged the zone */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        tld: string;
+                        additionalFieldsRequired: boolean;
+                        requiresValidatedAddress?: boolean;
+                        registrantOnly?: boolean;
+                        whoisPrivacySupported?: boolean;
+                        registrationDurationYears?: number;
+                        autoFlagged: boolean;
+                    };
+                };
+            };
+            /** @description Missing domains.read permission */
+            403: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -5889,6 +6790,390 @@ export interface operations {
                 content?: never;
             };
             /** @description Domain not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    listVpsInstances: {
+        parameters: {
+            query?: {
+                status?: "PENDING" | "ACTIVE" | "UNREACHABLE" | "DECOMMISSIONED";
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description All registered VPS instances */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["VpsInstance"][];
+                };
+            };
+            /** @description Missing vps.read permission */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    registerVpsInstance: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": components["schemas"]["RegisterVpsInstance"];
+            };
+        };
+        responses: {
+            /** @description Registered */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["VpsInstance"];
+                };
+            };
+            /** @description Missing vps.write permission */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    getVpsInstance: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description VPS detail, joined through to its panel (control_plane_source, one-to-one) and that panel's domain if any, plus any panel-less deployed protocols and the latest report per job type. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["VpsInstanceDetail"];
+                };
+            };
+            /** @description Missing vps.read permission */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description VPS instance not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    bootstrapVpsInstance: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Job enqueued (or the existing PENDING/PROCESSING job of this type, deduped) */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["VpsAutomationJobRef"];
+                };
+            };
+            /** @description Missing vps.write permission */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description VPS instance not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    testVpsInstance: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Job enqueued (or deduped) */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["VpsAutomationJobRef"];
+                };
+            };
+            /** @description Missing vps.write permission */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description VPS instance not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    healthCheckVpsInstance: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Job enqueued (or deduped) */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["VpsAutomationJobRef"];
+                };
+            };
+            /** @description Missing vps.write permission */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description VPS instance not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    updateVpsInstance: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Job enqueued (or deduped) */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["VpsAutomationJobRef"];
+                };
+            };
+            /** @description Missing vps.write permission */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description VPS instance not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    backupVpsInstance: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Job enqueued (or deduped) */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["VpsAutomationJobRef"];
+                };
+            };
+            /** @description Missing vps.write permission */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description VPS instance not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    startVpsServices: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Job enqueued (or deduped) */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["VpsAutomationJobRef"];
+                };
+            };
+            /** @description Missing vps.write permission */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description VPS instance not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    stopVpsServices: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Job enqueued (or deduped) */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["VpsAutomationJobRef"];
+                };
+            };
+            /** @description Missing vps.write permission */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description VPS instance not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    decommissionVpsInstance: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Job enqueued (or deduped) */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["VpsAutomationJobRef"];
+                };
+            };
+            /** @description Missing vps.write or vps.decommission permission */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description VPS instance not found */
             404: {
                 headers: {
                     [name: string]: unknown;
@@ -6129,6 +7414,129 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["ProvisioningRunResult"];
+                };
+            };
+            /** @description Invalid internal credential */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    claimNextVpsAutomationJob: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description A job was claimed, or none was pending */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ClaimedVpsAutomationJob"];
+                };
+            };
+            /** @description Invalid internal credential */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    reportVpsAutomationJob: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": components["schemas"]["VpsAutomationJobReport"];
+            };
+        };
+        responses: {
+            /** @description Job marked done */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Invalid internal credential */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Job not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    enqueueVpsHealthChecks: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Count of jobs newly enqueued (existing PENDING/PROCESSING jobs are not duplicated) */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        enqueued: number;
+                    };
+                };
+            };
+            /** @description Invalid internal credential */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    enqueueVpsTests: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Count of jobs newly enqueued */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        enqueued: number;
+                    };
                 };
             };
             /** @description Invalid internal credential */

@@ -21,6 +21,7 @@ import type {
   AdminReferralPartnerQuery,
   AdminRetentionQuery,
   AdminSubscriptionQuery,
+  AdminZonePricingQuery,
   CreateBrand,
   CreateControlPlaneSource,
   CreateEndpointGroup,
@@ -33,6 +34,7 @@ import type {
   CustomerHistory,
   Domain,
   ExtendSubscription,
+  GenerateDomainCandidatesRequest,
   IssuedSubscriptionToken,
   PasswordLogin,
   PlatformSetting,
@@ -55,6 +57,7 @@ import type {
   UpdateBrand,
   UpdateControlPlaneSource,
   UpdateCustomerContact,
+  UpdateDomainMetadata,
   UpdateEndpointGroup,
   UpdateInfrastructureEndpoint,
   UpdateMembership,
@@ -64,7 +67,9 @@ import type {
   UpdatePlatformSetting,
   UpdateReferralPartner,
   UpdateSubscription,
+  UpdateZonePricing,
   UpsertPromoCode,
+  ZonePricing,
 } from "@/api/types";
 
 export const API_URL = (process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:3000").replace(/\/$/, "");
@@ -181,4 +186,17 @@ export const adminApi = {
   syncDomain: async (domainId: string) => unwrap<void>(await client.POST("/admin/v1/domains/{id}/sync", { params: { path: { id: domainId } }, headers: staffHeaders() })),
   unlinkDomain: async (domainId: string) => unwrap<void>(await client.POST("/admin/v1/domains/{id}/unlink", { params: { path: { id: domainId } }, headers: staffHeaders() })),
   archiveDomain: async (domainId: string) => unwrap<void>(await client.POST("/admin/v1/domains/{id}/archive", { params: { path: { id: domainId } }, headers: staffHeaders() })),
+  updateDomainMetadata: async (domainId: string, body: UpdateDomainMetadata) =>
+    unwrap<Domain>(await client.PATCH("/admin/v1/domains/{id}", { params: { path: { id: domainId } }, body, headers: staffHeaders() })),
+  generateDomainCandidates: async (body: GenerateDomainCandidatesRequest) =>
+    unwrap<{ fqdns: string[] }>(await client.POST("/admin/v1/domains/generate-candidates", { body, headers: staffHeaders() })),
+  checkDomainAvailability: async (registrarAccountId: string, fqdns: string[]) =>
+    unwrap(await client.POST("/admin/v1/domains/check-availability", { body: { registrarAccountId, fqdns }, headers: staffHeaders() })),
+  listZonePricing: async (query: AdminZonePricingQuery) => unwrap<ZonePricing[]>(await client.GET("/admin/v1/domains/zone-pricing", { params: { query }, headers: staffHeaders() })),
+  syncZonePricing: async (registrarAccountId: string) =>
+    unwrap<{ synced?: number }>(await client.POST("/admin/v1/domains/zone-pricing/sync", { body: { registrarAccountId }, headers: staffHeaders() })),
+  updateZonePricing: async (tld: string, body: UpdateZonePricing) =>
+    unwrap<ZonePricing>(await client.PATCH("/admin/v1/domains/zone-pricing/{tld}", { params: { path: { tld } }, body, headers: staffHeaders() })),
+  checkZoneRequirements: async (tld: string, registrarAccountId: string) =>
+    unwrap(await client.POST("/admin/v1/domains/zone-pricing/{tld}/check-requirements", { params: { path: { tld } }, body: { registrarAccountId }, headers: staffHeaders() })),
 };

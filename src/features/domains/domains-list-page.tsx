@@ -2,6 +2,8 @@
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import type { ColumnDef } from "@tanstack/react-table";
+import { TagIcon } from "lucide-react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { toast } from "sonner";
@@ -18,6 +20,7 @@ import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectGroup, SelectItem, SelectLabel, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Spinner } from "@/components/ui/spinner";
 import { Switch } from "@/components/ui/switch";
+import { GenerateDomainsDialog } from "@/features/domains/generate-domains-dialog";
 import { PurchaseDomainsDialog } from "@/features/domains/purchase-domains-dialog";
 import { can } from "@/lib/access-control";
 
@@ -178,7 +181,20 @@ export function DomainsListPage() {
       <PageHeader
         title="Домены"
         description="Домены, купленные через регистратора (сейчас — Porkbun, только sandbox), и их привязка к панелям/нодам"
-        actions={mayWrite && <PurchaseDomainsDialog onPurchased={refresh} />}
+        actions={
+          <div className="flex gap-2">
+            <Button size="sm" variant="outline" render={<Link href="/infrastructure/domains/zone-pricing" />} nativeButton={false}>
+              <TagIcon />
+              Цены по зонам
+            </Button>
+            {mayWrite && (
+              <>
+                <GenerateDomainsDialog onPurchased={refresh} />
+                <PurchaseDomainsDialog onPurchased={refresh} />
+              </>
+            )}
+          </div>
+        }
       />
 
       <div className="grid grid-cols-1 gap-4 @xl/main:grid-cols-2 @5xl/main:grid-cols-4">
