@@ -11,7 +11,7 @@ import { Button } from "@/components/ui/button";
 import { Dialog, DialogClose, DialogContent, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Select, SelectContent, SelectGroup, SelectItem, SelectLabel, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Spinner } from "@/components/ui/spinner";
 
 function apiErrorMessage(error: ApiError): string {
@@ -134,11 +134,14 @@ export function PurchaseDomainsDialog({ onPurchased }: { onPurchased: () => void
                     <SelectValue placeholder="Выберите аккаунт" />
                   </SelectTrigger>
                   <SelectContent>
-                    {accounts.data.map((account) => (
-                      <SelectItem key={account.id} value={account.id}>
-                        {account.code} · {account.environment}
-                      </SelectItem>
-                    ))}
+                    <SelectGroup>
+                      <SelectLabel>Регистратор</SelectLabel>
+                      {accounts.data.map((account) => (
+                        <SelectItem key={account.id} value={account.id}>
+                          {account.code} · {account.environment}
+                        </SelectItem>
+                      ))}
+                    </SelectGroup>
                   </SelectContent>
                 </Select>
               )}
