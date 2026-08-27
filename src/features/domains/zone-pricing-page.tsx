@@ -16,7 +16,6 @@ import { can } from "@/lib/access-control";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogClose, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectGroup, SelectItem, SelectLabel, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Spinner } from "@/components/ui/spinner";
@@ -166,13 +165,6 @@ function ZoneDetailDialog({
   );
 }
 
-const priceFields = [
-  { value: "registrationPriceCents", label: "Регистрация" },
-  { value: "renewalPriceCents", label: "Продление" },
-  { value: "threeYearTcoCents", label: "Владение 3 года" },
-] as const;
-type PriceField = (typeof priceFields)[number]["value"];
-
 const verificationFilters = [
   { value: "all", label: "Любой статус" },
   { value: "required", label: "Требует проверки" },
@@ -191,9 +183,6 @@ export function ZonePricingPage() {
   const [sorting, setSorting] = useState<SortingState>([{ id: "tld", desc: false }]);
   const [selectedTld, setSelectedTld] = useState<string>();
   const [verificationFilter, setVerificationFilter] = useState<VerificationFilter>("all");
-  const [priceField, setPriceField] = useState<PriceField>("threeYearTcoCents");
-  const [priceMin, setPriceMin] = useState("");
-  const [priceMax, setPriceMax] = useState("");
 
   const staff = useQuery({ queryKey: ["staff-session"], queryFn: adminApi.getSession, retry: false });
   const mayWrite = can(staff.data, "domains.write");
@@ -219,17 +208,12 @@ export function ZonePricingPage() {
     onError: (error) => toast.error(error instanceof ApiError ? apiErrorMessage(error) : "Не удалось синхронизировать каталог цен."),
   });
 
-  const minCents = priceMin ? Math.round(Number(priceMin) * 100) : undefined;
-  const maxCents = priceMax ? Math.round(Number(priceMax) * 100) : undefined;
-
   const rows = useMemo(() => {
     let result = zonePricing.data ?? [];
     if (verificationFilter !== "all") {
       const wantsVerification = verificationFilter === "required";
       result = result.filter((zone) => zone.requiresVerification === wantsVerification);
     }
-    if (minCents !== undefined) result = result.filter((zone) => zone[priceField] >= minCents);
-    if (maxCents !== undefined) result = result.filter((zone) => zone[priceField] <= maxCents);
 
     const sort = sorting[0];
     if (sort) {
@@ -240,16 +224,16 @@ export function ZonePricingPage() {
       });
     }
     return result;
-  }, [zonePricing.data, verificationFilter, minCents, maxCents, priceField, sorting]);
+  }, [zonePricing.data, verificationFilter, sorting]);
 
   const columns: ColumnDef<ZonePricing>[] = [
-    { id: "tld", header: "Зона", cell: ({ row }) => <span className="font-medium">.{row.original.tld}</span> },
-    { id: "registrationPriceCents", header: "Регистрация", cell: ({ row }) => formatUsd(row.original.registrationPriceCents) },
-    { id: "renewalPriceCents", header: "Продление", cell: ({ row }) => formatUsd(row.original.renewalPriceCents) },
-    { id: "transferPriceCents", header: "Трансфер", cell: ({ row }) => formatUsd(row.original.transferPriceCents) },
-    { id: "threeYearTcoCents", header: "Владение 3 года", cell: ({ row }) => formatUsd(row.original.threeYearTcoCents) },
+    { accessorKey: "tld", header: "Зона", cell: ({ row }) => <span className="font-medium">.{row.original.tld}</span> },
+    { accessorKey: "registrationPriceCents", header: "Регистрация", cell: ({ row }) => formatUsd(row.original.registrationPriceCents) },
+    { accessorKey: "renewalPriceCents", header: "Продление", cell: ({ row }) => formatUsd(row.original.renewalPriceCents) },
+    { accessorKey: "transferPriceCents", header: "Трансфер", cell: ({ row }) => formatUsd(row.original.transferPriceCents) },
+    { accessorKey: "threeYearTcoCents", header: "Владение 3 года", cell: ({ row }) => formatUsd(row.original.threeYearTcoCents) },
     {
-      id: "requiresVerification",
+      accessorKey: "requiresVerification",
       header: "Проверка",
       cell: ({ row }) =>
         row.original.requiresVerification ? (
@@ -284,7 +268,7 @@ export function ZonePricingPage() {
         }
       />
 
-      <div className="grid gap-3 md:grid-cols-4">
+      <div className="grid gap-3 sm:grid-cols-2 md:max-w-md">
         <Select
           items={(accounts.data ?? []).map((account) => ({ value: account.id, label: `${account.code} · ${account.environment}` }))}
           value={registrarAccountId}
@@ -320,27 +304,6 @@ export function ZonePricingPage() {
             </SelectGroup>
           </SelectContent>
         </Select>
-
-        <Select items={priceFields} value={priceField} onValueChange={(value) => setPriceField((value as PriceField) ?? "threeYearTcoCents")}>
-          <SelectTrigger aria-label="Какую цену фильтровать">
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectGroup>
-              <SelectLabel>Фильтр по цене</SelectLabel>
-              {priceFields.map((option) => (
-                <SelectItem key={option.value} value={option.value}>
-                  {option.label}
-                </SelectItem>
-              ))}
-            </SelectGroup>
-          </SelectContent>
-        </Select>
-
-        <div className="flex items-center gap-2">
-          <Input aria-label="Цена от, $" type="number" min={0} placeholder="от, $" value={priceMin} onChange={(event) => setPriceMin(event.target.value)} />
-          <Input aria-label="Цена до, $" type="number" min={0} placeholder="до, $" value={priceMax} onChange={(event) => setPriceMax(event.target.value)} />
-        </div>
       </div>
 
       {!registrarAccountId ? (
