@@ -33,7 +33,7 @@ function Field({ label, value }: { label: string; value: React.ReactNode }) {
   return (
     <div>
       <p className="text-xs text-muted-foreground">{label}</p>
-      <p className="text-sm font-medium">{value}</p>
+      <div className="text-sm font-medium">{value}</div>
     </div>
   );
 }
