@@ -140,3 +140,11 @@ export type PurchaseBatchItemResult = Schemas["PurchaseBatchItemResult"];
 export type PurchaseBatchResult = Schemas["PurchaseBatchResult"];
 export type DomainStatus = Domain["status"];
 export type AdminDomainQuery = NonNullable<operations["listDomains"]["parameters"]["query"]>;
+export type UpdateDomainMetadata = NonNullable<operations["updateDomainMetadata"]["requestBody"]>["content"]["application/json"];
+
+export type ZonePricing = Schemas["ZonePricing"];
+export type AdminZonePricingQuery = operations["listZonePricing"]["parameters"]["query"];
+export type UpdateZonePricing = NonNullable<operations["updateZonePricing"]["requestBody"]>["content"]["application/json"];
+export type CheckZoneRequirementsResult = operations["checkZoneRequirements"]["responses"]["201"]["content"]["application/json"];
+export type GenerateDomainCandidatesRequest = NonNullable<operations["generateDomainCandidates"]["requestBody"]>["content"]["application/json"];
+export type CheckDomainAvailabilityResult = operations["checkDomainAvailability"]["responses"]["201"]["content"]["application/json"][number];

@@ -3,6 +3,7 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { ArrowLeftIcon, PlusIcon } from "lucide-react";
 import Link from "next/link";
+import { useState } from "react";
 import { toast } from "sonner";
 import { adminApi, ApiError } from "@/api/client";
 import { AppShell } from "@/components/app-shell";
@@ -14,6 +15,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Dialog, DialogClose, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { EmptyState } from "@/components/empty-state";
+import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Spinner } from "@/components/ui/spinner";
 import { Switch } from "@/components/ui/switch";
@@ -63,6 +65,8 @@ function AddDnsRecordDialog() {
 
 export function DomainDetailPage({ domainId }: { domainId: string }) {
   const queryClient = useQueryClient();
+  const [internalLabel, setInternalLabel] = useState("");
+  const [labelTouched, setLabelTouched] = useState(false);
 
   const staff = useQuery({ queryKey: ["staff-session"], queryFn: adminApi.getSession, retry: false });
   const mayWrite = can(staff.data, "domains.write");
@@ -111,8 +115,21 @@ export function DomainDetailPage({ domainId }: { domainId: string }) {
     },
     onError: (error) => toast.error(error instanceof ApiError ? apiErrorMessage(error) : "Не удалось архивировать домен."),
   });
+  const labelMutation = useMutation({
+    mutationFn: () => adminApi.updateDomainMetadata(domainId, { internalLabel }),
+    onSuccess: async () => {
+      toast.success("Внутренняя метка сохранена.");
+      setLabelTouched(false);
+      await refresh();
+    },
+    onError: (error) => toast.error(error instanceof ApiError ? apiErrorMessage(error) : "Не удалось сохранить внутреннюю метку."),
+  });
 
   const data = domain.data;
+  if (data && !labelTouched) {
+    const wanted = data.internalLabel ?? "";
+    if (wanted !== internalLabel) setInternalLabel(wanted);
+  }
 
   return (
     <AppShell>
@@ -203,6 +220,34 @@ export function DomainDetailPage({ domainId }: { domainId: string }) {
                 />
                 <Field label="Ref у регистратора" value={data.registrarDomainRef ?? "—"} />
                 {data.archivedAt && <Field label="В архиве с" value={formatDate(data.archivedAt)} />}
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle>Внутренняя метка</CardTitle>
+              <CardDescription>Видно только в этой админке, никогда не передаётся регистратору, в DNS или WHOIS</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="flex flex-wrap items-center gap-2">
+                <Input
+                  aria-label="Внутренняя метка"
+                  placeholder="Например panel-fr-01"
+                  className="max-w-72"
+                  disabled={!mayWrite}
+                  value={internalLabel}
+                  onChange={(event) => {
+                    setInternalLabel(event.target.value);
+                    setLabelTouched(true);
+                  }}
+                />
+                {mayWrite && (
+                  <Button size="sm" disabled={labelMutation.isPending || internalLabel === (data.internalLabel ?? "")} onClick={() => labelMutation.mutate()}>
+                    {labelMutation.isPending && <Spinner />}
+                    Сохранить
+                  </Button>
+                )}
               </div>
             </CardContent>
           </Card>

@@ -30,21 +30,38 @@ function resultVariant(status: PurchaseBatchItemResult["status"]): "default" | "
   return status === "DRY_RUN_OK" ? "outline" : "default";
 }
 
-type Row = { fqdn: string; costCents: string };
+export type PurchaseDomainRow = { fqdn: string; costCents: string };
+type Row = PurchaseDomainRow;
 const emptyRow: Row = { fqdn: "", costCents: "" };
 
-export function PurchaseDomainsDialog({ onPurchased }: { onPurchased: () => void }) {
-  const [open, setOpen] = useState(false);
-  const [registrarAccountId, setRegistrarAccountId] = useState("");
-  const [rows, setRows] = useState<Row[]>([{ ...emptyRow }]);
+export function PurchaseDomainsDialog({
+  onPurchased,
+  trigger,
+  open: openProp,
+  onOpenChange: onOpenChangeProp,
+  initialRegistrarAccountId,
+  initialRows,
+}: {
+  onPurchased: () => void;
+  trigger?: React.ReactNode;
+  open?: boolean;
+  onOpenChange?: (open: boolean) => void;
+  initialRegistrarAccountId?: string;
+  initialRows?: Row[];
+}) {
+  const [uncontrolledOpen, setUncontrolledOpen] = useState(false);
+  const open = openProp ?? uncontrolledOpen;
+  const setOpen = onOpenChangeProp ?? setUncontrolledOpen;
+  const [registrarAccountId, setRegistrarAccountId] = useState(initialRegistrarAccountId ?? "");
+  const [rows, setRows] = useState<Row[]>(initialRows && initialRows.length > 0 ? initialRows : [{ ...emptyRow }]);
   const [dryRunResults, setDryRunResults] = useState<PurchaseBatchItemResult[]>();
   const [finalResults, setFinalResults] = useState<PurchaseBatchItemResult[]>();
 
   const accounts = useQuery({ queryKey: ["admin-domain-registrar-accounts"], queryFn: adminApi.listDomainRegistrarAccounts, retry: false, enabled: open });
 
   const reset = () => {
-    setRegistrarAccountId("");
-    setRows([{ ...emptyRow }]);
+    setRegistrarAccountId(initialRegistrarAccountId ?? "");
+    setRows(initialRows && initialRows.length > 0 ? initialRows.map((row) => ({ ...row })) : [{ ...emptyRow }]);
     setDryRunResults(undefined);
     setFinalResults(undefined);
   };
@@ -93,7 +110,7 @@ export function PurchaseDomainsDialog({ onPurchased }: { onPurchased: () => void
         if (!next) reset();
       }}
     >
-      <DialogTrigger render={<Button size="sm">Купить домены</Button>} />
+      {trigger !== null && <DialogTrigger render={(trigger as React.ReactElement) ?? <Button size="sm">Купить домены</Button>} />}
       <DialogContent className="sm:max-w-2xl">
         <DialogHeader>
           <DialogTitle>Купить домены</DialogTitle>
