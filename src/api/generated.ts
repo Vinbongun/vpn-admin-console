@@ -1178,6 +1178,184 @@ export interface paths {
         patch: operations["updatePlatformSetting"];
         trace?: never;
     };
+    "/admin/v1/domains": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["listDomains"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/v1/domains/registrar-accounts": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description Lets the purchase wizard offer a registrar-account picker instead of requiring a raw UUID - no secrets are ever included in the response. */
+        get: operations["listDomainRegistrarAccounts"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/v1/domains/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["getDomain"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/v1/domains/{id}/dns-records": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["listDomainDnsRecords"];
+        put?: never;
+        post: operations["createDomainDnsRecord"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/v1/domains/purchase": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["purchaseDomains"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/v1/domains/{id}/renew": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["renewDomain"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/v1/domains/{id}/auto-renew": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch: operations["setDomainAutoRenew"];
+        trace?: never;
+    };
+    "/admin/v1/domains/{id}/sync": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["syncDomain"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/v1/domains/{id}/unlink": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["unlinkDomain"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/v1/domains/{id}/archive": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["archiveDomain"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/webhooks/v1/porkbun": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** @description Verifies X-Porkbun-Signature as HMAC-SHA256 over "{X-Porkbun-Timestamp}.{rawBody}", rejects payloads older than 5 minutes, and dedupes by X-Porkbun-Webhook-Id. No public HTTPS endpoint is registered with Porkbun in this environment yet; exercised so far only with synthetic signed payloads. */
+        post: operations["receivePorkbunWebhook"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/admin/v1/subscriptions/{subscriptionId}/tokens/rotate": {
         parameters: {
             query?: never;
@@ -2329,6 +2507,75 @@ export interface components {
         UpdatePlatformSetting: {
             /** @description Validated server-side against this key's bounds before being written - see GET /admin/v1/platform-settings for the current value/shape of each key. */
             value: unknown;
+        };
+        Domain: {
+            /** Format: uuid */
+            id: string;
+            fqdn: string;
+            /** Format: uuid */
+            registrarAccountId: string;
+            registrarDomainRef?: string | null;
+            /** @enum {string} */
+            status: "PENDING" | "ACTIVE" | "EXPIRED" | "ARCHIVED";
+            /**
+             * @description Always UNMANAGED in this release - no DnsProvider is wired up yet.
+             * @enum {string}
+             */
+            dnsMode: "UNMANAGED" | "MANAGED";
+            autoRenew: boolean;
+            /** Format: date-time */
+            expiresAt?: string | null;
+            /**
+             * Format: uuid
+             * @description The panel/node this domain is assigned to, if any - at most one domain per panel/node.
+             */
+            controlPlaneSourceId?: string | null;
+            /** Format: date-time */
+            archivedAt?: string | null;
+            /** Format: date-time */
+            createdAt?: string;
+        };
+        /** @description Never includes secret_ref or any credential material. */
+        RegistrarAccountSummary: {
+            /** Format: uuid */
+            id: string;
+            /** @example porkbun-sandbox */
+            code: string;
+            /** @example PORKBUN */
+            providerType: string;
+            /** @enum {string} */
+            environment: "sandbox" | "production";
+            /** @example ACTIVE */
+            status: string;
+        };
+        PurchaseDomainItem: {
+            fqdn: string;
+            /** @description Must equal the registrar's current quote for this fqdn - a stale price is rejected as PRICE_MISMATCH. */
+            expectedCostCents: number;
+        };
+        PurchaseDomainsRequest: {
+            /** Format: uuid */
+            registrarAccountId: string;
+            domains: components["schemas"]["PurchaseDomainItem"][];
+            /** @description When true, validates the whole batch against the registrar without registering anything. */
+            dryRun?: boolean;
+        };
+        PurchaseBatchItemResult: {
+            fqdn: string;
+            /** @enum {string} */
+            status: "SUCCEEDED" | "FAILED" | "DRY_RUN_OK";
+            errorCode?: string;
+            errorMessage?: string;
+            /** Format: uuid */
+            domainId?: string;
+        };
+        PurchaseBatchResult: {
+            /** Format: uuid */
+            batchId: string;
+            requested: number;
+            succeeded: number;
+            failed: number;
+            results: components["schemas"]["PurchaseBatchItemResult"][];
         };
         RotateSubscriptionToken: {
             /** Format: date-time */
@@ -5294,6 +5541,384 @@ export interface operations {
             };
             /** @description Unknown settings key */
             404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    listDomains: {
+        parameters: {
+            query?: {
+                status?: "PENDING" | "ACTIVE" | "EXPIRED" | "ARCHIVED";
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description All domains plus a status-count aggregate */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        domains: components["schemas"]["Domain"][];
+                        /** @description Count of domains per status value */
+                        stats: {
+                            [key: string]: number;
+                        };
+                    };
+                };
+            };
+            /** @description Missing domains.read permission */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    listDomainRegistrarAccounts: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description All configured registrar accounts (currently only Porkbun sandbox) */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RegistrarAccountSummary"][];
+                };
+            };
+            /** @description Missing domains.read permission */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    getDomain: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Single domain */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Domain"];
+                };
+            };
+            /** @description Missing domains.read permission */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Domain not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    listDomainDnsRecords: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Locally cached DNS records for this domain. Always empty/stale until a DnsProvider is wired up for dns_mode = MANAGED - this is a local cache, never the authoritative source. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": Record<string, never>[];
+                };
+            };
+        };
+    };
+    createDomainDnsRecord: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description No DnsProvider is configured yet for any domain (dns_mode is always UNMANAGED in this release) - the platform reports this honestly rather than faking success. */
+            501: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    purchaseDomains: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": components["schemas"]["PurchaseDomainsRequest"];
+            };
+        };
+        responses: {
+            /** @description Batch result with a per-domain outcome - partial success (e.g. 17/20 succeeded) is expected and not itself an error. Each domain's registrar call is idempotency-keyed per (batch, fqdn), so retrying the same batch never double-purchases. Only ever executes against a registrar account whose environment is 'sandbox' unless PORKBUN_ALLOW_PRODUCTION=true has been explicitly set. */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PurchaseBatchResult"];
+                };
+            };
+            /** @description Missing domains.write permission */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    renewDomain: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Renewal result for this single domain */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PurchaseBatchItemResult"];
+                };
+            };
+            /** @description Missing domains.write permission */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Domain not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    setDomainAutoRenew: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": {
+                    enabled: boolean;
+                };
+            };
+        };
+        responses: {
+            /** @description Auto-renew updated at the registrar and locally */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Missing domains.write permission */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Domain not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    syncDomain: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Local status/auto-renew/expiry reconciled against the registrar's own view */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Missing domains.write permission */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Domain not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    unlinkDomain: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Clears this domain's control_plane_source_id (frees it to be assigned to a different panel/node) - never contacts the registrar, never touches the registration itself. */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Missing domains.write permission */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Domain not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    archiveDomain: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Local archival only (sets archived_at, unlinks from any panel/node) - never releases or deletes the actual registration at the registrar. */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Missing domains.write permission */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Domain not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    receivePorkbunWebhook: {
+        parameters: {
+            query?: never;
+            header: {
+                "X-Porkbun-Timestamp": string;
+                "X-Porkbun-Signature": string;
+                "X-Porkbun-Webhook-Id": string;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Processed (or deduped as an already-seen delivery) */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Missing/invalid signature */
+            400: {
                 headers: {
                     [name: string]: unknown;
                 };

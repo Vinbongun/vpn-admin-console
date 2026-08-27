@@ -56,7 +56,9 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     if (!hasSession || isUnauthorized) router.replace(`/login?next=${encodeURIComponent(pathname)}`);
   }, [hasSession, isUnauthorized, pathname, router]);
 
-  const items = navigation.filter((item) => !item.permission || can(staff, item.permission));
+  const items = navigation
+    .filter((item) => !item.permission || can(staff, item.permission))
+    .map((item) => ({ ...item, items: item.items?.filter((subItem) => !subItem.permission || can(staff, subItem.permission)) }));
   const current = navigation.find((item) => item.href === pathname);
 
   const logout = async () => {

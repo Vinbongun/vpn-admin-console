@@ -131,3 +131,12 @@ export type PlatformSetting = Omit<Schemas["PlatformSetting"], "key" | "value"> 
   value: RateLimitValue | number;
 };
 export type UpdatePlatformSetting = { value: RateLimitValue | number };
+
+export type Domain = Schemas["Domain"];
+export type RegistrarAccountSummary = Schemas["RegistrarAccountSummary"];
+export type PurchaseDomainItem = Schemas["PurchaseDomainItem"];
+export type PurchaseDomainsRequest = Schemas["PurchaseDomainsRequest"];
+export type PurchaseBatchItemResult = Schemas["PurchaseBatchItemResult"];
+export type PurchaseBatchResult = Schemas["PurchaseBatchResult"];
+export type DomainStatus = Domain["status"];
+export type AdminDomainQuery = NonNullable<operations["listDomains"]["parameters"]["query"]>;
