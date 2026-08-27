@@ -3,7 +3,7 @@
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { RefreshCwIcon, SparklesIcon } from "lucide-react";
 import Link from "next/link";
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { toast } from "sonner";
 import { adminApi, ApiError } from "@/api/client";
 import type { CheckDomainAvailabilityResult } from "@/api/types";
@@ -36,6 +36,7 @@ export function GenerateDomainsDialog({ onPurchased }: { onPurchased: () => void
   const [open, setOpen] = useState(false);
   const [registrarAccountId, setRegistrarAccountId] = useState("");
   const [tlds, setTlds] = useState<string[]>([]);
+  const [tldSearch, setTldSearch] = useState("");
   const [count, setCount] = useState("10");
   const [candidates, setCandidates] = useState<Candidate[]>();
   const [purchaseOpen, setPurchaseOpen] = useState(false);
@@ -50,11 +51,22 @@ export function GenerateDomainsDialog({ onPurchased }: { onPurchased: () => void
     enabled: open && Boolean(registrarAccountId),
     retry: false,
   });
-  const availableTlds = zonePricing.data?.map((zone) => zone.tld).sort() ?? [];
+  const availableTlds = useMemo(
+    () =>
+      [...(zonePricing.data ?? [])]
+        .sort((a, b) => a.threeYearTcoCents - b.threeYearTcoCents || a.tld.localeCompare(b.tld))
+        .map((zone) => zone.tld),
+    [zonePricing.data],
+  );
+  const visibleTlds = useMemo(
+    () => (tldSearch ? availableTlds.filter((tld) => tld.includes(tldSearch.trim().toLowerCase())) : availableTlds),
+    [availableTlds, tldSearch],
+  );
 
   const reset = () => {
     setRegistrarAccountId("");
     setTlds([]);
+    setTldSearch("");
     setCount("10");
     setCandidates(undefined);
   };
@@ -172,12 +184,22 @@ export function GenerateDomainsDialog({ onPurchased }: { onPurchased: () => void
                     </p>
                   ) : (
                     <>
+                      <Input
+                        aria-label="Поиск по доменным зонам"
+                        placeholder="Поиск по зонам…"
+                        value={tldSearch}
+                        onChange={(event) => setTldSearch(event.target.value)}
+                      />
                       <div className="flex max-h-48 flex-col gap-1 overflow-y-auto rounded-md border p-2">
-                        {availableTlds.map((tld) => (
-                          <label key={tld} className="flex cursor-pointer items-center gap-2 rounded-sm px-1.5 py-1 text-sm hover:bg-accent">
-                            <Checkbox checked={tlds.includes(tld)} onCheckedChange={() => toggleTld(tld)} />.{tld}
-                          </label>
-                        ))}
+                        {visibleTlds.length === 0 ? (
+                          <p className="px-1.5 py-1 text-sm text-muted-foreground">Ничего не найдено.</p>
+                        ) : (
+                          visibleTlds.map((tld) => (
+                            <label key={tld} className="flex cursor-pointer items-center gap-2 rounded-sm px-1.5 py-1 text-sm hover:bg-accent">
+                              <Checkbox checked={tlds.includes(tld)} onCheckedChange={() => toggleTld(tld)} />.{tld}
+                            </label>
+                          ))
+                        )}
                       </div>
                       {tlds.length > 0 && (
                         <div className="flex flex-wrap gap-1">
