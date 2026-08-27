@@ -16,7 +16,7 @@ type NavItem = {
   href: string;
   icon: typeof Gauge;
   permission?: string;
-  items?: { label: string; href: string }[];
+  items?: { label: string; href: string; permission?: string }[];
 };
 
 export const navigation = [
@@ -42,6 +42,7 @@ export const navigation = [
       { label: "Серверы", href: "/infrastructure#endpoints" },
       { label: "Инциденты", href: "/infrastructure#incidents" },
       { label: "Статистика", href: "/infrastructure#popularity" },
+      { label: "Домены", href: "/infrastructure/domains", permission: "domains.read" },
     ],
   },
   {
