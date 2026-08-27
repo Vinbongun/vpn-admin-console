@@ -15,7 +15,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Dialog, DialogClose, DialogContent, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Select, SelectContent, SelectGroup, SelectItem, SelectLabel, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Spinner } from "@/components/ui/spinner";
 
 function apiErrorMessage(error: ApiError): string {
@@ -182,11 +182,14 @@ export function BrandPlansSection({ brand, mayWrite }: { brand: BrandDetail; may
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
-                        {billingModels.map((model) => (
-                          <SelectItem key={model} value={model}>
-                            {model}
-                          </SelectItem>
-                        ))}
+                        <SelectGroup>
+                          <SelectLabel>Модель тарификации</SelectLabel>
+                          {billingModels.map((model) => (
+                            <SelectItem key={model} value={model}>
+                              {model}
+                            </SelectItem>
+                          ))}
+                        </SelectGroup>
                       </SelectContent>
                     </Select>
                   </div>
@@ -205,11 +208,14 @@ export function BrandPlansSection({ brand, mayWrite }: { brand: BrandDetail; may
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
-                        {serviceLines.map((line) => (
-                          <SelectItem key={line} value={line}>
-                            {line}
-                          </SelectItem>
-                        ))}
+                        <SelectGroup>
+                          <SelectLabel>Линейка услуг</SelectLabel>
+                          {serviceLines.map((line) => (
+                            <SelectItem key={line} value={line}>
+                              {line}
+                            </SelectItem>
+                          ))}
+                        </SelectGroup>
                       </SelectContent>
                     </Select>
                   </div>
@@ -270,11 +276,14 @@ export function BrandPlansSection({ brand, mayWrite }: { brand: BrandDetail; may
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  {billingModels.map((model) => (
-                    <SelectItem key={model} value={model}>
-                      {model}
-                    </SelectItem>
-                  ))}
+                  <SelectGroup>
+                    <SelectLabel>Модель тарификации</SelectLabel>
+                    {billingModels.map((model) => (
+                      <SelectItem key={model} value={model}>
+                        {model}
+                      </SelectItem>
+                    ))}
+                  </SelectGroup>
                 </SelectContent>
               </Select>
             </div>
@@ -289,11 +298,14 @@ export function BrandPlansSection({ brand, mayWrite }: { brand: BrandDetail; may
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  {serviceLines.map((line) => (
-                    <SelectItem key={line} value={line}>
-                      {line}
-                    </SelectItem>
-                  ))}
+                  <SelectGroup>
+                    <SelectLabel>Линейка услуг</SelectLabel>
+                    {serviceLines.map((line) => (
+                      <SelectItem key={line} value={line}>
+                        {line}
+                      </SelectItem>
+                    ))}
+                  </SelectGroup>
                 </SelectContent>
               </Select>
             </div>
@@ -311,8 +323,11 @@ export function BrandPlansSection({ brand, mayWrite }: { brand: BrandDetail; may
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="ACTIVE">ACTIVE</SelectItem>
-                  <SelectItem value="INACTIVE">INACTIVE</SelectItem>
+                  <SelectGroup>
+                    <SelectLabel>Статус</SelectLabel>
+                    <SelectItem value="ACTIVE">ACTIVE</SelectItem>
+                    <SelectItem value="INACTIVE">INACTIVE</SelectItem>
+                  </SelectGroup>
                 </SelectContent>
               </Select>
             </div>

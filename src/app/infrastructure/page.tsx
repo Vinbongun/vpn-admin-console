@@ -19,7 +19,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardAction, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Select, SelectContent, SelectGroup, SelectItem, SelectLabel, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Spinner } from "@/components/ui/spinner";
 import { CreateSourceDialog } from "@/features/infrastructure/create-source-dialog";
 import { EndpointEditDialog } from "@/features/infrastructure/endpoint-edit-dialog";
@@ -160,12 +160,15 @@ export default function InfrastructurePage() {
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="all">Все панели</SelectItem>
-                {sources.data?.map((source) => (
-                  <SelectItem key={source.id} value={source.code}>
-                    {source.code}
-                  </SelectItem>
-                ))}
+                <SelectGroup>
+                  <SelectLabel>Панель</SelectLabel>
+                  <SelectItem value="all">Все панели</SelectItem>
+                  {sources.data?.map((source) => (
+                    <SelectItem key={source.id} value={source.code}>
+                      {source.code}
+                    </SelectItem>
+                  ))}
+                </SelectGroup>
               </SelectContent>
             </Select>
             <Select
@@ -177,13 +180,16 @@ export default function InfrastructurePage() {
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="all">Все страны</SelectItem>
-                {endpointCountries.map((code) => (
-                  <SelectItem key={code} value={code}>
-                    <CountryFlag code={code} className="mr-1" />
-                    {code}
-                  </SelectItem>
-                ))}
+                <SelectGroup>
+                  <SelectLabel>Страна</SelectLabel>
+                  <SelectItem value="all">Все страны</SelectItem>
+                  {endpointCountries.map((code) => (
+                    <SelectItem key={code} value={code}>
+                      <CountryFlag code={code} className="mr-1" />
+                      {code}
+                    </SelectItem>
+                  ))}
+                </SelectGroup>
               </SelectContent>
             </Select>
             <Input aria-label="Протокол" placeholder="Протокол" value={protocol} onChange={(event) => { setProtocol(event.target.value); setEndpointPage(1); }} />
@@ -224,10 +230,13 @@ export default function InfrastructurePage() {
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="all">Все статусы</SelectItem>
-                <SelectItem value="OPEN">OPEN</SelectItem>
-                <SelectItem value="ACKNOWLEDGED">ACKNOWLEDGED</SelectItem>
-                <SelectItem value="RESOLVED">RESOLVED</SelectItem>
+                <SelectGroup>
+                  <SelectLabel>Статус инцидента</SelectLabel>
+                  <SelectItem value="all">Все статусы</SelectItem>
+                  <SelectItem value="OPEN">OPEN</SelectItem>
+                  <SelectItem value="ACKNOWLEDGED">ACKNOWLEDGED</SelectItem>
+                  <SelectItem value="RESOLVED">RESOLVED</SelectItem>
+                </SelectGroup>
               </SelectContent>
             </Select>
             <Select
@@ -244,10 +253,13 @@ export default function InfrastructurePage() {
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="all">Любая критичность</SelectItem>
-                <SelectItem value="INFO">INFO</SelectItem>
-                <SelectItem value="WARNING">WARNING</SelectItem>
-                <SelectItem value="CRITICAL">CRITICAL</SelectItem>
+                <SelectGroup>
+                  <SelectLabel>Критичность</SelectLabel>
+                  <SelectItem value="all">Любая критичность</SelectItem>
+                  <SelectItem value="INFO">INFO</SelectItem>
+                  <SelectItem value="WARNING">WARNING</SelectItem>
+                  <SelectItem value="CRITICAL">CRITICAL</SelectItem>
+                </SelectGroup>
               </SelectContent>
             </Select>
           </div>
@@ -311,8 +323,11 @@ function PopularityCard() {
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="assigned">По назначению</SelectItem>
-              <SelectItem value="live">По реальному использованию</SelectItem>
+              <SelectGroup>
+                <SelectLabel>Режим</SelectLabel>
+                <SelectItem value="assigned">По назначению</SelectItem>
+                <SelectItem value="live">По реальному использованию</SelectItem>
+              </SelectGroup>
             </SelectContent>
           </Select>
           {mode === "live" && (
@@ -321,8 +336,11 @@ function PopularityCard() {
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="7">7 дней</SelectItem>
-                <SelectItem value="30">30 дней</SelectItem>
+                <SelectGroup>
+                  <SelectLabel>Окно, дней</SelectLabel>
+                  <SelectItem value="7">7 дней</SelectItem>
+                  <SelectItem value="30">30 дней</SelectItem>
+                </SelectGroup>
               </SelectContent>
             </Select>
           )}
@@ -516,13 +534,16 @@ function SourcesCard({ sources, mayWrite }: { sources: ReturnType<typeof useQuer
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="all">Все страны</SelectItem>
-                {sourceCountries.map((code) => (
-                  <SelectItem key={code} value={code}>
-                    <CountryFlag code={code} className="mr-1" />
-                    {code}
-                  </SelectItem>
-                ))}
+                <SelectGroup>
+                  <SelectLabel>Страна панели</SelectLabel>
+                  <SelectItem value="all">Все страны</SelectItem>
+                  {sourceCountries.map((code) => (
+                    <SelectItem key={code} value={code}>
+                      <CountryFlag code={code} className="mr-1" />
+                      {code}
+                    </SelectItem>
+                  ))}
+                </SelectGroup>
               </SelectContent>
             </Select>
           </div>

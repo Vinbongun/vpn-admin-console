@@ -11,7 +11,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Field, FieldError, FieldGroup, FieldLabel } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Select, SelectContent, SelectGroup, SelectItem, SelectLabel, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Spinner } from "@/components/ui/spinner";
 import { brandBasicsSchema, brandStatuses, type BrandBasicsValues } from "@/features/brands/schema";
 
@@ -68,11 +68,14 @@ export function BrandBasicsSection({ brand, mayWrite }: { brand: BrandDetail; ma
                           <SelectValue />
                         </SelectTrigger>
                         <SelectContent>
-                          {brandStatuses.map((value) => (
-                            <SelectItem key={value} value={value}>
-                              {value}
-                            </SelectItem>
-                          ))}
+                          <SelectGroup>
+                            <SelectLabel>Статус</SelectLabel>
+                            {brandStatuses.map((value) => (
+                              <SelectItem key={value} value={value}>
+                                {value}
+                              </SelectItem>
+                            ))}
+                          </SelectGroup>
                         </SelectContent>
                       </Select>
                     </Field>

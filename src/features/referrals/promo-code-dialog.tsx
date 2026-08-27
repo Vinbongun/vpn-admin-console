@@ -13,7 +13,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Dialog, DialogClose, DialogContent, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Field, FieldDescription, FieldError, FieldGroup, FieldLabel } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Select, SelectContent, SelectGroup, SelectItem, SelectLabel, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Spinner } from "@/components/ui/spinner";
 import { discountTypes, promoCodeSchema, promoCodeStatuses, type PromoCodeValues } from "@/features/referrals/schema";
 
@@ -117,11 +117,14 @@ export function PromoCodeDialog({ promoCode, trigger }: { promoCode?: PromoCode;
                         <SelectValue placeholder="Выберите партнёра…" />
                       </SelectTrigger>
                       <SelectContent>
-                        {partners.data?.map((partner) => (
-                          <SelectItem key={partner.id} value={partner.id}>
-                            {partner.name}
-                          </SelectItem>
-                        ))}
+                        <SelectGroup>
+                          <SelectLabel>Партнёр</SelectLabel>
+                          {partners.data?.map((partner) => (
+                            <SelectItem key={partner.id} value={partner.id}>
+                              {partner.name}
+                            </SelectItem>
+                          ))}
+                        </SelectGroup>
                       </SelectContent>
                     </Select>
                     <FieldError errors={[fieldState.error]} />
@@ -148,8 +151,11 @@ export function PromoCodeDialog({ promoCode, trigger }: { promoCode?: PromoCode;
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="PERCENT">% скидка</SelectItem>
-                        <SelectItem value="FIXED_PRICE">Фиксированная цена</SelectItem>
+                        <SelectGroup>
+                          <SelectLabel>Тип скидки</SelectLabel>
+                          <SelectItem value="PERCENT">% скидка</SelectItem>
+                          <SelectItem value="FIXED_PRICE">Фиксированная цена</SelectItem>
+                        </SelectGroup>
                       </SelectContent>
                     </Select>
                   </Field>
@@ -191,11 +197,14 @@ export function PromoCodeDialog({ promoCode, trigger }: { promoCode?: PromoCode;
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                      {promoCodeStatuses.map((value) => (
-                        <SelectItem key={value} value={value}>
-                          {value}
-                        </SelectItem>
-                      ))}
+                      <SelectGroup>
+                        <SelectLabel>Статус</SelectLabel>
+                        {promoCodeStatuses.map((value) => (
+                          <SelectItem key={value} value={value}>
+                            {value}
+                          </SelectItem>
+                        ))}
+                      </SelectGroup>
                     </SelectContent>
                   </Select>
                 </Field>

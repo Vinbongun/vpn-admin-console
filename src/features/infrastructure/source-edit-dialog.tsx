@@ -11,7 +11,7 @@ import { Button } from "@/components/ui/button";
 import { Dialog, DialogClose, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Field, FieldError, FieldGroup, FieldLabel } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Select, SelectContent, SelectGroup, SelectItem, SelectLabel, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Spinner } from "@/components/ui/spinner";
 import { Textarea } from "@/components/ui/textarea";
 import { billingPeriods, sourceStatuses, updateSourceSchema, type UpdateSourceValues } from "@/features/infrastructure/schema";
@@ -118,11 +118,14 @@ function SourceEditBody({ source, mayWrite, onClose }: { source: ControlPlaneSou
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    {sourceStatuses.map((value) => (
-                      <SelectItem key={value} value={value}>
-                        {value}
-                      </SelectItem>
-                    ))}
+                    <SelectGroup>
+                      <SelectLabel>Статус</SelectLabel>
+                      {sourceStatuses.map((value) => (
+                        <SelectItem key={value} value={value}>
+                          {value}
+                        </SelectItem>
+                      ))}
+                    </SelectGroup>
                   </SelectContent>
                 </Select>
               </Field>
@@ -173,12 +176,15 @@ function SourceEditBody({ source, mayWrite, onClose }: { source: ControlPlaneSou
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="">Не задано</SelectItem>
-                    {billingPeriods.map((value) => (
-                      <SelectItem key={value} value={value}>
-                        {billingPeriodLabel(value)}
-                      </SelectItem>
-                    ))}
+                    <SelectGroup>
+                      <SelectLabel>Период оплаты</SelectLabel>
+                      <SelectItem value="">Не задано</SelectItem>
+                      {billingPeriods.map((value) => (
+                        <SelectItem key={value} value={value}>
+                          {billingPeriodLabel(value)}
+                        </SelectItem>
+                      ))}
+                    </SelectGroup>
                   </SelectContent>
                 </Select>
               </Field>

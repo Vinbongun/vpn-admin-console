@@ -12,7 +12,7 @@ import { SectionHeader } from "@/components/section-header";
 import { StatusBadge } from "@/components/status-badge";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Select, SelectContent, SelectGroup, SelectItem, SelectLabel, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { PaymentDetailDialog } from "@/features/payments/payment-detail-dialog";
 import { PaymentsSummaryCards } from "@/features/payments/payments-summary";
 import { paymentStatuses } from "@/features/payments/schema";
@@ -100,12 +100,15 @@ export default function PaymentsPage() {
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="all">Все бренды</SelectItem>
-                {brands.data?.map((brand) => (
-                  <SelectItem key={brand.id} value={brand.code}>
-                    {brand.name}
-                  </SelectItem>
-                ))}
+                <SelectGroup>
+                  <SelectLabel>Бренд</SelectLabel>
+                  <SelectItem value="all">Все бренды</SelectItem>
+                  {brands.data?.map((brand) => (
+                    <SelectItem key={brand.id} value={brand.code}>
+                      {brand.name}
+                    </SelectItem>
+                  ))}
+                </SelectGroup>
               </SelectContent>
             </Select>
             <Select
@@ -117,12 +120,15 @@ export default function PaymentsPage() {
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="all">Все тарифы</SelectItem>
-                {plans.data?.items.map((plan) => (
-                  <SelectItem key={plan.id} value={plan.code}>
-                    {plan.name}
-                  </SelectItem>
-                ))}
+                <SelectGroup>
+                  <SelectLabel>Тариф</SelectLabel>
+                  <SelectItem value="all">Все тарифы</SelectItem>
+                  {plans.data?.items.map((plan) => (
+                    <SelectItem key={plan.id} value={plan.code}>
+                      {plan.name}
+                    </SelectItem>
+                  ))}
+                </SelectGroup>
               </SelectContent>
             </Select>
             <Select
@@ -134,12 +140,15 @@ export default function PaymentsPage() {
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="all">Все статусы</SelectItem>
-                {paymentStatuses.map((value) => (
-                  <SelectItem key={value} value={value}>
-                    {value}
-                  </SelectItem>
-                ))}
+                <SelectGroup>
+                  <SelectLabel>Статус</SelectLabel>
+                  <SelectItem value="all">Все статусы</SelectItem>
+                  {paymentStatuses.map((value) => (
+                    <SelectItem key={value} value={value}>
+                      {value}
+                    </SelectItem>
+                  ))}
+                </SelectGroup>
               </SelectContent>
             </Select>
             <Select
@@ -151,12 +160,15 @@ export default function PaymentsPage() {
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="all">Все шлюзы</SelectItem>
-                {gateways.data?.map((gateway) => (
-                  <SelectItem key={gateway.id} value={gateway.code}>
-                    {gateway.name}
-                  </SelectItem>
-                ))}
+                <SelectGroup>
+                  <SelectLabel>Шлюз</SelectLabel>
+                  <SelectItem value="all">Все шлюзы</SelectItem>
+                  {gateways.data?.map((gateway) => (
+                    <SelectItem key={gateway.id} value={gateway.code}>
+                      {gateway.name}
+                    </SelectItem>
+                  ))}
+                </SelectGroup>
               </SelectContent>
             </Select>
             <Select
@@ -168,12 +180,15 @@ export default function PaymentsPage() {
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="all">Все способы</SelectItem>
-                {methods.map((method) => (
-                  <SelectItem key={method.id} value={method.code}>
-                    {method.name} ({method.gatewayName})
-                  </SelectItem>
-                ))}
+                <SelectGroup>
+                  <SelectLabel>Способ оплаты</SelectLabel>
+                  <SelectItem value="all">Все способы</SelectItem>
+                  {methods.map((method) => (
+                    <SelectItem key={method.id} value={method.code}>
+                      {method.name} ({method.gatewayName})
+                    </SelectItem>
+                  ))}
+                </SelectGroup>
               </SelectContent>
             </Select>
             <Input aria-label="Дата от" type="datetime-local" value={dateFrom} onChange={(event) => { setDateFrom(event.target.value); resetPage(); }} />

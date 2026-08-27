@@ -11,7 +11,7 @@ import { PageHeader } from "@/components/page-header";
 import { StatusBadge } from "@/components/status-badge";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Select, SelectContent, SelectGroup, SelectItem, SelectLabel, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { logEventTypes, logLevels } from "@/features/payments/schema";
 
 const pageSize = 25;
@@ -82,12 +82,15 @@ export default function PaymentLogsPage() {
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="all">Все уровни</SelectItem>
-                {logLevels.map((value) => (
-                  <SelectItem key={value} value={value}>
-                    {value}
-                  </SelectItem>
-                ))}
+                <SelectGroup>
+                  <SelectLabel>Уровень</SelectLabel>
+                  <SelectItem value="all">Все уровни</SelectItem>
+                  {logLevels.map((value) => (
+                    <SelectItem key={value} value={value}>
+                      {value}
+                    </SelectItem>
+                  ))}
+                </SelectGroup>
               </SelectContent>
             </Select>
             <Select
@@ -99,12 +102,15 @@ export default function PaymentLogsPage() {
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="all">Все события</SelectItem>
-                {logEventTypes.map((value) => (
-                  <SelectItem key={value} value={value}>
-                    {eventTypeLabels[value] ?? value}
-                  </SelectItem>
-                ))}
+                <SelectGroup>
+                  <SelectLabel>Тип события</SelectLabel>
+                  <SelectItem value="all">Все события</SelectItem>
+                  {logEventTypes.map((value) => (
+                    <SelectItem key={value} value={value}>
+                      {eventTypeLabels[value] ?? value}
+                    </SelectItem>
+                  ))}
+                </SelectGroup>
               </SelectContent>
             </Select>
             <Input aria-label="ID платежа" placeholder="ID платежа" value={paymentIntentId} onChange={(event) => { setPaymentIntentId(event.target.value); resetPage(); }} />
