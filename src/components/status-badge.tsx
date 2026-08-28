@@ -1,8 +1,8 @@
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 
-const NEGATIVE = new Set(["SUSPENDED", "REVOKED", "EXPIRED", "FAILED", "CANCELLED", "CRITICAL", "UNHEALTHY", "ERROR"]);
-const NEUTRAL = new Set(["PENDING", "TRIAL", "PAST_DUE", "WARNING", "DEGRADED", "ACKNOWLEDGED", "OPEN", "ARCHIVED"]);
+const NEGATIVE = new Set(["SUSPENDED", "REVOKED", "EXPIRED", "FAILED", "CANCELLED", "CRITICAL", "UNHEALTHY", "ERROR", "UNREACHABLE"]);
+const NEUTRAL = new Set(["PENDING", "TRIAL", "PAST_DUE", "WARNING", "DEGRADED", "ACKNOWLEDGED", "OPEN", "ARCHIVED", "DECOMMISSIONED"]);
 
 function variantFor(status: string): "default" | "destructive" | "outline" {
   const normalized = status.toUpperCase();
