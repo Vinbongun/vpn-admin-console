@@ -1,7 +1,7 @@
 "use client";
 
 import { useQuery } from "@tanstack/react-query";
-import { Activity, CircleAlert, Network, RadioTower, Server, TagIcon } from "lucide-react";
+import { Activity, CircleAlert, CreditCardIcon, Network, RadioTower, Server, TagIcon } from "lucide-react";
 import Link from "next/link";
 import { adminApi } from "@/api/client";
 import { AppShell } from "@/components/app-shell";
@@ -14,6 +14,7 @@ const quickLinks = [
   { label: "Протоколы", description: "Inbound'ы по всем панелям, здоровье и фильтры", href: "/infrastructure/protocols", icon: Network },
   { label: "Инциденты", description: "История проблем с протоколами/серверами", href: "/infrastructure/incidents", icon: CircleAlert },
   { label: "Статистика", description: "Популярность серверов и протоколов", href: "/infrastructure/stats", icon: Activity },
+  { label: "Регистраторы VPS", description: "Аккаунты QWINS, каталог тарифов, покупка серверов", href: "/infrastructure/vps-registrars", icon: CreditCardIcon },
   { label: "Домены", description: "Купленные домены и цены по зонам", href: "/infrastructure/domains", icon: TagIcon },
 ];
 

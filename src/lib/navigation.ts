@@ -43,6 +43,7 @@ export const navigation = [
       { label: "Протоколы", href: "/infrastructure/protocols" },
       { label: "Инциденты", href: "/infrastructure/incidents" },
       { label: "Статистика", href: "/infrastructure/stats" },
+      { label: "Регистраторы VPS", href: "/infrastructure/vps-registrars" },
       { label: "Домены", href: "/infrastructure/domains", permission: "domains.read" },
     ],
   },
