@@ -1500,9 +1500,10 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** @description VPS-purchase registrar accounts (QWINS/BILLmanager 5 today). Built from a reverse-engineered spec with no live account available - see docs/BACKLOG_PRIORITIES.md for the full list of unverified assumptions before relying on this in production. */
+        /** @description VPS-purchase registrar accounts (QWINS/BILLmanager 5 today). Originally built from a reverse-engineered spec, since live-verified against a real account (balance, catalog, purchase resume-after-crash, server history, billing-metadata sync). Only one account per providerType can be status ACTIVE at a time (DB-enforced) - every registrar call (purchase/syncCatalog/sync/etc.) takes an explicit registrarAccountId with no other way to pick "the real one", so use POST .../{id}/activate to switch which account that is. */
         get: operations["listVpsRegistrarAccounts"];
         put?: never;
+        /** @description The first account created for a given providerType comes back ACTIVE; any account created after that starts INACTIVE (never races the one-active-per-type constraint) - call POST .../{id}/activate to make a later one the active account instead. */
         post: operations["createVpsRegistrarAccount"];
         delete?: never;
         options?: never;
@@ -1521,6 +1522,23 @@ export interface paths {
         put?: never;
         /** @description Rotates username/password via SecretStorage - test creds today, real ones later, no code deploy needed. */
         post: operations["updateVpsRegistrarCredentials"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/v1/vps-registrar-accounts/{id}/activate": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** @description Deactivates every other account of this one's providerType first, then activates this one - makes it the account every registrar call for that provider now resolves to. No-op if this account is already the active one. */
+        post: operations["activateVpsRegistrarAccount"];
         delete?: never;
         options?: never;
         head?: never;
@@ -1559,6 +1577,23 @@ export interface paths {
         options?: never;
         head?: never;
         patch?: never;
+        trace?: never;
+    };
+    "/admin/v1/vps-registrar-accounts/{id}/payment-methods/{methodId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete: operations["deleteVpsPaymentMethod"];
+        options?: never;
+        head?: never;
+        /** @description Only the fields present in the request body are changed. */
+        patch: operations["updateVpsPaymentMethod"];
         trace?: never;
     };
     "/admin/v1/vps-registrar-accounts/{id}/sync-catalog": {
@@ -1776,6 +1811,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/admin/v1/vps-instances/health-check-all": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** @description Staff-facing equivalent of the scheduler's internal enqueue-health-checks (internalBearer- only, unreachable from the admin console) - enqueues a HEALTH_CHECK job for every ACTIVE, non-archived VPS in one request (deduping against any already-PENDING/PROCESSING job of that type per VPS, same as every other job-trigger endpoint). */
+        post: operations["healthCheckAllVpsInstances"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/admin/v1/vps-instances/{id}/update": {
         parameters: {
             query?: never;
@@ -1802,6 +1854,23 @@ export interface paths {
         get?: never;
         put?: never;
         post: operations["backupVpsInstance"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/v1/vps-instances/{id}/sync": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** @description Synchronous, not a job - pulls expireDate/cost/autoProlong directly from the registrar (QWINS) and reconciles this instance's purchase metadata. Use this after manually changing the tariff or renewal setting in the registrar's own panel (changeTariff/prolong are deliberately not built here - do that in QWINS itself, then sync). Returns `{"synced":false}` without error for a MANUAL instance with no registrar link. */
+        post: operations["syncVpsInstance"];
         delete?: never;
         options?: never;
         head?: never;
@@ -3263,7 +3332,8 @@ export interface components {
             code: string;
             /** @example QWINS */
             providerType: string;
-            status: string;
+            /** @enum {string} */
+            status: "ACTIVE" | "INACTIVE";
             balanceCents?: number | null;
             balanceCurrency?: string | null;
             /** Format: date-time */
@@ -3282,7 +3352,7 @@ export interface components {
             id: string;
             /** @enum {string} */
             methodType: "STORED_CARD_SBP" | "PERSONAL_ACCOUNT";
-            paymethodId: string;
+            paymethodId: number;
             recurringRef?: string | null;
             displayName: string;
             isDefault: boolean;
@@ -3558,6 +3628,13 @@ export interface components {
             lastInventoryError?: string | null;
             endpointCount: number;
             unhealthyCount: number;
+            /** @description True if credentials are resolvable for this source - either stored in the DB (never returned itself) or via the ${code}_BASE_URL/${code}_API_TOKEN (or ${providerType}_...) env var fallback. Never reveals the credential. */
+            credentialsConfigured: boolean;
+            /**
+             * Format: date-time
+             * @description Most recent of this source's own creation or a PUT .../credentials call (derived from audit_events, no dedicated column) - null for a source that has never had DB-stored credentials (e.g. always resolved via env vars).
+             */
+            credentialsRotatedAt?: string | null;
         };
         InfrastructureEndpointSummary: {
             /** Format: uuid */
@@ -3574,6 +3651,10 @@ export interface components {
             lastSeenAt?: string | null;
             /** Format: date-time */
             lastProbeAt?: string | null;
+            /** @description Real Remnawave node identity this inbound runs on (from the panel's own /api/nodes), when this endpoint came from a Remnawave source - null for 3x-ui/anything else, where panel and VPS are the same machine so there's no ambiguity to resolve. Not yet cross-referenced to a vps_instances row (that needs vps_instances to record its own Remnawave node uuid first, planned alongside future Remnawave node-install automation). */
+            nodeUuid?: string | null;
+            /** @description The Remnawave node's own display name, alongside nodeUuid - same availability caveat. */
+            nodeName?: string | null;
         };
         InfrastructureEndpointPage: components["schemas"]["PageMetadata"] & {
             items: components["schemas"]["InfrastructureEndpointSummary"][];
@@ -7269,6 +7350,28 @@ export interface operations {
             };
         };
     };
+    activateVpsRegistrarAccount: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The now-active account */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["VpsRegistrarAccount"];
+                };
+            };
+        };
+    };
     syncVpsRegistrarBalance: {
         parameters: {
             query?: never;
@@ -7327,7 +7430,8 @@ export interface operations {
                 "application/json": {
                     /** @enum {string} */
                     methodType: "STORED_CARD_SBP" | "PERSONAL_ACCOUNT";
-                    paymethodId: string;
+                    /** @description QWINS's own paymethod is always numeric (e.g. paymethod=6). For PERSONAL_ACCOUNT, which has no real numeric paymethod at all (it's identified by its button name "fromsubaccount"), 0 is an honest placeholder - purchase() never reads paymethodId/recurringRef for that methodType. */
+                    paymethodId: number;
                     recurringRef?: string;
                     displayName: string;
                     isDefault?: boolean;
@@ -7343,6 +7447,77 @@ export interface operations {
                 content: {
                     "application/json": components["schemas"]["VpsPaymentMethod"];
                 };
+            };
+        };
+    };
+    deleteVpsPaymentMethod: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+                methodId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        ok?: boolean;
+                    };
+                };
+            };
+            /** @description Payment method not found for this registrar account */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    updateVpsPaymentMethod: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+                methodId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": {
+                    paymethodId?: number;
+                    recurringRef?: string;
+                    displayName?: string;
+                    isDefault?: boolean;
+                };
+            };
+        };
+        responses: {
+            /** @description Updated */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["VpsPaymentMethod"];
+                };
+            };
+            /** @description Payment method not found for this registrar account */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
         };
     };
@@ -7803,6 +7978,35 @@ export interface operations {
             };
         };
     };
+    healthCheckAllVpsInstances: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description How many VPS instances got a new job enqueued */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        enqueued: number;
+                    };
+                };
+            };
+            /** @description Missing vps.write permission */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
     updateVpsInstance: {
         parameters: {
             query?: never;
@@ -7857,6 +8061,44 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["VpsAutomationJobRef"];
+                };
+            };
+            /** @description Missing vps.write permission */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description VPS instance not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    syncVpsInstance: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Sync result */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        synced: boolean;
+                    };
                 };
             };
             /** @description Missing vps.write permission */

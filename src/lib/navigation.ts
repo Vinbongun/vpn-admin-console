@@ -40,10 +40,8 @@ export const navigation = [
     items: [
       { label: "Обзор", href: "/infrastructure" },
       { label: "Панели и серверы", href: "/infrastructure/panels-and-servers" },
-      { label: "Протоколы", href: "/infrastructure/protocols" },
+      { label: "Точки подключения", href: "/infrastructure/protocols" },
       { label: "Инциденты", href: "/infrastructure/incidents" },
-      { label: "Статистика", href: "/infrastructure/stats" },
-      { label: "Регистраторы VPS", href: "/infrastructure/vps-registrars" },
       { label: "Домены", href: "/infrastructure/domains", permission: "domains.read" },
     ],
   },

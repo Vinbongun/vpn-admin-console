@@ -170,3 +170,4 @@ export type AddVpsPaymentMethod = NonNullable<operations["addVpsPaymentMethod"][
 export type SyncVpsTariffCatalog = NonNullable<operations["syncVpsTariffCatalog"]["requestBody"]>["content"]["application/json"];
 export type PurchaseVpsRequest = NonNullable<operations["purchaseVps"]["requestBody"]>["content"]["application/json"];
 export type ChangeVpsServerPassword = NonNullable<operations["changeVpsServerPassword"]["requestBody"]>["content"]["application/json"];
+export type UpdateVpsPaymentMethod = NonNullable<operations["updateVpsPaymentMethod"]["requestBody"]>["content"]["application/json"];

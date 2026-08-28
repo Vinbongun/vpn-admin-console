@@ -10,17 +10,18 @@ import type { VpsHistoryEntry } from "@/api/types";
 import { AppShell } from "@/components/app-shell";
 import { ErrorState } from "@/components/error-state";
 import { StatusBadge } from "@/components/status-badge";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
-import { Dialog, DialogClose, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Dialog, DialogClose, DialogContent, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Spinner } from "@/components/ui/spinner";
+import { DangerZoneCard } from "@/features/vps/danger-zone-card";
 import { EditPurchaseInfoDialog } from "@/features/vps/edit-purchase-info-dialog";
-import { VpsActionButtons } from "@/features/vps/vps-action-buttons";
+import { PanelProtocolCard } from "@/features/vps/panel-protocol-card";
+import { VpsJobsCard } from "@/features/vps/vps-jobs-card";
 import { can } from "@/lib/access-control";
 
 function apiErrorMessage(error: ApiError): string {
@@ -43,48 +44,6 @@ function Field({ label, value }: { label: string; value: React.ReactNode }) {
       <p className="text-xs text-muted-foreground">{label}</p>
       <div className="text-sm font-medium">{value}</div>
     </div>
-  );
-}
-
-function InstallPanelDialog({ vpsId }: { vpsId: string }) {
-  const [open, setOpen] = useState(false);
-  const queryClient = useQueryClient();
-  const mutation = useMutation({
-    mutationFn: () => adminApi.installPanelOnVpsInstance(vpsId),
-    onSuccess: async () => {
-      toast.success("Задача установки панели поставлена.");
-      setOpen(false);
-      await queryClient.invalidateQueries({ queryKey: ["admin-vps-instance", vpsId] });
-    },
-    onError: (error) => toast.error(error instanceof ApiError ? apiErrorMessage(error) : "Не удалось поставить задачу установки панели."),
-  });
-
-  return (
-    <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger render={<Button size="sm" variant="outline" />}>Установить панель (3x-ui)</DialogTrigger>
-      <DialogContent className="sm:max-w-md">
-        <DialogHeader>
-          <DialogTitle>Установить панель 3x-ui?</DialogTitle>
-          <DialogDescription render={<div />}>
-            <ul className="list-disc space-y-1.5 pl-4">
-              <li>Панель поднимется на порту 2053 с логином/паролем admin/admin, без TLS/домена — порт и логин не рандомизируются (ограничение образа).</li>
-              <li>
-                Панель <b>не регистрируется в системе автоматически</b> — после установки нужно зайти по <code>http://&lt;host&gt;:2053</code>, сменить
-                пароль, настроить API-доступ и зарегистрировать панель вручную через «+ Добавить панель».
-              </li>
-              <li>После успешной задачи привязка к панели у VPS останется пустой — это ожидаемо, не ошибка.</li>
-            </ul>
-          </DialogDescription>
-        </DialogHeader>
-        <DialogFooter>
-          <DialogClose render={<Button type="button" variant="outline" />}>Отмена</DialogClose>
-          <Button disabled={mutation.isPending} onClick={() => mutation.mutate()}>
-            {mutation.isPending && <Spinner />}
-            Установить
-          </Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
   );
 }
 
@@ -146,7 +105,7 @@ function QwinsServerCard({ registrarAccountId, itemId }: { registrarAccountId: s
   return (
     <Card>
       <CardHeader>
-        <CardTitle>QWINS-сервер</CardTitle>
+        <CardTitle>Сервер регистратора</CardTitle>
         <CardDescription>Куплен через регистратора — действия и история изменений услуги</CardDescription>
       </CardHeader>
       <CardContent className="flex flex-col gap-4">
@@ -204,7 +163,7 @@ export function VpsDetailPage({ vpsId }: { vpsId: string }) {
           <ArrowLeftIcon />
           Назад
         </Button>
-        <Button size="icon-sm" variant="ghost" title="Обновить" onClick={refresh}>
+        <Button size="icon-sm" variant="ghost" title="Обновить статус" onClick={refresh}>
           <RefreshCwIcon />
         </Button>
       </div>
@@ -229,11 +188,7 @@ export function VpsDetailPage({ vpsId }: { vpsId: string }) {
                 {data.host} · {data.id}
               </p>
             </div>
-            <div className="flex flex-wrap items-center gap-2">
-              <VpsActionButtons vps={data} mayWrite={mayWrite} mayDecommission={mayDecommission} />
-              {mayWrite && !data.controlPlaneSourceId && <InstallPanelDialog vpsId={data.id} />}
-              {mayWrite && <EditPurchaseInfoDialog vps={data} />}
-            </div>
+            {mayWrite && <EditPurchaseInfoDialog vps={data} />}
           </div>
 
           <Card>
@@ -245,7 +200,6 @@ export function VpsDetailPage({ vpsId }: { vpsId: string }) {
                 <Field label="SSH" value={`${data.sshUser}@${data.host}:${data.sshPort}`} />
                 <Field label="Способ добавления" value={data.providerType === "MANUAL" ? "Вручную" : `Через API (${data.providerType})`} />
                 <Field label="Последняя проверка здоровья" value={formatDate(data.lastHealthCheckAt)} />
-                <Field label="Панель" value={data.panelCode ? `${data.panelCode} (${data.panelProviderType})` : "без панели"} />
                 <Field label="Домен панели" value={data.domainFqdn ?? "—"} />
                 <Field label="Стоимость покупки" value={formatMoney(data.purchaseCostCents, data.currency)} />
                 <Field label="Дата покупки" value={formatDate(data.purchasedAt)} />
@@ -256,21 +210,9 @@ export function VpsDetailPage({ vpsId }: { vpsId: string }) {
             </CardContent>
           </Card>
 
-          {data.deployedProtocols && data.deployedProtocols.length > 0 && (
-            <Card>
-              <CardHeader>
-                <CardTitle>Развёрнутые протоколы</CardTitle>
-                <CardDescription>Без панели — управляются напрямую по SSH/Ansible</CardDescription>
-              </CardHeader>
-              <CardContent className="flex flex-wrap gap-2">
-                {data.deployedProtocols.map((protocol, index) => (
-                  <Badge key={index} variant="outline">
-                    {protocol.protocolCode} · {protocol.deploymentMethod} · {protocol.status}
-                  </Badge>
-                ))}
-              </CardContent>
-            </Card>
-          )}
+          <PanelProtocolCard vps={data} mayWrite={mayWrite} />
+
+          <VpsJobsCard vps={data} mayWrite={mayWrite} />
 
           <Card>
             <CardHeader>
@@ -311,6 +253,8 @@ export function VpsDetailPage({ vpsId }: { vpsId: string }) {
           {data.providerType !== "MANUAL" && data.registrarAccountId && data.registrarItemRef && (
             <QwinsServerCard registrarAccountId={data.registrarAccountId} itemId={data.registrarItemRef} />
           )}
+
+          <DangerZoneCard vps={data} mayWrite={mayWrite} mayDecommission={mayDecommission} />
         </div>
       )}
     </AppShell>
