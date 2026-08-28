@@ -2,6 +2,7 @@ import createClient from "openapi-fetch";
 import type { paths } from "@/api/generated";
 import { sessionTokens } from "@/api/session";
 import type {
+  AddVpsPaymentMethod,
   AdminAcquisitionQuery,
   AdminAuditQuery,
   AdminCustomerQuery,
@@ -21,7 +22,9 @@ import type {
   AdminReferralPartnerQuery,
   AdminRetentionQuery,
   AdminSubscriptionQuery,
+  AdminVpsInstanceQuery,
   AdminZonePricingQuery,
+  ChangeVpsServerPassword,
   CreateBrand,
   CreateControlPlaneSource,
   CreateEndpointGroup,
@@ -30,6 +33,7 @@ import type {
   CreatePlan,
   CreateReferralPartner,
   CreateSubscription,
+  CreateVpsRegistrarAccount,
   CustomerDetail,
   CustomerHistory,
   Domain,
@@ -42,7 +46,9 @@ import type {
   PurchaseBatchKickoff,
   PurchaseBatchStatus,
   PurchaseDomainsRequest,
+  PurchaseVpsRequest,
   RefundPayment,
+  RegisterVpsInstance,
   RegistrarAccountSummary,
   ReplaceBrandPaymentMethods,
   ReplaceEndpointGroupMembers,
@@ -55,6 +61,7 @@ import type {
   StaffOtpVerify,
   StaffProfile,
   SyncSourceInventory,
+  SyncVpsTariffCatalog,
   UpdateBrand,
   UpdateControlPlaneSource,
   UpdateCustomerContact,
@@ -68,8 +75,18 @@ import type {
   UpdatePlatformSetting,
   UpdateReferralPartner,
   UpdateSubscription,
+  UpdateVpsInstanceMetadata,
+  UpdateVpsRegistrarCredentials,
   UpdateZonePricing,
   UpsertPromoCode,
+  VpsAutomationJobRef,
+  VpsInstance,
+  VpsInstanceDetail,
+  VpsPaymentMethod,
+  VpsPurchaseOperation,
+  VpsRegistrarAccount,
+  VpsHistoryEntry,
+  VpsTariff,
   ZonePricing,
 } from "@/api/types";
 
@@ -203,4 +220,45 @@ export const adminApi = {
     unwrap<ZonePricing>(await client.PATCH("/admin/v1/domains/zone-pricing/{tld}", { params: { path: { tld } }, body, headers: staffHeaders() })),
   checkZoneRequirements: async (tld: string, registrarAccountId: string) =>
     unwrap(await client.POST("/admin/v1/domains/zone-pricing/{tld}/check-requirements", { params: { path: { tld } }, body: { registrarAccountId }, headers: staffHeaders() })),
+
+  listVpsInstances: async (query: AdminVpsInstanceQuery = {}) => unwrap<VpsInstance[]>(await client.GET("/admin/v1/vps-instances", { params: { query }, headers: staffHeaders() })),
+  registerVpsInstance: async (body: RegisterVpsInstance) => unwrap<VpsInstance>(await client.POST("/admin/v1/vps-instances", { body, headers: staffHeaders() })),
+  getVpsInstance: async (id: string) => unwrap<VpsInstanceDetail>(await client.GET("/admin/v1/vps-instances/{id}", { params: { path: { id } }, headers: staffHeaders() })),
+  updateVpsInstanceMetadata: async (id: string, body: UpdateVpsInstanceMetadata) =>
+    unwrap<VpsInstance>(await client.PATCH("/admin/v1/vps-instances/{id}", { params: { path: { id } }, body, headers: staffHeaders() })),
+  bootstrapVpsInstance: async (id: string) => unwrap<VpsAutomationJobRef>(await client.POST("/admin/v1/vps-instances/{id}/bootstrap", { params: { path: { id } }, headers: staffHeaders() })),
+  testVpsInstance: async (id: string) => unwrap<VpsAutomationJobRef>(await client.POST("/admin/v1/vps-instances/{id}/test", { params: { path: { id } }, headers: staffHeaders() })),
+  healthCheckVpsInstance: async (id: string) => unwrap<VpsAutomationJobRef>(await client.POST("/admin/v1/vps-instances/{id}/health-check", { params: { path: { id } }, headers: staffHeaders() })),
+  // POST .../update triggers an Ansible re-provision job - distinct from the PATCH above, which only edits purchase metadata.
+  runVpsInstanceUpdate: async (id: string) => unwrap<VpsAutomationJobRef>(await client.POST("/admin/v1/vps-instances/{id}/update", { params: { path: { id } }, headers: staffHeaders() })),
+  backupVpsInstance: async (id: string) => unwrap<VpsAutomationJobRef>(await client.POST("/admin/v1/vps-instances/{id}/backup", { params: { path: { id } }, headers: staffHeaders() })),
+  installPanelOnVpsInstance: async (id: string) => unwrap<VpsAutomationJobRef>(await client.POST("/admin/v1/vps-instances/{id}/install-panel", { params: { path: { id } }, headers: staffHeaders() })),
+  startVpsServices: async (id: string) => unwrap<VpsAutomationJobRef>(await client.POST("/admin/v1/vps-instances/{id}/start", { params: { path: { id } }, headers: staffHeaders() })),
+  stopVpsServices: async (id: string) => unwrap<VpsAutomationJobRef>(await client.POST("/admin/v1/vps-instances/{id}/stop", { params: { path: { id } }, headers: staffHeaders() })),
+  // No request body - the backend enqueues the job on the id alone; typed confirmation (host/IP) is a frontend-only safety gate.
+  decommissionVpsInstance: async (id: string) => unwrap<VpsAutomationJobRef>(await client.POST("/admin/v1/vps-instances/{id}/decommission", { params: { path: { id } }, headers: staffHeaders() })),
+
+  listVpsRegistrarAccounts: async () => unwrap<VpsRegistrarAccount[]>(await client.GET("/admin/v1/vps-registrar-accounts", { headers: staffHeaders() })),
+  createVpsRegistrarAccount: async (body: CreateVpsRegistrarAccount) => unwrap<VpsRegistrarAccount>(await client.POST("/admin/v1/vps-registrar-accounts", { body, headers: staffHeaders() })),
+  updateVpsRegistrarCredentials: async (id: string, body: UpdateVpsRegistrarCredentials) =>
+    unwrap<{ ok?: boolean }>(await client.POST("/admin/v1/vps-registrar-accounts/{id}/credentials", { params: { path: { id } }, body, headers: staffHeaders() })),
+  syncVpsRegistrarBalance: async (id: string) => unwrap<VpsRegistrarAccount>(await client.POST("/admin/v1/vps-registrar-accounts/{id}/sync-balance", { params: { path: { id } }, headers: staffHeaders() })),
+  listVpsPaymentMethods: async (id: string) => unwrap<VpsPaymentMethod[]>(await client.GET("/admin/v1/vps-registrar-accounts/{id}/payment-methods", { params: { path: { id } }, headers: staffHeaders() })),
+  addVpsPaymentMethod: async (id: string, body: AddVpsPaymentMethod) =>
+    unwrap<VpsPaymentMethod>(await client.POST("/admin/v1/vps-registrar-accounts/{id}/payment-methods", { params: { path: { id } }, body, headers: staffHeaders() })),
+  syncVpsTariffCatalog: async (id: string, body: SyncVpsTariffCatalog = {}) =>
+    unwrap<{ synced?: number }>(await client.POST("/admin/v1/vps-registrar-accounts/{id}/sync-catalog", { params: { path: { id } }, body, headers: staffHeaders() })),
+  listVpsTariffCatalog: async (id: string, datacenter?: string) =>
+    unwrap<VpsTariff[]>(await client.GET("/admin/v1/vps-registrar-accounts/{id}/catalog", { params: { path: { id }, query: { datacenter } }, headers: staffHeaders() })),
+  purchaseVps: async (id: string, body: PurchaseVpsRequest) =>
+    unwrap<VpsPurchaseOperation>(await client.POST("/admin/v1/vps-registrar-accounts/{id}/purchase", { params: { path: { id } }, body, headers: staffHeaders() })),
+  getVpsPurchaseOperation: async (id: string) => unwrap<VpsPurchaseOperation>(await client.GET("/admin/v1/vps-purchase-operations/{id}", { params: { path: { id } }, headers: staffHeaders() })),
+  advanceVpsPurchaseOperation: async (id: string) =>
+    unwrap<VpsPurchaseOperation>(await client.POST("/admin/v1/vps-purchase-operations/{id}/advance", { params: { path: { id } }, headers: staffHeaders() })),
+  rebootVpsServer: async (id: string, itemId: string) =>
+    unwrap<{ ok?: boolean }>(await client.POST("/admin/v1/vps-registrar-accounts/{id}/servers/{itemId}/reboot", { params: { path: { id, itemId } }, headers: staffHeaders() })),
+  changeVpsServerPassword: async (id: string, itemId: string, body: ChangeVpsServerPassword) =>
+    unwrap<{ ok?: boolean }>(await client.POST("/admin/v1/vps-registrar-accounts/{id}/servers/{itemId}/change-password", { params: { path: { id, itemId } }, body, headers: staffHeaders() })),
+  getVpsServerHistory: async (id: string, itemId: string) =>
+    unwrap<VpsHistoryEntry[]>(await client.GET("/admin/v1/vps-registrar-accounts/{id}/servers/{itemId}/history", { params: { path: { id, itemId } }, headers: staffHeaders() })),
 };
