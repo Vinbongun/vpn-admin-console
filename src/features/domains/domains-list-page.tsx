@@ -21,7 +21,6 @@ import { Select, SelectContent, SelectGroup, SelectItem, SelectLabel, SelectTrig
 import { Spinner } from "@/components/ui/spinner";
 import { Switch } from "@/components/ui/switch";
 import { GenerateDomainsDialog } from "@/features/domains/generate-domains-dialog";
-import { PurchaseDomainsDialog } from "@/features/domains/purchase-domains-dialog";
 import { can } from "@/lib/access-control";
 
 function apiErrorMessage(error: ApiError): string {
@@ -187,12 +186,7 @@ export function DomainsListPage() {
               <TagIcon />
               Цены по зонам
             </Button>
-            {mayWrite && (
-              <>
-                <GenerateDomainsDialog onPurchased={refresh} />
-                <PurchaseDomainsDialog onPurchased={refresh} />
-              </>
-            )}
+            {mayWrite && <GenerateDomainsDialog onPurchased={refresh} />}
           </div>
         }
       />
