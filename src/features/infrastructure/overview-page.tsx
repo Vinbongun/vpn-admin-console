@@ -20,7 +20,7 @@ const quickLinks = [
   { label: "Панели и серверы", description: "Панели управления и физические VPS", href: "/infrastructure/panels-and-servers", icon: RadioTower },
   { label: "Точки подключения", description: "То, что клиент видит как «сервер» в приложении", href: "/infrastructure/protocols", icon: Network },
   { label: "Инциденты", description: "История проблем с точками подключения/серверами", href: "/infrastructure/incidents", icon: CircleAlert },
-  { label: "Регистраторы VPS", description: "Покупка и управление серверами", href: "/infrastructure/vps-registrars", icon: CreditCardIcon },
+  { label: "Купить VPS", description: "Покупка и управление серверами", href: "/infrastructure/vps-purchase", icon: CreditCardIcon },
   { label: "Домены", description: "Купленные домены и цены по зонам", href: "/infrastructure/domains", icon: TagIcon },
 ];
 
