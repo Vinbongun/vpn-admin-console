@@ -18,6 +18,7 @@ import { Spinner } from "@/components/ui/spinner";
 import { CreateSourceDialog } from "@/features/infrastructure/create-source-dialog";
 import { RotateCredentialsDialog } from "@/features/infrastructure/rotate-credentials-dialog";
 import { SourceEditDialog } from "@/features/infrastructure/source-edit-dialog";
+import { VpsListPage } from "@/features/vps/vps-list-page";
 import { can } from "@/lib/access-control";
 
 function apiErrorMessage(error: ApiError): string {
@@ -223,6 +224,7 @@ export function PanelsAndServersPage() {
       />
 
       <PanelsCard />
+      <VpsListPage />
     </AppShell>
   );
 }
