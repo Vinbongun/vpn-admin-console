@@ -57,7 +57,7 @@ export function VpsRegistrarDetailPage({ accountId }: { accountId: string }) {
 
   return (
     <AppShell>
-      <Button size="sm" variant="ghost" render={<Link href="/infrastructure/vps-registrars" />} nativeButton={false} className="-ml-2.5 self-start">
+      <Button size="sm" variant="ghost" render={<Link href="/infrastructure/vps-purchase" />} nativeButton={false} className="-ml-2.5 self-start">
         <ArrowLeftIcon />
         Назад
       </Button>

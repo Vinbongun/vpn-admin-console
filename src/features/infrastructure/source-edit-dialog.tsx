@@ -2,6 +2,7 @@
 
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useState } from "react";
 import { Controller, useForm, useWatch } from "react-hook-form";
 import { toast } from "sonner";
 import { adminApi, ApiError } from "@/api/client";
@@ -37,6 +38,7 @@ function formatDate(value?: string | null) {
 
 function CredentialsSection({ source, mayWrite }: { source: ControlPlaneSourceSummary; mayWrite: boolean }) {
   const queryClient = useQueryClient();
+  const [expanded, setExpanded] = useState(false);
   const form = useForm<RotateCredentialsValues>({ resolver: zodResolver(rotateCredentialsSchema), defaultValues: { baseUrl: "", apiToken: "" } });
 
   const mutation = useMutation({
@@ -44,6 +46,7 @@ function CredentialsSection({ source, mayWrite }: { source: ControlPlaneSourceSu
     onSuccess: async () => {
       toast.success("Credentials обновлены.");
       form.reset({ baseUrl: "", apiToken: "" });
+      setExpanded(false);
       await queryClient.invalidateQueries({ queryKey: ["admin-infrastructure-sources"] });
     },
     onError: (error) => toast.error(error instanceof ApiError ? apiErrorMessage(error) : "Не удалось обновить credentials."),
@@ -58,20 +61,30 @@ function CredentialsSection({ source, mayWrite }: { source: ControlPlaneSourceSu
           {source.credentialsConfigured && source.credentialsRotatedAt && <span>обновлены {formatDate(source.credentialsRotatedAt)}</span>}
         </div>
       </div>
-      {mayWrite && (
-        // A plain div, not a <form> - this section is one of several independent mutations inside
-        // the same dialog (see SourceEditBody), each with its own handleSubmit-on-click button.
-        <div className="contents">
-          <FieldGroup>
-            <p className="text-xs text-muted-foreground">Текущие значения нигде не хранятся в открытом виде — заполните оба поля заново, чтобы заменить.</p>
-            <CredentialsFields form={form} optional={false} />
-          </FieldGroup>
-          <Button size="sm" type="button" className="self-start" disabled={mutation.isPending} onClick={form.handleSubmit((values) => mutation.mutate(values))}>
-            {mutation.isPending && <Spinner />}
-            Сохранить credentials
+      {mayWrite &&
+        (expanded ? (
+          // A plain div, not a <form> - this section is one of several independent mutations inside
+          // the same dialog (see SourceEditBody), each with its own handleSubmit-on-click button.
+          <div className="contents">
+            <FieldGroup>
+              <p className="text-xs text-muted-foreground">Текущие значения нигде не хранятся в открытом виде — заполните оба поля заново, чтобы заменить.</p>
+              <CredentialsFields form={form} optional={false} />
+            </FieldGroup>
+            <div className="flex gap-2 self-start">
+              <Button size="sm" type="button" disabled={mutation.isPending} onClick={form.handleSubmit((values) => mutation.mutate(values))}>
+                {mutation.isPending && <Spinner />}
+                Сохранить credentials
+              </Button>
+              <Button size="sm" type="button" variant="outline" onClick={() => setExpanded(false)}>
+                Отмена
+              </Button>
+            </div>
+          </div>
+        ) : (
+          <Button size="sm" type="button" variant="outline" className="self-start" onClick={() => setExpanded(true)}>
+            Сменить credentials
           </Button>
-        </div>
-      )}
+        ))}
     </div>
   );
 }

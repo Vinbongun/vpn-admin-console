@@ -153,6 +153,8 @@ export function VpsDetailPage({ vpsId }: { vpsId: string }) {
   const mayDecommission = can(staff.data, "vps.decommission");
   const vps = useQuery({ queryKey: ["admin-vps-instance", vpsId], queryFn: () => adminApi.getVpsInstance(vpsId), retry: false });
   const data = vps.data;
+  const registrarAccounts = useQuery({ queryKey: ["admin-vps-registrar-accounts"], queryFn: adminApi.listVpsRegistrarAccounts, retry: false, enabled: Boolean(data?.registrarAccountId) });
+  const registrarAccount = registrarAccounts.data?.find((account) => account.id === data?.registrarAccountId);
 
   const refresh = () => queryClient.invalidateQueries({ queryKey: ["admin-vps-instance", vpsId] });
 
@@ -199,6 +201,20 @@ export function VpsDetailPage({ vpsId }: { vpsId: string }) {
               <div className="grid gap-4 sm:grid-cols-2">
                 <Field label="SSH" value={`${data.sshUser}@${data.host}:${data.sshPort}`} />
                 <Field label="Способ добавления" value={data.providerType === "MANUAL" ? "Вручную" : `Через API (${data.providerType})`} />
+                {data.registrarAccountId && (
+                  <Field
+                    label="Регистратор"
+                    value={
+                      registrarAccount ? (
+                        <Link href={`/infrastructure/vps-purchase/${data.registrarAccountId}`} className="underline">
+                          {registrarAccount.code}
+                        </Link>
+                      ) : (
+                        "—"
+                      )
+                    }
+                  />
+                )}
                 <Field label="Последняя проверка здоровья" value={formatDate(data.lastHealthCheckAt)} />
                 <Field label="Домен панели" value={data.domainFqdn ?? "—"} />
                 <Field label="Локация" value={data.datacenterName ?? "—"} />

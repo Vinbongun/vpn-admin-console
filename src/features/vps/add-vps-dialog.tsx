@@ -82,7 +82,7 @@ export function AddVpsDialog() {
     >
       <DialogTrigger
         render={
-          <Button size="sm">
+          <Button size="sm" variant="secondary">
             <PlusIcon />
             Добавить VPS
           </Button>
