@@ -160,7 +160,10 @@ export function PurchaseVpsDialog({
           <>
             <div className="flex flex-col gap-2">
               {!operation.data ? (
-                <p className="text-sm text-muted-foreground">Запускаем покупку…</p>
+                <p className="flex items-center gap-2 text-sm text-muted-foreground">
+                  <Spinner />
+                  Запускаем покупку…
+                </p>
               ) : operation.data.stage === "FAILED" ? (
                 <p className="text-sm text-destructive">{operation.data.errorMessage ? apiErrorMessage(new ApiError(0, { message: operation.data.errorMessage })) : "Покупка не удалась."}</p>
               ) : operation.data.stage === "CREDENTIALS_RETRIEVED" ? (
@@ -168,7 +171,10 @@ export function PurchaseVpsDialog({
                   Сервер{Number(orderCount) > 1 ? "ы" : ""} активирован{Number(orderCount) > 1 ? "ы" : ""}, учётные данные получены.
                 </p>
               ) : (
-                <p className="text-sm text-muted-foreground">Стадия: {operation.data.stage}… (обычно занимает до нескольких минут)</p>
+                <p className="flex items-center gap-2 text-sm text-muted-foreground">
+                  <Spinner />
+                  Стадия: {operation.data.stage}… (обычно занимает до нескольких минут)
+                </p>
               )}
             </div>
             <DialogFooter>
