@@ -59,16 +59,18 @@ function CredentialsSection({ source, mayWrite }: { source: ControlPlaneSourceSu
         </div>
       </div>
       {mayWrite && (
-        <form className="contents" onSubmit={form.handleSubmit((values) => mutation.mutate(values))}>
+        // A plain div, not a <form> - this section is one of several independent mutations inside
+        // the same dialog (see SourceEditBody), each with its own handleSubmit-on-click button.
+        <div className="contents">
           <FieldGroup>
             <p className="text-xs text-muted-foreground">Текущие значения нигде не хранятся в открытом виде — заполните оба поля заново, чтобы заменить.</p>
             <CredentialsFields form={form} optional={false} />
           </FieldGroup>
-          <Button size="sm" type="submit" className="self-start" disabled={mutation.isPending}>
+          <Button size="sm" type="button" className="self-start" disabled={mutation.isPending} onClick={form.handleSubmit((values) => mutation.mutate(values))}>
             {mutation.isPending && <Spinner />}
             Сохранить credentials
           </Button>
-        </form>
+        </div>
       )}
     </div>
   );
@@ -190,7 +192,13 @@ function SourceEditBody({ source, mayWrite, onClose }: { source: ControlPlaneSou
         <DialogTitle>{source.code}</DialogTitle>
         <DialogDescription>Провайдер: {providerLabel(source.providerType)} — не редактируется, задаётся только при создании.</DialogDescription>
       </DialogHeader>
-      <form className="contents" onSubmit={submit}>
+      {/*
+        A plain div, not a <form> - this dialog nests CredentialsSection/NodesSection/LinkedVpsSection
+        below the code/status/country/comment fields, and a <form> descendant of a <form> is invalid
+        HTML (also breaks which section's Enter key submits which mutation). "Сохранить" below calls
+        handleSubmit directly from onClick instead of relying on a submit event.
+      */}
+      <div className="contents">
         <FieldGroup>
           <Field data-invalid={Boolean(form.formState.errors.code)}>
             <FieldLabel htmlFor="source-edit-code">Код панели</FieldLabel>
@@ -243,13 +251,13 @@ function SourceEditBody({ source, mayWrite, onClose }: { source: ControlPlaneSou
         <DialogFooter className="mt-4">
           <DialogClose render={<Button type="button" variant="outline" />}>Закрыть</DialogClose>
           {mayWrite && (
-            <Button disabled={mutation.isPending} type="submit">
+            <Button disabled={mutation.isPending} type="button" onClick={submit}>
               {mutation.isPending && <Spinner />}
               Сохранить
             </Button>
           )}
         </DialogFooter>
-      </form>
+      </div>
     </>
   );
 }
