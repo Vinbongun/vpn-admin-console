@@ -32,11 +32,28 @@ function statusBadge(availability?: CheckDomainAvailabilityResult) {
   return <Badge variant="outline">Свободен</Badge>;
 }
 
+function formatUsd(cents: number) {
+  return `$${(cents / 100).toFixed(2)}`;
+}
+
+const tldSortOptions = [
+  { value: "registration", label: "Покупка" },
+  { value: "renewal", label: "Продление" },
+  { value: "threeYear", label: "3 года" },
+] as const;
+type TldSort = (typeof tldSortOptions)[number]["value"];
+const tldSortField: Record<TldSort, "registrationPriceCents" | "renewalPriceCents" | "threeYearTcoCents"> = {
+  registration: "registrationPriceCents",
+  renewal: "renewalPriceCents",
+  threeYear: "threeYearTcoCents",
+};
+
 export function GenerateDomainsDialog({ onPurchased }: { onPurchased: () => void }) {
   const [open, setOpen] = useState(false);
   const [registrarAccountId, setRegistrarAccountId] = useState("");
   const [tlds, setTlds] = useState<string[]>([]);
   const [tldSearch, setTldSearch] = useState("");
+  const [tldSort, setTldSort] = useState<TldSort>("threeYear");
   const [count, setCount] = useState("10");
   const [candidates, setCandidates] = useState<Candidate[]>();
   const [purchaseOpen, setPurchaseOpen] = useState(false);
@@ -51,17 +68,16 @@ export function GenerateDomainsDialog({ onPurchased }: { onPurchased: () => void
     enabled: open && Boolean(registrarAccountId),
     retry: false,
   });
-  const availableTlds = useMemo(
-    () =>
-      [...(zonePricing.data ?? [])]
-        .sort((a, b) => a.threeYearTcoCents - b.threeYearTcoCents || a.tld.localeCompare(b.tld))
-        .map((zone) => zone.tld),
-    [zonePricing.data],
+  const sortedZones = useMemo(() => {
+    const field = tldSortField[tldSort];
+    return [...(zonePricing.data ?? [])].sort((a, b) => a[field] - b[field] || a.tld.localeCompare(b.tld));
+  }, [zonePricing.data, tldSort]);
+  const visibleZones = useMemo(
+    () => (tldSearch ? sortedZones.filter((zone) => zone.tld.includes(tldSearch.trim().toLowerCase())) : sortedZones),
+    [sortedZones, tldSearch],
   );
-  const visibleTlds = useMemo(
-    () => (tldSearch ? availableTlds.filter((tld) => tld.includes(tldSearch.trim().toLowerCase())) : availableTlds),
-    [availableTlds, tldSearch],
-  );
+  const zoneByTld = useMemo(() => new Map((zonePricing.data ?? []).map((zone) => [zone.tld, zone])), [zonePricing.data]);
+  const zoneForFqdn = (fqdn: string) => tlds.map((tld) => zoneByTld.get(tld)).find((zone) => zone && fqdn.endsWith(`.${zone.tld}`));
 
   const reset = () => {
     setRegistrarAccountId("");
@@ -174,7 +190,7 @@ export function GenerateDomainsDialog({ onPurchased }: { onPurchased: () => void
                   <Label>Зоны (TLD)</Label>
                   {zonePricing.isLoading ? (
                     <p className="text-sm text-muted-foreground">Загрузка каталога цен…</p>
-                  ) : availableTlds.length === 0 ? (
+                  ) : sortedZones.length === 0 ? (
                     <p className="text-sm text-muted-foreground">
                       Каталог цен по зонам пуст для этого аккаунта —{" "}
                       <Link href="/infrastructure/domains/zone-pricing" className="underline">
@@ -184,19 +200,43 @@ export function GenerateDomainsDialog({ onPurchased }: { onPurchased: () => void
                     </p>
                   ) : (
                     <>
-                      <Input
-                        aria-label="Поиск по доменным зонам"
-                        placeholder="Поиск по зонам…"
-                        value={tldSearch}
-                        onChange={(event) => setTldSearch(event.target.value)}
-                      />
+                      <div className="flex gap-2">
+                        <Input
+                          aria-label="Поиск по доменным зонам"
+                          placeholder="Поиск по зонам…"
+                          value={tldSearch}
+                          onChange={(event) => setTldSearch(event.target.value)}
+                          className="flex-1"
+                        />
+                        <Select items={tldSortOptions} value={tldSort} onValueChange={(value) => setTldSort((value as TldSort) ?? "threeYear")}>
+                          <SelectTrigger className="w-36" aria-label="Сортировка зон">
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectGroup>
+                              <SelectLabel>Сортировка</SelectLabel>
+                              {tldSortOptions.map((option) => (
+                                <SelectItem key={option.value} value={option.value}>
+                                  {option.label}
+                                </SelectItem>
+                              ))}
+                            </SelectGroup>
+                          </SelectContent>
+                        </Select>
+                      </div>
                       <div className="flex max-h-48 flex-col gap-1 overflow-y-auto rounded-md border p-2">
-                        {visibleTlds.length === 0 ? (
+                        {visibleZones.length === 0 ? (
                           <p className="px-1.5 py-1 text-sm text-muted-foreground">Ничего не найдено.</p>
                         ) : (
-                          visibleTlds.map((tld) => (
-                            <label key={tld} className="flex cursor-pointer items-center gap-2 rounded-sm px-1.5 py-1 text-sm hover:bg-accent">
-                              <Checkbox checked={tlds.includes(tld)} onCheckedChange={() => toggleTld(tld)} />.{tld}
+                          visibleZones.map((zone) => (
+                            <label key={zone.tld} className="flex cursor-pointer items-center justify-between gap-2 rounded-sm px-1.5 py-1 text-sm hover:bg-accent">
+                              <span className="flex items-center gap-2">
+                                <Checkbox checked={tlds.includes(zone.tld)} onCheckedChange={() => toggleTld(zone.tld)} />.{zone.tld}
+                              </span>
+                              <span className="text-xs text-muted-foreground">
+                                Покупка {formatUsd(zone.registrationPriceCents)} · продление {formatUsd(zone.renewalPriceCents)} · 3 года{" "}
+                                {formatUsd(zone.threeYearTcoCents)}
+                              </span>
                             </label>
                           ))
                         )}
@@ -231,24 +271,35 @@ export function GenerateDomainsDialog({ onPurchased }: { onPurchased: () => void
                   </Button>
                 </div>
                 <div className="flex max-h-72 flex-col gap-1 overflow-y-auto rounded-md border p-2">
-                  {candidates.map((candidate) => (
-                    <label key={candidate.fqdn} className="flex items-center justify-between gap-2 rounded-sm px-1.5 py-1 text-sm hover:bg-accent">
-                      <span className="flex items-center gap-2">
-                        <Checkbox
-                          checked={candidate.selected}
-                          disabled={Boolean(candidate.availability) && !candidate.availability?.available}
-                          onCheckedChange={() => toggleCandidate(candidate.fqdn)}
-                        />
-                        {candidate.fqdn}
-                      </span>
-                      <span className="flex items-center gap-2 text-xs text-muted-foreground">
-                        {candidate.availability?.premium && <Badge variant="outline">premium</Badge>}
-                        {candidate.availability?.priceCents != null && `${candidate.availability.priceCents} ${candidate.availability.currency ?? ""}`}
-                        {candidate.availability?.errorMessage}
-                        {statusBadge(candidate.availability)}
-                      </span>
-                    </label>
-                  ))}
+                  {candidates.map((candidate) => {
+                    const zone = zoneForFqdn(candidate.fqdn);
+                    return (
+                      <label key={candidate.fqdn} className="flex items-center justify-between gap-2 rounded-sm px-1.5 py-1 text-sm hover:bg-accent">
+                        <span className="flex flex-col gap-0.5">
+                          <span className="flex items-center gap-2">
+                            <Checkbox
+                              checked={candidate.selected}
+                              disabled={Boolean(candidate.availability) && !candidate.availability?.available}
+                              onCheckedChange={() => toggleCandidate(candidate.fqdn)}
+                            />
+                            {candidate.fqdn}
+                          </span>
+                          {zone && (
+                            <span className="pl-6 text-xs text-muted-foreground">
+                              Регистрация {formatUsd(zone.registrationPriceCents)} · продление {formatUsd(zone.renewalPriceCents)} · 3 года{" "}
+                              {formatUsd(zone.threeYearTcoCents)}
+                            </span>
+                          )}
+                        </span>
+                        <span className="flex items-center gap-2 text-xs text-muted-foreground">
+                          {candidate.availability?.premium && <Badge variant="outline">premium</Badge>}
+                          {candidate.availability?.priceCents != null && `${candidate.availability.priceCents} ${candidate.availability.currency ?? ""}`}
+                          {candidate.availability?.errorMessage}
+                          {statusBadge(candidate.availability)}
+                        </span>
+                      </label>
+                    );
+                  })}
                 </div>
               </div>
             )}
@@ -256,6 +307,16 @@ export function GenerateDomainsDialog({ onPurchased }: { onPurchased: () => void
 
           <DialogFooter>
             <DialogClose render={<Button type="button" variant="outline" />}>Отмена</DialogClose>
+            {candidates && (
+              <Button
+                type="button"
+                variant="outline"
+                disabled={generateMutation.isPending || checkMutation.isPending}
+                onClick={() => setCandidates(undefined)}
+              >
+                Назад
+              </Button>
+            )}
             {!candidates ? (
               <Button disabled={!canGenerate} onClick={() => generateMutation.mutate()}>
                 {generateMutation.isPending && <Spinner />}
