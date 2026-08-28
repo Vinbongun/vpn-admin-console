@@ -2,6 +2,7 @@
 
 import { useQuery } from "@tanstack/react-query";
 import type { ColumnDef } from "@tanstack/react-table";
+import Link from "next/link";
 import { useState } from "react";
 import { adminApi } from "@/api/client";
 import type { InfrastructureEndpointSummary } from "@/api/types";
@@ -25,7 +26,7 @@ function formatDate(value?: string | null) {
 const columns: ColumnDef<InfrastructureEndpointSummary>[] = [
   {
     accessorKey: "name",
-    header: "Сервер",
+    header: "Точка подключения",
     cell: ({ row }) => (
       <span className="font-medium">
         <EndpointName name={row.original.name} />
@@ -33,6 +34,20 @@ const columns: ColumnDef<InfrastructureEndpointSummary>[] = [
     ),
   },
   { accessorKey: "sourceCode", header: "Панель" },
+  {
+    id: "node",
+    header: "Нода",
+    // vpsInstanceId/Code are only ever set for a Remnawave node installed through install-remnawave-node -
+    // nodeName alone (no VPS link) means Remnawave knows the node but we didn't provision it ourselves.
+    cell: ({ row }) =>
+      row.original.vpsInstanceId ? (
+        <Link href={`/infrastructure/vps/${row.original.vpsInstanceId}`} className="underline" onClick={(event) => event.stopPropagation()}>
+          {row.original.vpsInstanceCode}
+        </Link>
+      ) : (
+        (row.original.nodeName ?? "—")
+      ),
+  },
   { id: "location", header: "Локация", cell: ({ row }) => [row.original.countryCode, row.original.city].filter(Boolean).join(" · ") || "—" },
   { id: "protocol", header: "Протокол", cell: ({ row }) => row.original.protocol + (row.original.transport ? ` · ${row.original.transport}` : "") },
   { id: "healthStatus", header: "Здоровье", cell: ({ row }) => <Badge>{row.original.healthStatus}</Badge> },

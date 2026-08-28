@@ -10,6 +10,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Dialog, DialogClose, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Spinner } from "@/components/ui/spinner";
+import { InstallRemnawaveNodeDialog } from "@/features/vps/install-remnawave-node-dialog";
 
 function apiErrorMessage(error: ApiError): string {
   const details = error.details as { message?: string | string[] } | undefined;
@@ -65,11 +66,44 @@ function InstallPanelDialog({ vps, alreadyInstalled }: { vps: VpsInstanceDetail;
   );
 }
 
+function InstallRemnawavePanelDialog({ vps }: { vps: VpsInstanceDetail }) {
+  const [open, setOpen] = useState(false);
+  const queryClient = useQueryClient();
+  const mutation = useMutation({
+    mutationFn: () => adminApi.installRemnawavePanelOnVpsInstance(vps.id),
+    onSuccess: async () => {
+      toast.success("Задача установки панели Remnawave поставлена.");
+      setOpen(false);
+      await queryClient.invalidateQueries({ queryKey: ["admin-vps-instance", vps.id] });
+    },
+    onError: (error) => toast.error(error instanceof ApiError ? apiErrorMessage(error) : "Не удалось поставить задачу установки панели."),
+  });
+
+  return (
+    <Dialog open={open} onOpenChange={setOpen}>
+      <DialogTrigger render={<Button size="sm" variant="outline" />}>Установить панель Remnawave</DialogTrigger>
+      <DialogContent className="sm:max-w-md">
+        <DialogHeader>
+          <DialogTitle>Установить панель Remnawave?</DialogTitle>
+          <DialogDescription>
+            Поставит Postgres + Redis + backend Remnawave на этот сервер и сам зарегистрирует панель в системе с реально выпущенным
+            API-токеном — в отличие от 3x-ui, ручной регистрации после установки не требуется.
+          </DialogDescription>
+        </DialogHeader>
+        <DialogFooter>
+          <DialogClose render={<Button type="button" variant="outline" />}>Отмена</DialogClose>
+          <Button disabled={mutation.isPending} onClick={() => mutation.mutate()}>
+            {mutation.isPending && <Spinner />}
+            Установить
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
 export function PanelProtocolCard({ vps, mayWrite }: { vps: VpsInstanceDetail; mayWrite: boolean }) {
-  // "INSTALL_PANEL" is a valid job_type at the DB level (see vps_automation_jobs_type_check) but the
-  // openapi.yaml enum for VpsAutomationReportSummary.jobType hasn't been updated to include it yet -
-  // cast rather than widen the generated union, since that's a spec gap, not something to paper over.
-  const hasInstallReport = (vps.latestReports ?? []).some((report) => (report.jobType as string) === "INSTALL_PANEL");
+  const hasInstallReport = (vps.latestReports ?? []).some((report) => report.jobType === "INSTALL_PANEL");
 
   return (
     <Card>
@@ -101,7 +135,13 @@ export function PanelProtocolCard({ vps, mayWrite }: { vps: VpsInstanceDetail; m
           </div>
         )}
 
-        {mayWrite && !vps.panelCode && <InstallPanelDialog vps={vps} alreadyInstalled={hasInstallReport} />}
+        {mayWrite && !vps.panelCode && (
+          <div className="flex flex-wrap gap-2">
+            <InstallPanelDialog vps={vps} alreadyInstalled={hasInstallReport} />
+            <InstallRemnawavePanelDialog vps={vps} />
+            <InstallRemnawaveNodeDialog vps={vps} />
+          </div>
+        )}
       </CardContent>
     </Card>
   );

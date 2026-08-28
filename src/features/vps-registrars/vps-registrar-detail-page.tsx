@@ -13,6 +13,7 @@ import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Spinner } from "@/components/ui/spinner";
 import { PaymentMethodsPanel } from "@/features/vps-registrars/payment-methods-panel";
+import { RegistrarServersPanel } from "@/features/vps-registrars/registrar-servers-panel";
 import { RotateRegistrarCredentialsDialog } from "@/features/vps-registrars/rotate-registrar-credentials-dialog";
 import { TariffCatalogPanel } from "@/features/vps-registrars/tariff-catalog-panel";
 import { can } from "@/lib/access-control";
@@ -98,6 +99,7 @@ export function VpsRegistrarDetailPage({ accountId }: { accountId: string }) {
             )}
           </div>
 
+          <RegistrarServersPanel accountId={account.id} mayWrite={mayWrite} />
           <PaymentMethodsPanel accountId={account.id} mayWrite={mayWrite} />
           <TariffCatalogPanel accountId={account.id} mayWrite={mayWrite} />
         </div>

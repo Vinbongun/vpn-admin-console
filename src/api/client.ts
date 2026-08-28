@@ -25,6 +25,8 @@ import type {
   AdminVpsInstanceQuery,
   AdminZonePricingQuery,
   ChangeVpsServerPassword,
+  ConfigProfileSummary,
+  ControlPlaneSourceDetail,
   CreateBrand,
   CreateControlPlaneSource,
   CreateEndpointGroup,
@@ -39,6 +41,7 @@ import type {
   Domain,
   ExtendSubscription,
   GenerateDomainCandidatesRequest,
+  InstallRemnawaveNode,
   IssuedSubscriptionToken,
   PasswordLogin,
   PlatformSetting,
@@ -50,6 +53,7 @@ import type {
   RefundPayment,
   RegisterVpsInstance,
   RegistrarAccountSummary,
+  RegistrarServerSummary,
   ReplaceBrandPaymentMethods,
   ReplaceEndpointGroupMembers,
   ReplaceEndpointGroupPlans,
@@ -145,11 +149,15 @@ export const adminApi = {
   listAuditEvents: async (query: AdminAuditQuery = {}) => unwrap(await client.GET("/admin/v1/audit-events", { params: { query }, headers: staffHeaders() })),
   getInfrastructureSummary: async () => unwrap(await client.GET("/admin/v1/infrastructure/summary", { headers: staffHeaders() })),
   listControlPlaneSources: async () => unwrap(await client.GET("/admin/v1/infrastructure/sources", { headers: staffHeaders() })),
+  getControlPlaneSourceDetail: async (sourceId: string) =>
+    unwrap<ControlPlaneSourceDetail>(await client.GET("/admin/v1/infrastructure/sources/{id}", { params: { path: { id: sourceId } }, headers: staffHeaders() })),
   createControlPlaneSource: async (body: CreateControlPlaneSource) => unwrap(await client.POST("/admin/v1/infrastructure/sources", { body, headers: staffHeaders() })),
   updateControlPlaneSource: async (sourceId: string, body: UpdateControlPlaneSource) =>
     unwrap(await client.PATCH("/admin/v1/infrastructure/sources/{id}", { params: { path: { id: sourceId } }, body, headers: staffHeaders() })),
   setControlPlaneSourceCredentials: async (sourceId: string, body: SetControlPlaneSourceCredentials) =>
     unwrap(await client.PUT("/admin/v1/infrastructure/sources/{id}/credentials", { params: { path: { id: sourceId } }, body, headers: staffHeaders() })),
+  listControlPlaneSourceConfigProfiles: async (sourceId: string) =>
+    unwrap<ConfigProfileSummary[]>(await client.GET("/admin/v1/infrastructure/sources/{id}/config-profiles", { params: { path: { id: sourceId } }, headers: staffHeaders() })),
   syncSource: async (sourceId: string, body: SyncSourceInventory = {}) => unwrap(await client.POST("/admin/v1/infrastructure/sources/{id}/sync", { params: { path: { id: sourceId } }, body, headers: staffHeaders() })),
   listInfrastructureEndpoints: async (query: AdminInfrastructureEndpointQuery = {}) => unwrap(await client.GET("/admin/v1/infrastructure/endpoints", { params: { query }, headers: staffHeaders() })),
   updateInfrastructureEndpoint: async (endpointId: string, body: UpdateInfrastructureEndpoint) =>
@@ -234,6 +242,12 @@ export const adminApi = {
   runVpsInstanceUpdate: async (id: string) => unwrap<VpsAutomationJobRef>(await client.POST("/admin/v1/vps-instances/{id}/update", { params: { path: { id } }, headers: staffHeaders() })),
   backupVpsInstance: async (id: string) => unwrap<VpsAutomationJobRef>(await client.POST("/admin/v1/vps-instances/{id}/backup", { params: { path: { id } }, headers: staffHeaders() })),
   installPanelOnVpsInstance: async (id: string) => unwrap<VpsAutomationJobRef>(await client.POST("/admin/v1/vps-instances/{id}/install-panel", { params: { path: { id } }, headers: staffHeaders() })),
+  // Self-contained: creates a new control_plane_source with a freshly-minted API token, no manual registration step afterward (unlike install-panel/3x-ui).
+  installRemnawavePanelOnVpsInstance: async (id: string) =>
+    unwrap<VpsAutomationJobRef>(await client.POST("/admin/v1/vps-instances/{id}/install-remnawave-panel", { params: { path: { id } }, headers: staffHeaders() })),
+  // Attaches to an EXISTING REMNAWAVE panel - backend calls that panel's own API (create node + mint SECRET_KEY) before enqueueing the SSH job.
+  installRemnawaveNodeOnVpsInstance: async (id: string, body: InstallRemnawaveNode) =>
+    unwrap<VpsAutomationJobRef>(await client.POST("/admin/v1/vps-instances/{id}/install-remnawave-node", { params: { path: { id } }, body, headers: staffHeaders() })),
   startVpsServices: async (id: string) => unwrap<VpsAutomationJobRef>(await client.POST("/admin/v1/vps-instances/{id}/start", { params: { path: { id } }, headers: staffHeaders() })),
   stopVpsServices: async (id: string) => unwrap<VpsAutomationJobRef>(await client.POST("/admin/v1/vps-instances/{id}/stop", { params: { path: { id } }, headers: staffHeaders() })),
   // No request body - the backend enqueues the job on the id alone; typed confirmation (host/IP) is a frontend-only safety gate.
@@ -248,6 +262,11 @@ export const adminApi = {
   // Deactivates every other account of this providerType first - "1 активный аккаунт на регистратора" is DB-enforced.
   activateVpsRegistrarAccount: async (id: string) => unwrap<VpsRegistrarAccount>(await client.POST("/admin/v1/vps-registrar-accounts/{id}/activate", { params: { path: { id } }, headers: staffHeaders() })),
   syncVpsRegistrarBalance: async (id: string) => unwrap<VpsRegistrarAccount>(await client.POST("/admin/v1/vps-registrar-accounts/{id}/sync-balance", { params: { path: { id } }, headers: staffHeaders() })),
+  // Servers bought on the registrar's side, including ones never registered into vps_instances (e.g. bought outside this pipeline) - sync only ever reconciles already-linked instances.
+  listVpsRegistrarServers: async (id: string) =>
+    unwrap<RegistrarServerSummary[]>(await client.GET("/admin/v1/vps-registrar-accounts/{id}/servers", { params: { path: { id } }, headers: staffHeaders() })),
+  importVpsRegistrarServer: async (id: string, itemId: string) =>
+    unwrap<{ vpsInstanceId: string }>(await client.POST("/admin/v1/vps-registrar-accounts/{id}/servers/{itemId}/import", { params: { path: { id, itemId } }, headers: staffHeaders() })),
   listVpsPaymentMethods: async (id: string) => unwrap<VpsPaymentMethod[]>(await client.GET("/admin/v1/vps-registrar-accounts/{id}/payment-methods", { params: { path: { id } }, headers: staffHeaders() })),
   addVpsPaymentMethod: async (id: string, body: AddVpsPaymentMethod) =>
     unwrap<VpsPaymentMethod>(await client.POST("/admin/v1/vps-registrar-accounts/{id}/payment-methods", { params: { path: { id } }, body, headers: staffHeaders() })),

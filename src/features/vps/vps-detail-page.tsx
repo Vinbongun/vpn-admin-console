@@ -201,6 +201,7 @@ export function VpsDetailPage({ vpsId }: { vpsId: string }) {
                 <Field label="Способ добавления" value={data.providerType === "MANUAL" ? "Вручную" : `Через API (${data.providerType})`} />
                 <Field label="Последняя проверка здоровья" value={formatDate(data.lastHealthCheckAt)} />
                 <Field label="Домен панели" value={data.domainFqdn ?? "—"} />
+                <Field label="Локация" value={data.datacenterName ?? "—"} />
                 <Field label="Стоимость покупки" value={formatMoney(data.purchaseCostCents, data.currency)} />
                 <Field label="Дата покупки" value={formatDate(data.purchasedAt)} />
                 <Field label="Дата истечения" value={data.expireDate ? formatDate(data.expireDate) : "—"} />

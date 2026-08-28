@@ -99,6 +99,44 @@ function LinkedVpsSection({ sourceId }: { sourceId: string }) {
   );
 }
 
+function NodesSection({ sourceId }: { sourceId: string }) {
+  const detail = useQuery({ queryKey: ["admin-infrastructure-source-detail", sourceId], queryFn: () => adminApi.getControlPlaneSourceDetail(sourceId), retry: false });
+  const nodes = detail.data?.nodes ?? [];
+
+  return (
+    <div className="space-y-2">
+      <p className="text-sm font-medium">Ноды ({detail.isLoading ? "…" : nodes.length})</p>
+      {detail.isLoading ? (
+        <p className="text-sm text-muted-foreground">Загрузка…</p>
+      ) : detail.isError ? (
+        <p className="text-sm text-destructive">Не удалось получить список нод.</p>
+      ) : nodes.length === 0 ? (
+        <p className="text-sm text-muted-foreground">У панели пока нет нод — либо credentials не настроены, либо ноды ещё не добавлены.</p>
+      ) : (
+        <div className="flex flex-col gap-1">
+          {nodes.map((node) => (
+            <div key={node.uuid} className="flex flex-wrap items-center justify-between gap-2 rounded-md border px-2.5 py-1.5 text-sm">
+              <span className="font-medium">
+                {node.name} {node.vpsInstanceCode && <span className="font-normal text-muted-foreground">({node.vpsInstanceCode})</span>}
+              </span>
+              <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                <CountryFlag code={node.countryCode} />
+                <span>
+                  {node.address}
+                  {node.port ? `:${node.port}` : ""}
+                </span>
+                <Badge variant={node.isConnected ? "outline" : "destructive"}>
+                  {node.isDisabled ? "Отключена" : node.isConnecting ? "Подключается" : node.isConnected ? "В сети" : "Не в сети"}
+                </Badge>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
 export function SourceEditDialog({
   source,
   onOpenChange,
@@ -199,6 +237,7 @@ function SourceEditBody({ source, mayWrite, onClose }: { source: ControlPlaneSou
         </FieldGroup>
         <div className="mt-4 flex flex-col gap-4">
           <CredentialsSection source={source} mayWrite={mayWrite} />
+          {source.providerType === "REMNAWAVE" && <NodesSection sourceId={source.id} />}
           <LinkedVpsSection sourceId={source.id} />
         </div>
         <DialogFooter className="mt-4">
