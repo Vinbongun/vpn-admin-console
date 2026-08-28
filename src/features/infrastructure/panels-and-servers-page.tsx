@@ -15,7 +15,6 @@ import { Button } from "@/components/ui/button";
 import { Card, CardAction, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectGroup, SelectItem, SelectLabel, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Spinner } from "@/components/ui/spinner";
-import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { CreateSourceDialog } from "@/features/infrastructure/create-source-dialog";
 import { SourceEditDialog } from "@/features/infrastructure/source-edit-dialog";
 import { VpsListPage } from "@/features/vps/vps-list-page";
@@ -168,19 +167,7 @@ function PanelsCard() {
               {bulkSyncing && <Spinner />}
               Обновить все панели
             </Button>
-            {mayWrite && (
-              <>
-                <Tooltip>
-                  <TooltipTrigger render={<Button size="sm" variant="outline" disabled />}>Установить панель Remnawave</TooltipTrigger>
-                  <TooltipContent>Скоро — пока нужно ставить вручную и регистрировать через «+ Добавить панель»</TooltipContent>
-                </Tooltip>
-                <Tooltip>
-                  <TooltipTrigger render={<Button size="sm" variant="outline" disabled />}>Присоединить как ноду Remnawave</TooltipTrigger>
-                  <TooltipContent>Скоро</TooltipContent>
-                </Tooltip>
-                <CreateSourceDialog />
-              </>
-            )}
+            {mayWrite && <CreateSourceDialog />}
           </div>
         </CardAction>
       </CardHeader>

@@ -1729,6 +1729,57 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/admin/v1/vps-registrar-accounts/{id}/servers": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description Every server this account has on the registrar's side, flagging which are already tracked in vps_instances - syncAllRegistrarLinkedInstances only ever reconciles servers ALREADY linked, so this is the only way to spot one bought outside this pipeline. */
+        get: operations["listVpsRegistrarServers"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/v1/vps-registrar-accounts/{id}/servers/{itemId}/import": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** @description Registers a pre-existing (already active) registrar server into vps_instances. */
+        post: operations["importVpsRegistrarServer"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/v1/scheduled-tasks": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description Every known background scheduler task (provisioning/reconciliation/domain-purchase/ subscription-expiry/promo-code-payout/device-usage/telegram-alert/vps-health-check/ vps-test-server/vps-registrar-sync) - each appears here even if it has never run yet. Populated by a global interceptor (@TrackScheduledTask), not by the scheduler containers themselves - regional-probe and backup-scheduler are not tracked (they don't fit the "one endpoint call = one task run" shape this is built around). */
+        get: operations["listScheduledTasks"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/admin/v1/vps-instances": {
         parameters: {
             query?: never;
@@ -1888,6 +1939,40 @@ export interface paths {
         put?: never;
         /** @description Enqueues an INSTALL_PANEL job (Ansible role install-3x-ui) - installs a 3x-ui panel via Docker on this VPS. Verified live 2026-08-28: the image's `x-ui setting -port/-username/-password` CLI flags do not actually take effect on this Docker image (the entrypoint bypasses the install-state file), so the panel always comes up on the image's own defaults - port 2053, admin/admin, no TLS/domain - and the role verifies this via a real POST /login instead of trusting the flags. No persistent Bearer API token is configured automatically, so `control_plane_sources` is never auto-created - this job succeeding leaves controlPlaneSourceId null on the VPS; the admin must log in manually, change the password, configure API access, and register the panel by hand via the existing "create control plane source" flow. */
         post: operations["installPanelOnVpsInstance"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/v1/vps-instances/{id}/install-remnawave-panel": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** @description Enqueues an INSTALL_REMNAWAVE_PANEL job - installs a full Remnawave panel stack (backend+postgres+redis) on this VPS, live-verified 2026-08-28. Self-contained (no extraParams needed): the Ansible role generates its own secrets, registers a real superadmin, mints a real long-lived API token, and auto-registers a REMNAWAVE control_plane_source from it - controlPlaneSourceId is set automatically on success, no manual credential entry needed (unlike install-panel/3x-ui). Bound to the bare IP over plain HTTP with no reverse proxy/TLS yet - put a real one in front before production use. */
+        post: operations["installRemnawavePanelOnVpsInstance"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/v1/vps-instances/{id}/install-remnawave-node": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** @description Enqueues an INSTALL_REMNAWAVE_NODE job - installs a Remnawave node on this VPS that reports to an EXISTING panel elsewhere. NOT self-contained: the backend first calls the target panel's own API (create node + mint its SECRET_KEY) before enqueueing the SSH job, so this requires an existing config profile/inbounds on that panel (see GET .../infrastructure/sources/{id}/config-profiles). On success, controlPlaneSourceId and remnawaveNodeUuid are set on this VPS automatically. Structurally verified (contracts + Ansible syntax) 2026-08-28, not yet live-verified end-to-end (needs a second VPS + a pre-configured panel). */
+        post: operations["installRemnawaveNodeOnVpsInstance"];
         delete?: never;
         options?: never;
         head?: never;
@@ -2233,7 +2318,8 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        get?: never;
+        /** @description Panel-detail view - the source plus (for a REMNAWAVE source with credentials configured) its live node list. nodes is always an empty array, never an error, for a non-REMNAWAVE source or one without credentials. */
+        get: operations["getControlPlaneSourceDetail"];
         put?: never;
         post?: never;
         delete?: never;
@@ -2253,6 +2339,23 @@ export interface paths {
         get?: never;
         /** @description Rotates a source's credentials in place (replaces whatever was stored before, or adds DB-stored credentials to a source that was relying on env vars). No restart needed. */
         put: operations["setControlPlaneSourceCredentials"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/v1/infrastructure/sources/{id}/config-profiles": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description REMNAWAVE-only - which config profile/inbounds a new node on this panel can attach to (used to build the install-remnawave-node form). 400 for a non-REMNAWAVE source. */
+        get: operations["listControlPlaneSourceConfigProfiles"];
+        put?: never;
         post?: never;
         delete?: never;
         options?: never;
@@ -3347,6 +3450,19 @@ export interface components {
             ip?: string | null;
             user: string;
         };
+        ScheduledTaskSummary: {
+            taskName: string;
+            /** @description The scheduler's documented default poll interval - a real deployment may override this via its own *_POLL_INTERVAL_SECONDS env var, which the backend has no way to see, so treat this as indicative only. */
+            defaultIntervalSeconds: number;
+            /** Format: date-time */
+            lastRunAt: string | null;
+            /** @enum {string|null} */
+            lastStatus: "SUCCESS" | "FAILED" | null;
+            /** @description JSON-stringified handler result (on success) or the error message (on failure), truncated to 2000 chars. */
+            lastResult: string | null;
+            /** @description lastRunAt older than 2x defaultIntervalSeconds, or never run at all - a rough staleness signal, not a guarantee something is broken. */
+            overdue: boolean;
+        };
         VpsPaymentMethod: {
             /** Format: uuid */
             id: string;
@@ -3369,6 +3485,23 @@ export interface components {
             ramGb?: number | null;
             diskGb?: number | null;
             networkSpeedLabel?: string | null;
+        };
+        RegistrarServerSummary: {
+            /** @description The registrar's own server/item id. */
+            itemId: string;
+            /** @description Raw registrar status code: 0 unknown, 1 ordered, 2 active, 3 stopped, 4 deleted, 5 processing. */
+            status: string;
+            statusText: string;
+            ip?: string | null;
+            hostname?: string | null;
+            os?: string | null;
+            /** Format: date */
+            expireDate?: string | null;
+            costCents?: number | null;
+            currency?: string | null;
+            datacenterName?: string | null;
+            /** @description True if already tracked in vps_instances under this registrar account - POST .../import if not. */
+            imported: boolean;
         };
         VpsPurchaseOperation: {
             /** Format: uuid */
@@ -3429,6 +3562,15 @@ export interface components {
              * @description Next renewal/expiry date.
              */
             expireDate?: string | null;
+            /** @description Set once this VPS is installed as a Remnawave node (via install-remnawave-node) - the node's uuid on its owning panel. */
+            remnawaveNodeUuid?: string | null;
+            /** @description Registrar's own datacenter id */
+            datacenterId?: string | null;
+            /**
+             * @description Human-readable location
+             * @example Финляндия
+             */
+            datacenterName?: string | null;
         };
         VpsDeployedProtocol: {
             protocolCode?: string;
@@ -3441,7 +3583,7 @@ export interface components {
         };
         VpsAutomationReportSummary: {
             /** @enum {string} */
-            jobType?: "BOOTSTRAP" | "TEST" | "HEALTH_CHECK" | "UPDATE" | "BACKUP" | "DECOMMISSION" | "START_SERVICES" | "STOP_SERVICES";
+            jobType?: "BOOTSTRAP" | "TEST" | "HEALTH_CHECK" | "UPDATE" | "BACKUP" | "DECOMMISSION" | "START_SERVICES" | "STOP_SERVICES" | "INSTALL_PANEL" | "INSTALL_REMNAWAVE_PANEL" | "INSTALL_REMNAWAVE_NODE";
             /** @description Raw JSON as written by the matching Ansible role. */
             reportPayload?: Record<string, never>;
             /** Format: date-time */
@@ -3480,6 +3622,24 @@ export interface components {
             /** Format: date */
             expireDate?: string;
         };
+        InstallRemnawaveNode: {
+            /**
+             * Format: uuid
+             * @description Which REMNAWAVE control_plane_source this node should attach to.
+             */
+            panelSourceId: string;
+            /**
+             * Format: uuid
+             * @description From GET .../infrastructure/sources/{panelSourceId}/config-profiles.
+             */
+            configProfileUuid: string;
+            activeInboundUuids: string[];
+            countryCode: string;
+            /** @description Defaults to the VPS's own code if omitted. */
+            name?: string;
+            /** @default 2222 */
+            port: number;
+        };
         /** @description Manual-entry editing for purchase metadata - every field optional, only what's provided is updated (existing values are preserved otherwise). Not a job trigger. */
         UpdateVpsInstanceMetadata: {
             /** Format: date-time */
@@ -3507,7 +3667,7 @@ export interface components {
             sshPort?: number;
             sshUser?: string;
             /** @enum {string} */
-            jobType?: "BOOTSTRAP" | "TEST" | "HEALTH_CHECK" | "UPDATE" | "BACKUP" | "DECOMMISSION" | "START_SERVICES" | "STOP_SERVICES";
+            jobType?: "BOOTSTRAP" | "TEST" | "HEALTH_CHECK" | "UPDATE" | "BACKUP" | "DECOMMISSION" | "START_SERVICES" | "STOP_SERVICES" | "INSTALL_PANEL" | "INSTALL_REMNAWAVE_PANEL" | "INSTALL_REMNAWAVE_NODE";
             extraParams?: Record<string, never> | null;
         };
         VpsAutomationJobReport: {
@@ -3636,6 +3796,37 @@ export interface components {
              */
             credentialsRotatedAt?: string | null;
         };
+        RemnawaveNodeSummary: {
+            uuid: string;
+            name: string;
+            address: string;
+            port?: number | null;
+            countryCode: string;
+            isConnected: boolean;
+            isDisabled: boolean;
+            isConnecting: boolean;
+            lastStatusMessage?: string | null;
+            /**
+             * Format: uuid
+             * @description Set only if this node was installed through install-remnawave-node - null for a node Remnawave otherwise knows about.
+             */
+            vpsInstanceId?: string | null;
+            vpsInstanceCode?: string | null;
+        };
+        ControlPlaneSourceDetail: components["schemas"]["ControlPlaneSourceSummary"] & {
+            /** @description Live node list from the panel's own API - only ever non-empty for a REMNAWAVE source with configured credentials; empty (not an error) otherwise. */
+            nodes: components["schemas"]["RemnawaveNodeSummary"][];
+        };
+        ConfigProfileInboundSummary: {
+            uuid: string;
+            tag: string;
+            type: string;
+        };
+        ConfigProfileSummary: {
+            uuid: string;
+            name: string;
+            inbounds: components["schemas"]["ConfigProfileInboundSummary"][];
+        };
         InfrastructureEndpointSummary: {
             /** Format: uuid */
             id: string;
@@ -3651,10 +3842,16 @@ export interface components {
             lastSeenAt?: string | null;
             /** Format: date-time */
             lastProbeAt?: string | null;
-            /** @description Real Remnawave node identity this inbound runs on (from the panel's own /api/nodes), when this endpoint came from a Remnawave source - null for 3x-ui/anything else, where panel and VPS are the same machine so there's no ambiguity to resolve. Not yet cross-referenced to a vps_instances row (that needs vps_instances to record its own Remnawave node uuid first, planned alongside future Remnawave node-install automation). */
+            /** @description Real Remnawave node identity this inbound runs on (from the panel's own /api/nodes), when this endpoint came from a Remnawave source - null for 3x-ui/anything else, where panel and VPS are the same machine so there's no ambiguity to resolve. */
             nodeUuid?: string | null;
             /** @description The Remnawave node's own display name, alongside nodeUuid - same availability caveat. */
             nodeName?: string | null;
+            /**
+             * Format: uuid
+             * @description Which of our own vps_instances this endpoint's node physically runs on - only set once that node was installed through install-remnawave-node (joined via vps_instances.remnawaveNodeUuid); null otherwise, same as nodeUuid.
+             */
+            vpsInstanceId?: string | null;
+            vpsInstanceCode?: string | null;
         };
         InfrastructureEndpointPage: components["schemas"]["PageMetadata"] & {
             items: components["schemas"]["InfrastructureEndpointSummary"][];
@@ -7300,8 +7497,11 @@ export interface operations {
             content: {
                 "application/json": {
                     code: string;
-                    /** @enum {string} */
-                    providerType: "QWINS";
+                    /**
+                     * @description DEMO has no real provider behind it - fake read-only data, every mutating action fails cleanly.
+                     * @enum {string}
+                     */
+                    providerType: "QWINS" | "DEMO";
                     username: string;
                     password: string;
                 };
@@ -7734,6 +7934,102 @@ export interface operations {
             };
         };
     };
+    listVpsRegistrarServers: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RegistrarServerSummary"][];
+                };
+            };
+        };
+    };
+    importVpsRegistrarServer: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+                itemId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Imported */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /** Format: uuid */
+                        vpsInstanceId: string;
+                    };
+                };
+            };
+            /** @description Server is not active yet */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Server not found on this registrar account */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Server already imported */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    listScheduledTasks: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description All known tasks, sorted by name */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ScheduledTaskSummary"][];
+                };
+            };
+            /** @description Missing infrastructure.read permission */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
     listVpsInstances: {
         parameters: {
             query?: {
@@ -8146,6 +8442,96 @@ export interface operations {
             };
             /** @description VPS instance not found */
             404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    installRemnawavePanelOnVpsInstance: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Job enqueued (or deduped) */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["VpsAutomationJobRef"];
+                };
+            };
+            /** @description Missing vps.write permission */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description VPS instance not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    installRemnawaveNodeOnVpsInstance: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["InstallRemnawaveNode"];
+            };
+        };
+        responses: {
+            /** @description Job enqueued */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["VpsAutomationJobRef"];
+                };
+            };
+            /** @description Validation error */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Missing vps.write permission */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description VPS instance or panel source not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Panel is not REMNAWAVE */
+            422: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -8820,6 +9206,35 @@ export interface operations {
             };
         };
     };
+    getControlPlaneSourceDetail: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ControlPlaneSourceDetail"];
+                };
+            };
+            /** @description Control plane source not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
     updateControlPlaneSource: {
         parameters: {
             query?: never;
@@ -8915,6 +9330,42 @@ export interface operations {
             };
             /** @description Missing infrastructure.write permission */
             403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Control plane source not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    listControlPlaneSourceConfigProfiles: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ConfigProfileSummary"][];
+                };
+            };
+            /** @description Source is not REMNAWAVE */
+            400: {
                 headers: {
                     [name: string]: unknown;
                 };
