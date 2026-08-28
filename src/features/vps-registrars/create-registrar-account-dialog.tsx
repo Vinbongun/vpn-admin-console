@@ -26,6 +26,8 @@ export function CreateRegistrarAccountDialog() {
   const queryClient = useQueryClient();
 
   const mutation = useMutation({
+    // providerType is currently locked to "QWINS" on the backend - the only real VPS-registrar
+    // integration that exists today. A provider Select belongs here once a second one ships.
     mutationFn: () => adminApi.createVpsRegistrarAccount({ code: form.code.trim(), providerType: "QWINS", username: form.username.trim(), password: form.password }),
     onSuccess: async () => {
       toast.success("Аккаунт регистратора добавлен.");
@@ -50,18 +52,18 @@ export function CreateRegistrarAccountDialog() {
         render={
           <Button size="sm">
             <PlusIcon />
-            Добавить аккаунт QWINS
+            Добавить аккаунт регистратора
           </Button>
         }
       />
       <DialogContent className="sm:max-w-sm">
         <DialogHeader>
-          <DialogTitle>Добавить аккаунт QWINS</DialogTitle>
+          <DialogTitle>Добавить аккаунт регистратора</DialogTitle>
         </DialogHeader>
         <div className="flex flex-col gap-3">
           <div className="space-y-2">
             <Label htmlFor="registrar-code">Код</Label>
-            <Input id="registrar-code" placeholder="qwins-main" value={form.code} onChange={(event) => setForm((prev) => ({ ...prev, code: event.target.value }))} />
+            <Input id="registrar-code" placeholder="Например main" value={form.code} onChange={(event) => setForm((prev) => ({ ...prev, code: event.target.value }))} />
           </div>
           <div className="space-y-2">
             <Label htmlFor="registrar-username">Логин</Label>

@@ -15,8 +15,8 @@ import { Button } from "@/components/ui/button";
 import { Card, CardAction, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectGroup, SelectItem, SelectLabel, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Spinner } from "@/components/ui/spinner";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { CreateSourceDialog } from "@/features/infrastructure/create-source-dialog";
-import { RotateCredentialsDialog } from "@/features/infrastructure/rotate-credentials-dialog";
 import { SourceEditDialog } from "@/features/infrastructure/source-edit-dialog";
 import { VpsListPage } from "@/features/vps/vps-list-page";
 import { can } from "@/lib/access-control";
@@ -120,7 +120,7 @@ function PanelsCard() {
           </div>
         ),
       },
-      { accessorKey: "endpointCount", header: "Серверы" },
+      { accessorKey: "endpointCount", header: "Точки подключения" },
       { accessorKey: "unhealthyCount", header: "Неисправны" },
       {
         id: "sync",
@@ -140,7 +140,11 @@ function PanelsCard() {
                 {syncingId === source.id && <Spinner />}
                 Синхронизировать с панелью
               </Button>
-              {mayWrite && <RotateCredentialsDialog sourceId={source.id} sourceCode={source.code} canAutoSync={source.providerType !== "3X_UI"} />}
+              {mayWrite && (
+                <Button size="sm" variant="outline" onClick={() => setSelectedSourceId(source.id)}>
+                  Редактировать
+                </Button>
+              )}
             </div>
           );
         },
@@ -164,7 +168,19 @@ function PanelsCard() {
               {bulkSyncing && <Spinner />}
               Обновить все панели
             </Button>
-            {mayWrite && <CreateSourceDialog />}
+            {mayWrite && (
+              <>
+                <Tooltip>
+                  <TooltipTrigger render={<Button size="sm" variant="outline" disabled />}>Установить панель Remnawave</TooltipTrigger>
+                  <TooltipContent>Скоро — пока нужно ставить вручную и регистрировать через «+ Добавить панель»</TooltipContent>
+                </Tooltip>
+                <Tooltip>
+                  <TooltipTrigger render={<Button size="sm" variant="outline" disabled />}>Присоединить как ноду Remnawave</TooltipTrigger>
+                  <TooltipContent>Скоро</TooltipContent>
+                </Tooltip>
+                <CreateSourceDialog />
+              </>
+            )}
           </div>
         </CardAction>
       </CardHeader>

@@ -76,6 +76,7 @@ import type {
   UpdateReferralPartner,
   UpdateSubscription,
   UpdateVpsInstanceMetadata,
+  UpdateVpsPaymentMethod,
   UpdateVpsRegistrarCredentials,
   UpdateZonePricing,
   UpsertPromoCode,
@@ -237,15 +238,23 @@ export const adminApi = {
   stopVpsServices: async (id: string) => unwrap<VpsAutomationJobRef>(await client.POST("/admin/v1/vps-instances/{id}/stop", { params: { path: { id } }, headers: staffHeaders() })),
   // No request body - the backend enqueues the job on the id alone; typed confirmation (host/IP) is a frontend-only safety gate.
   decommissionVpsInstance: async (id: string) => unwrap<VpsAutomationJobRef>(await client.POST("/admin/v1/vps-instances/{id}/decommission", { params: { path: { id } }, headers: staffHeaders() })),
+  // Staff-facing equivalent of the internal-only scheduler cron - enqueues HEALTH_CHECK for every ACTIVE VPS in one request.
+  healthCheckAllVpsInstances: async () => unwrap<{ enqueued: number }>(await client.POST("/admin/v1/vps-instances/health-check-all", { headers: staffHeaders() })),
 
   listVpsRegistrarAccounts: async () => unwrap<VpsRegistrarAccount[]>(await client.GET("/admin/v1/vps-registrar-accounts", { headers: staffHeaders() })),
   createVpsRegistrarAccount: async (body: CreateVpsRegistrarAccount) => unwrap<VpsRegistrarAccount>(await client.POST("/admin/v1/vps-registrar-accounts", { body, headers: staffHeaders() })),
   updateVpsRegistrarCredentials: async (id: string, body: UpdateVpsRegistrarCredentials) =>
     unwrap<{ ok?: boolean }>(await client.POST("/admin/v1/vps-registrar-accounts/{id}/credentials", { params: { path: { id } }, body, headers: staffHeaders() })),
+  // Deactivates every other account of this providerType first - "1 активный аккаунт на регистратора" is DB-enforced.
+  activateVpsRegistrarAccount: async (id: string) => unwrap<VpsRegistrarAccount>(await client.POST("/admin/v1/vps-registrar-accounts/{id}/activate", { params: { path: { id } }, headers: staffHeaders() })),
   syncVpsRegistrarBalance: async (id: string) => unwrap<VpsRegistrarAccount>(await client.POST("/admin/v1/vps-registrar-accounts/{id}/sync-balance", { params: { path: { id } }, headers: staffHeaders() })),
   listVpsPaymentMethods: async (id: string) => unwrap<VpsPaymentMethod[]>(await client.GET("/admin/v1/vps-registrar-accounts/{id}/payment-methods", { params: { path: { id } }, headers: staffHeaders() })),
   addVpsPaymentMethod: async (id: string, body: AddVpsPaymentMethod) =>
     unwrap<VpsPaymentMethod>(await client.POST("/admin/v1/vps-registrar-accounts/{id}/payment-methods", { params: { path: { id } }, body, headers: staffHeaders() })),
+  updateVpsPaymentMethod: async (id: string, methodId: string, body: UpdateVpsPaymentMethod) =>
+    unwrap<VpsPaymentMethod>(await client.PATCH("/admin/v1/vps-registrar-accounts/{id}/payment-methods/{methodId}", { params: { path: { id, methodId } }, body, headers: staffHeaders() })),
+  deleteVpsPaymentMethod: async (id: string, methodId: string) =>
+    unwrap<{ ok?: boolean }>(await client.DELETE("/admin/v1/vps-registrar-accounts/{id}/payment-methods/{methodId}", { params: { path: { id, methodId } }, headers: staffHeaders() })),
   syncVpsTariffCatalog: async (id: string, body: SyncVpsTariffCatalog = {}) =>
     unwrap<{ synced?: number }>(await client.POST("/admin/v1/vps-registrar-accounts/{id}/sync-catalog", { params: { path: { id } }, body, headers: staffHeaders() })),
   listVpsTariffCatalog: async (id: string, datacenter?: string) =>

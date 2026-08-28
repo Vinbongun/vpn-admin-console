@@ -70,8 +70,8 @@ export function ProtocolsPage() {
   return (
     <AppShell>
       <PageHeader
-        title="Протоколы"
-        description="Inbound'ы (протокольные endpoint'ы) по всем панелям — один физический сервер может показывать несколько строк, по одной на протокол"
+        title="Точки подключения"
+        description="То, что клиент видит в приложении как «сервер» для подключения (inbound по всем панелям) — не путать с физическими VPS-серверами. Один VPS может показывать несколько точек подключения, по одной на протокол."
       />
 
       <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">

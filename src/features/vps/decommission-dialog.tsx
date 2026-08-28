@@ -1,15 +1,11 @@
 "use client";
 
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { useState } from "react";
 import { toast } from "sonner";
 import { adminApi, ApiError } from "@/api/client";
 import type { VpsInstance } from "@/api/types";
 import { Button } from "@/components/ui/button";
-import { Dialog, DialogClose, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Spinner } from "@/components/ui/spinner";
+import { TypedConfirmDialog } from "@/features/vps/typed-confirm-dialog";
 
 function apiErrorMessage(error: ApiError): string {
   const details = error.details as { message?: string | string[] } | undefined;
@@ -18,8 +14,6 @@ function apiErrorMessage(error: ApiError): string {
 }
 
 export function DecommissionDialog({ vps }: { vps: VpsInstance }) {
-  const [open, setOpen] = useState(false);
-  const [confirmText, setConfirmText] = useState("");
   const queryClient = useQueryClient();
 
   const mutation = useMutation({
@@ -28,8 +22,6 @@ export function DecommissionDialog({ vps }: { vps: VpsInstance }) {
     mutationFn: () => adminApi.decommissionVpsInstance(vps.id),
     onSuccess: async () => {
       toast.success("Задача списания поставлена.");
-      setOpen(false);
-      setConfirmText("");
       await Promise.all([
         queryClient.invalidateQueries({ queryKey: ["admin-vps-instances"] }),
         queryClient.invalidateQueries({ queryKey: ["admin-vps-instance", vps.id] }),
@@ -39,33 +31,20 @@ export function DecommissionDialog({ vps }: { vps: VpsInstance }) {
   });
 
   return (
-    <Dialog
-      open={open}
-      onOpenChange={(next) => {
-        setOpen(next);
-        if (!next) setConfirmText("");
-      }}
-    >
-      <DialogTrigger render={<Button size="sm" variant="destructive" />}>Списать</DialogTrigger>
-      <DialogContent className="sm:max-w-md">
-        <DialogHeader>
-          <DialogTitle>Списать {vps.code}?</DialogTitle>
-          <DialogDescription>
-            Разрушительная операция. Чтобы подтвердить, введите хост сервера — <span className="font-mono">{vps.host}</span>.
-          </DialogDescription>
-        </DialogHeader>
-        <div className="space-y-2">
-          <Label htmlFor="decommission-confirm">Хост сервера</Label>
-          <Input id="decommission-confirm" value={confirmText} onChange={(event) => setConfirmText(event.target.value)} placeholder={vps.host} />
-        </div>
-        <DialogFooter>
-          <DialogClose render={<Button type="button" variant="outline" />}>Отмена</DialogClose>
-          <Button variant="destructive" disabled={confirmText !== vps.host || mutation.isPending} onClick={() => mutation.mutate()}>
-            {mutation.isPending && <Spinner />}
-            Списать
-          </Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
+    <TypedConfirmDialog
+      trigger={<Button size="sm" variant="destructive">Списать</Button>}
+      title={`Списать ${vps.code}?`}
+      description={
+        <>
+          Останавливает Docker на сервере и ставит локальный маркер — это не отменяет аренду у хостера/регистратора,
+          сервер продолжает стоить денег, пока вы не отмените её там отдельно. Чтобы подтвердить, введите хост
+          сервера — <span className="font-mono">{vps.host}</span>.
+        </>
+      }
+      confirmWord={vps.host}
+      confirmLabel="Списать"
+      isPending={mutation.isPending}
+      onConfirm={() => mutation.mutate()}
+    />
   );
 }

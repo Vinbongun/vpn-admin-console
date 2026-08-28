@@ -29,8 +29,9 @@ export const rotateCredentialsSchema = z.object({
 });
 export type RotateCredentialsValues = z.infer<typeof rotateCredentialsSchema>;
 
-export const billingPeriods = ["MONTHLY", "YEARLY", "ONE_TIME", "OTHER"] as const;
-
+// Поля покупки (где куплена/стоимость/валюта/период/следующая оплата) убраны из формы редактирования —
+// это устаревшая, довиртуальная модель "стоимость владения панелью" с тех времён, когда VPS и панель ещё
+// не различались как отдельные сущности. Реальная информация о покупке теперь живёт на VPS (vps_instances).
 export const updateSourceSchema = z.object({
   code: z
     .string()
@@ -44,17 +45,6 @@ export const updateSourceSchema = z.object({
     .toUpperCase()
     .refine((value) => value === "" || /^[A-Z]{2}$/.test(value), "2 буквы (ISO alpha-2) или пусто"),
   comment: z.string().trim().max(2000, "До 2000 символов"),
-  purchasedFrom: z.string().trim().max(200, "До 200 символов"),
-  costAmount: z
-    .string()
-    .trim()
-    .refine((value) => value === "" || (!Number.isNaN(Number(value)) && Number(value) >= 0), "Введите неотрицательное число"),
-  costCurrency: z.string().trim().toUpperCase().max(8, "До 8 символов"),
-  billingPeriod: z.enum(["", ...billingPeriods]),
-  nextPaymentAt: z
-    .string()
-    .trim()
-    .refine((value) => value === "" || /^\d{4}-\d{2}-\d{2}$/.test(value), "Формат ГГГГ-ММ-ДД"),
 });
 export type UpdateSourceValues = z.infer<typeof updateSourceSchema>;
 

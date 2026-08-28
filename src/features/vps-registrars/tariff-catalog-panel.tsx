@@ -65,7 +65,7 @@ export function TariffCatalogPanel({ accountId, mayWrite }: { accountId: string;
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Каталог тарифов QWINS</CardTitle>
+        <CardTitle>Каталог тарифов</CardTitle>
         <CardDescription>Локальный кэш — обновляется вручную, не по расписанию</CardDescription>
         <CardAction>
           {mayWrite && (
