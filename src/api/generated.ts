@@ -1388,7 +1388,25 @@ export interface paths {
         };
         get?: never;
         put?: never;
+        /** @description Only enqueues - returns immediately with a batchId and a rough ETA, it does not wait for any registrar call to complete. Each domain becomes one PENDING domain_purchase_operations row; a scheduler-driven worker (not this request) completes them one at a time, respecting the registrar's own throttle. Poll GET .../purchase-batches/{batchId} for progress/results. Only ever executes against a registrar account whose environment is 'sandbox' unless PORKBUN_ALLOW_PRODUCTION=true has been explicitly set. */
         post: operations["purchaseDomains"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/v1/domains/purchase-batches/{batchId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description Poll this while a batch is in flight - `pending` includes both PENDING and PROCESSING operations. Once `pending` reaches 0 the batch is finished (partial success, e.g. 17/20 succeeded, is a normal expected outcome, not an error). */
+        get: operations["getDomainPurchaseBatchStatus"];
+        put?: never;
+        post?: never;
         delete?: never;
         options?: never;
         head?: never;
@@ -1475,6 +1493,207 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/admin/v1/vps-registrar-accounts": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description VPS-purchase registrar accounts (QWINS/BILLmanager 5 today). Built from a reverse-engineered spec with no live account available - see docs/BACKLOG_PRIORITIES.md for the full list of unverified assumptions before relying on this in production. */
+        get: operations["listVpsRegistrarAccounts"];
+        put?: never;
+        post: operations["createVpsRegistrarAccount"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/v1/vps-registrar-accounts/{id}/credentials": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** @description Rotates username/password via SecretStorage - test creds today, real ones later, no code deploy needed. */
+        post: operations["updateVpsRegistrarCredentials"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/v1/vps-registrar-accounts/{id}/sync-balance": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** @description UNVERIFIED - the balance function name/shape is a best guess (func=account), not confirmed against a real QWINS account. */
+        post: operations["syncVpsRegistrarBalance"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/v1/vps-registrar-accounts/{id}/payment-methods": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["listVpsPaymentMethods"];
+        put?: never;
+        /** @description Both methodType values are fully wired to a real payment call - STORED_CARD_SBP (doc section 8B/9) and PERSONAL_ACCOUNT (request shape confirmed live 2026-08-28 against a real account, not from the original spec). Neither will actually move money unless QWINS_ALLOW_REAL_PURCHASE is set - see the purchase endpoint's own description. */
+        post: operations["addVpsPaymentMethod"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/v1/vps-registrar-accounts/{id}/sync-catalog": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** @description Syncs all 7 QWINS datacenters (or a filtered subset via datacenterIds) - manual button, not scheduled. */
+        post: operations["syncVpsTariffCatalog"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/v1/vps-registrar-accounts/{id}/catalog": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description Local cache synced via sync-catalog - price only, no structured vCPU/RAM/disk breakdown is confirmed available from this API. */
+        get: operations["listVpsTariffCatalog"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/v1/vps-registrar-accounts/{id}/purchase": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** @description Drives PENDING -> ORDER_CREATED -> BASKET_CHECKED_OUT -> PAYMENT_CREATED synchronously. Idempotent by idempotencyKey - resumes from the last persisted stage instead of re-ordering if a previous call crashed partway. Refuses to spend money unless QWINS_ALLOW_REAL_PURCHASE=true is set (BILLmanager has no sandbox mode). Poll POST .../vps-purchase-operations/{id}/advance afterward until stage reaches CREDENTIALS_RETRIEVED - activation is not synchronous (the registrar itself expects polling for up to several minutes). */
+        post: operations["purchaseVps"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/v1/vps-purchase-operations/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["getVpsPurchaseOperation"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/v1/vps-purchase-operations/{id}/advance": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** @description Call repeatedly (e.g. every few seconds) after purchase() reaches PAYMENT_CREATED. Once all ordered servers report status=2 (active), retrieves root credentials via service.instruction.html and creates real vps_instances rows - createdVpsInstanceIds is only populated on the call where CREDENTIALS_RETRIEVED is first reached. */
+        post: operations["advanceVpsPurchaseOperation"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/v1/vps-registrar-accounts/{id}/servers/{itemId}/reboot": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["rebootVpsServer"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/v1/vps-registrar-accounts/{id}/servers/{itemId}/change-password": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["changeVpsServerPassword"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/v1/vps-registrar-accounts/{id}/servers/{itemId}/history": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description Read-only audit trail from `service.history` (verified live 2026-08-28 against a real server) - no form/confirm step, unlike prolong/changeTariff. */
+        get: operations["getVpsServerHistory"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/admin/v1/vps-instances": {
         parameters: {
             query?: never;
@@ -1505,7 +1724,8 @@ export interface paths {
         delete?: never;
         options?: never;
         head?: never;
-        patch?: never;
+        /** @description Manual purchase-metadata editing (not a job trigger) - see UpdateVpsInstanceMetadata. */
+        patch: operations["updateVpsInstanceMetadata"];
         trace?: never;
     };
     "/admin/v1/vps-instances/{id}/bootstrap": {
@@ -1582,6 +1802,23 @@ export interface paths {
         get?: never;
         put?: never;
         post: operations["backupVpsInstance"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/v1/vps-instances/{id}/install-panel": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** @description Enqueues an INSTALL_PANEL job (Ansible role install-3x-ui) - installs a 3x-ui panel via Docker on this VPS. Verified live 2026-08-28: the image's `x-ui setting -port/-username/-password` CLI flags do not actually take effect on this Docker image (the entrypoint bypasses the install-state file), so the panel always comes up on the image's own defaults - port 2053, admin/admin, no TLS/domain - and the role verifies this via a real POST /login instead of trusting the flags. No persistent Bearer API token is configured automatically, so `control_plane_sources` is never auto-created - this job succeeding leaves controlPlaneSourceId null on the VPS; the admin must log in manually, change the password, configure API access, and register the panel by hand via the existing "create control plane source" flow. */
+        post: operations["installPanelOnVpsInstance"];
         delete?: never;
         options?: never;
         head?: never;
@@ -2993,42 +3230,135 @@ export interface components {
             /** Format: uuid */
             domainId?: string;
         };
-        PurchaseBatchResult: {
+        PurchaseBatchKickoff: {
+            /** Format: uuid */
+            batchId: string;
+            requested: number;
+            /** @description Rough ETA (requested * ~12s/domain) - not a guarantee, just enough for a UI progress estimate. */
+            estimatedSeconds: number;
+        };
+        PurchaseBatchStatusItem: {
+            fqdn: string;
+            /** @enum {string} */
+            status: "PENDING" | "PROCESSING" | "SUCCEEDED" | "FAILED";
+            /** Format: uuid */
+            domainId?: string;
+            errorCode?: string;
+            errorMessage?: string;
+        };
+        PurchaseBatchStatus: {
             /** Format: uuid */
             batchId: string;
             requested: number;
             succeeded: number;
             failed: number;
-            results: components["schemas"]["PurchaseBatchItemResult"][];
+            /** @description Sum of operations still PENDING or PROCESSING - 0 means the batch is finished. */
+            pending: number;
+            items: components["schemas"]["PurchaseBatchStatusItem"][];
+        };
+        /** @description Never includes secret_ref or any credential material. */
+        VpsRegistrarAccount: {
+            /** Format: uuid */
+            id: string;
+            code: string;
+            /** @example QWINS */
+            providerType: string;
+            status: string;
+            balanceCents?: number | null;
+            balanceCurrency?: string | null;
+            /** Format: date-time */
+            balanceSyncedAt?: string | null;
+        };
+        /** @description One row of BILLmanager's service.history - a real, read-only audit trail (verified live 2026-08-28), not a form/confirm step like prolong/changeTariff. */
+        VpsHistoryEntry: {
+            fromDate?: string | null;
+            changeDate: string;
+            description: string;
+            ip?: string | null;
+            user: string;
+        };
+        VpsPaymentMethod: {
+            /** Format: uuid */
+            id: string;
+            /** @enum {string} */
+            methodType: "STORED_CARD_SBP" | "PERSONAL_ACCOUNT";
+            paymethodId: string;
+            recurringRef?: string | null;
+            displayName: string;
+            isDefault: boolean;
+        };
+        VpsTariff: {
+            datacenterId: string;
+            datacenterName: string;
+            pricelistId: string;
+            priceCents?: number | null;
+            priceCurrency?: string | null;
+            /** @description Unparsed price text as returned by the registrar. */
+            rawLabel?: string | null;
+            vcpuCount?: number | null;
+            ramGb?: number | null;
+            diskGb?: number | null;
+            networkSpeedLabel?: string | null;
+        };
+        VpsPurchaseOperation: {
+            /** Format: uuid */
+            id: string;
+            /** @enum {string} */
+            stage: "PENDING" | "ORDER_CREATED" | "BASKET_CHECKED_OUT" | "PAYMENT_CREATED" | "SERVERS_ACTIVE" | "CREDENTIALS_RETRIEVED" | "FAILED";
+            billorderId?: string | null;
+            itemIds?: string[] | null;
+            paymentId?: string | null;
+            errorMessage?: string | null;
+            /** @description Only populated on the call where CREDENTIALS_RETRIEVED is first reached. */
+            createdVpsInstanceIds?: string[];
         };
         VpsInstance: {
             /** Format: uuid */
             id: string;
             /**
-             * @description Always MANUAL today - field exists so a real hosting-provider API can be added later.
+             * @description MANUAL for a hand-registered VPS, or a real hosting-provider code (e.g. QWINS) once purchased through the registrar - see registrarAccountId/purchasedAt below.
              * @example MANUAL
              */
-            provider_type: string;
+            providerType: string;
             code: string;
             /** @description IP address */
             host: string;
-            ssh_port: number;
-            ssh_user: string;
+            sshPort: number;
+            sshUser: string;
             /** @enum {string} */
             status: "PENDING" | "ACTIVE" | "UNREACHABLE" | "DECOMMISSIONED";
             /**
              * Format: uuid
-             * @description One-to-one with a panel (control_plane_source) - each panel instance runs on exactly one VPS.
+             * @description The panel (control_plane_source) running on this VPS, if any. One panel can now manage many VPS/nodes (e.g. one Remnawave panel + ~49 remote nodes) - this is no longer a one-to-one relationship.
              */
-            control_plane_source_id?: string | null;
+            controlPlaneSourceId?: string | null;
             /** Format: date-time */
-            last_health_check_at?: string | null;
+            lastHealthCheckAt?: string | null;
             /** Format: date-time */
-            archived_at?: string | null;
+            archivedAt?: string | null;
             /** Format: date-time */
-            created_at: string;
+            createdAt: string;
             /** Format: date-time */
-            updated_at: string;
+            updatedAt: string;
+            /**
+             * Format: uuid
+             * @description Set when this VPS was bought through a vps-registrar-account (e.g. QWINS); null for a manually-added VPS.
+             */
+            registrarAccountId?: string | null;
+            /** @description The registrar's own server/item id. */
+            registrarItemRef?: string | null;
+            /** Format: date-time */
+            purchasedAt?: string | null;
+            purchaseCostCents?: number | null;
+            currency?: string | null;
+            /** @description Billing period in months. */
+            period?: number | null;
+            autoProlong: boolean;
+            /**
+             * Format: date
+             * @description Next renewal/expiry date.
+             */
+            expireDate?: string | null;
         };
         VpsDeployedProtocol: {
             protocolCode?: string;
@@ -3048,13 +3378,13 @@ export interface components {
             createdAt?: string;
         };
         VpsInstanceDetail: components["schemas"]["VpsInstance"] & {
-            panel_code?: string | null;
-            panel_provider_type?: string | null;
-            /** @description The fqdn of the domain linked to this VPS's panel, if any (joined via control_plane_source_id). */
-            domain_fqdn?: string | null;
-            deployed_protocols?: components["schemas"]["VpsDeployedProtocol"][];
-            /** @description Latest report per job_type, not full history. */
-            latest_reports?: components["schemas"]["VpsAutomationReportSummary"][];
+            panelCode?: string | null;
+            panelProviderType?: string | null;
+            /** @description A domain linked to this VPS's panel, if any (joined via control_plane_source_id). Since one panel can now manage many VPS/nodes, the same domain may show up on several VPS's detail pages if they share a panel - it belongs to the panel, not to this one VPS specifically. */
+            domainFqdn?: string | null;
+            deployedProtocols?: components["schemas"]["VpsDeployedProtocol"][];
+            /** @description Latest report per job type, not full history. */
+            latestReports?: components["schemas"]["VpsAutomationReportSummary"][];
         };
         RegisterVpsInstance: {
             code: string;
@@ -3066,6 +3396,30 @@ export interface components {
             sshCredential: string;
             /** Format: uuid */
             controlPlaneSourceId?: string;
+            /**
+             * Format: date-time
+             * @description For manually-added VPS - fill in what you know.
+             */
+            purchasedAt?: string;
+            purchaseCostCents?: number;
+            currency?: string;
+            /** @description Billing period in months. */
+            period?: number;
+            /** @default true */
+            autoProlong: boolean;
+            /** Format: date */
+            expireDate?: string;
+        };
+        /** @description Manual-entry editing for purchase metadata - every field optional, only what's provided is updated (existing values are preserved otherwise). Not a job trigger. */
+        UpdateVpsInstanceMetadata: {
+            /** Format: date-time */
+            purchasedAt?: string;
+            purchaseCostCents?: number;
+            currency?: string;
+            period?: number;
+            autoProlong?: boolean;
+            /** Format: date */
+            expireDate?: string;
         };
         VpsAutomationJobRef: {
             /** Format: uuid */
@@ -6602,17 +6956,53 @@ export interface operations {
             };
         };
         responses: {
-            /** @description Batch result with a per-domain outcome - partial success (e.g. 17/20 succeeded) is expected and not itself an error. Each domain's registrar call is idempotency-keyed per (batch, fqdn), so retrying the same batch never double-purchases. Only ever executes against a registrar account whose environment is 'sandbox' unless PORKBUN_ALLOW_PRODUCTION=true has been explicitly set. */
+            /** @description Batch accepted - poll the status endpoint below for per-domain progress. */
             201: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["PurchaseBatchResult"];
+                    "application/json": components["schemas"]["PurchaseBatchKickoff"];
                 };
             };
             /** @description Missing domains.write permission */
             403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    getDomainPurchaseBatchStatus: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                batchId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Aggregate progress plus a per-domain status list */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PurchaseBatchStatus"];
+                };
+            };
+            /** @description Missing domains.read permission */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Unknown batchId */
+            404: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -6798,6 +7188,377 @@ export interface operations {
             };
         };
     };
+    listVpsRegistrarAccounts: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Accounts (never includes credentials) */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["VpsRegistrarAccount"][];
+                };
+            };
+        };
+    };
+    createVpsRegistrarAccount: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": {
+                    code: string;
+                    /** @enum {string} */
+                    providerType: "QWINS";
+                    username: string;
+                    password: string;
+                };
+            };
+        };
+        responses: {
+            /** @description Created */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["VpsRegistrarAccount"];
+                };
+            };
+        };
+    };
+    updateVpsRegistrarCredentials: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": {
+                    username: string;
+                    password: string;
+                };
+            };
+        };
+        responses: {
+            /** @description OK */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        ok?: boolean;
+                    };
+                };
+            };
+        };
+    };
+    syncVpsRegistrarBalance: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Updated account with balance */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["VpsRegistrarAccount"];
+                };
+            };
+        };
+    };
+    listVpsPaymentMethods: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Payment methods for this registrar account */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["VpsPaymentMethod"][];
+                };
+            };
+        };
+    };
+    addVpsPaymentMethod: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": {
+                    /** @enum {string} */
+                    methodType: "STORED_CARD_SBP" | "PERSONAL_ACCOUNT";
+                    paymethodId: string;
+                    recurringRef?: string;
+                    displayName: string;
+                    isDefault?: boolean;
+                };
+            };
+        };
+        responses: {
+            /** @description Created */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["VpsPaymentMethod"];
+                };
+            };
+        };
+    };
+    syncVpsTariffCatalog: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": {
+                    datacenterIds?: string[];
+                };
+            };
+        };
+        responses: {
+            /** @description Sync count */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        synced?: number;
+                    };
+                };
+            };
+        };
+    };
+    listVpsTariffCatalog: {
+        parameters: {
+            query?: {
+                datacenter?: string;
+            };
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Tariffs */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["VpsTariff"][];
+                };
+            };
+        };
+    };
+    purchaseVps: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": {
+                    datacenterId: string;
+                    period: string;
+                    pricelistId: string;
+                    osTemplate: string;
+                    orderCount: number;
+                    autoProlong?: boolean;
+                    /** Format: uuid */
+                    paymentMethodId: string;
+                    idempotencyKey: string;
+                };
+            };
+        };
+        responses: {
+            /** @description Current purchase-operation state */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["VpsPurchaseOperation"];
+                };
+            };
+        };
+    };
+    getVpsPurchaseOperation: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Purchase operation state */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["VpsPurchaseOperation"];
+                };
+            };
+        };
+    };
+    advanceVpsPurchaseOperation: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Current purchase-operation state */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["VpsPurchaseOperation"];
+                };
+            };
+        };
+    };
+    rebootVpsServer: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+                itemId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        ok?: boolean;
+                    };
+                };
+            };
+        };
+    };
+    changeVpsServerPassword: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+                itemId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": {
+                    newPassword: string;
+                };
+            };
+        };
+        responses: {
+            /** @description OK */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        ok?: boolean;
+                    };
+                };
+            };
+        };
+    };
+    getVpsServerHistory: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+                itemId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description History entries, newest last (sort by changeDate on the frontend if a different order is wanted) */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["VpsHistoryEntry"][];
+                };
+            };
+        };
+    };
     listVpsInstances: {
         parameters: {
             query?: {
@@ -6869,7 +7630,7 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            /** @description VPS detail, joined through to its panel (control_plane_source, one-to-one) and that panel's domain if any, plus any panel-less deployed protocols and the latest report per job type. */
+            /** @description VPS detail, joined through to its panel (control_plane_source - one panel may manage several VPS/nodes) and that panel's domain if any, plus any panel-less deployed protocols and the latest report per job type. */
             200: {
                 headers: {
                     [name: string]: unknown;
@@ -6879,6 +7640,46 @@ export interface operations {
                 };
             };
             /** @description Missing vps.read permission */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description VPS instance not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    updateVpsInstanceMetadata: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": components["schemas"]["UpdateVpsInstanceMetadata"];
+            };
+        };
+        responses: {
+            /** @description Updated */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["VpsInstance"];
+                };
+            };
+            /** @description Missing vps.write permission */
             403: {
                 headers: {
                     [name: string]: unknown;
@@ -7039,6 +7840,42 @@ export interface operations {
         };
     };
     backupVpsInstance: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Job enqueued (or deduped) */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["VpsAutomationJobRef"];
+                };
+            };
+            /** @description Missing vps.write permission */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description VPS instance not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    installPanelOnVpsInstance: {
         parameters: {
             query?: never;
             header?: never;

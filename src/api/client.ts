@@ -39,7 +39,8 @@ import type {
   PasswordLogin,
   PlatformSetting,
   PlatformSettingKey,
-  PurchaseBatchResult,
+  PurchaseBatchKickoff,
+  PurchaseBatchStatus,
   PurchaseDomainsRequest,
   RefundPayment,
   RegistrarAccountSummary,
@@ -179,7 +180,10 @@ export const adminApi = {
   listDomainRegistrarAccounts: async () => unwrap<RegistrarAccountSummary[]>(await client.GET("/admin/v1/domains/registrar-accounts", { headers: staffHeaders() })),
   getDomain: async (domainId: string) => unwrap<Domain>(await client.GET("/admin/v1/domains/{id}", { params: { path: { id: domainId } }, headers: staffHeaders() })),
   listDomainDnsRecords: async (domainId: string) => unwrap<unknown[]>(await client.GET("/admin/v1/domains/{id}/dns-records", { params: { path: { id: domainId } }, headers: staffHeaders() })),
-  purchaseDomains: async (body: PurchaseDomainsRequest) => unwrap<PurchaseBatchResult>(await client.POST("/admin/v1/domains/purchase", { body, headers: staffHeaders() })),
+  // Kicks off an async batch (Porkbun rate-limits to ~1 registration/10s) - poll getDomainPurchaseBatchStatus for the real per-domain outcome.
+  purchaseDomains: async (body: PurchaseDomainsRequest) => unwrap<PurchaseBatchKickoff>(await client.POST("/admin/v1/domains/purchase", { body, headers: staffHeaders() })),
+  getDomainPurchaseBatchStatus: async (batchId: string) =>
+    unwrap<PurchaseBatchStatus>(await client.GET("/admin/v1/domains/purchase-batches/{batchId}", { params: { path: { batchId } }, headers: staffHeaders() })),
   renewDomain: async (domainId: string) => unwrap(await client.POST("/admin/v1/domains/{id}/renew", { params: { path: { id: domainId } }, headers: staffHeaders() })),
   setDomainAutoRenew: async (domainId: string, enabled: boolean) =>
     unwrap<void>(await client.PATCH("/admin/v1/domains/{id}/auto-renew", { params: { path: { id: domainId } }, body: { enabled }, headers: staffHeaders() })),
