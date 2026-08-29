@@ -167,6 +167,9 @@ export const adminApi = {
   listControlPlaneSourceConfigProfiles: async (sourceId: string) =>
     unwrap<ConfigProfileSummary[]>(await client.GET("/admin/v1/infrastructure/sources/{id}/config-profiles", { params: { path: { id: sourceId } }, headers: staffHeaders() })),
   syncSource: async (sourceId: string, body: SyncSourceInventory = {}) => unwrap(await client.POST("/admin/v1/infrastructure/sources/{id}/sync", { params: { path: { id: sourceId } }, body, headers: staffHeaders() })),
+  // Manual counterpart to the remnawave-status-check cron - REMNAWAVE-only, checks live node connectivity and opens/resolves infrastructure_incidents accordingly.
+  checkNodesNow: async (sourceId: string) =>
+    unwrap<{ checked: number; changed: number }>(await client.POST("/admin/v1/infrastructure/sources/{id}/check-nodes-now", { params: { path: { id: sourceId } }, headers: staffHeaders() })),
   listInfrastructureEndpoints: async (query: AdminInfrastructureEndpointQuery = {}) => unwrap(await client.GET("/admin/v1/infrastructure/endpoints", { params: { query }, headers: staffHeaders() })),
   updateInfrastructureEndpoint: async (endpointId: string, body: UpdateInfrastructureEndpoint) =>
     unwrap(await client.PATCH("/admin/v1/infrastructure/endpoints/{id}", { params: { path: { id: endpointId } }, body, headers: staffHeaders() })),
@@ -254,6 +257,9 @@ export const adminApi = {
   bootstrapVpsInstance: async (id: string) => unwrap<VpsAutomationJobRef>(await client.POST("/admin/v1/vps-instances/{id}/bootstrap", { params: { path: { id } }, headers: staffHeaders() })),
   testVpsInstance: async (id: string) => unwrap<VpsAutomationJobRef>(await client.POST("/admin/v1/vps-instances/{id}/test", { params: { path: { id } }, headers: staffHeaders() })),
   healthCheckVpsInstance: async (id: string) => unwrap<VpsAutomationJobRef>(await client.POST("/admin/v1/vps-instances/{id}/health-check", { params: { path: { id } }, headers: staffHeaders() })),
+  // Idempotent Ansible role - installs our automation SSH key on a server that so far only has the registrar's root password.
+  installSshKeyOnVpsInstance: async (id: string) =>
+    unwrap<VpsAutomationJobRef>(await client.POST("/admin/v1/vps-instances/{id}/install-ssh-key", { params: { path: { id } }, headers: staffHeaders() })),
   // POST .../update triggers an Ansible re-provision job - distinct from the PATCH above, which only edits purchase metadata.
   runVpsInstanceUpdate: async (id: string) => unwrap<VpsAutomationJobRef>(await client.POST("/admin/v1/vps-instances/{id}/update", { params: { path: { id } }, headers: staffHeaders() })),
   backupVpsInstance: async (id: string) => unwrap<VpsAutomationJobRef>(await client.POST("/admin/v1/vps-instances/{id}/backup", { params: { path: { id } }, headers: staffHeaders() })),
