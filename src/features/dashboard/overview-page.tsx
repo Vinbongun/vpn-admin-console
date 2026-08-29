@@ -11,6 +11,14 @@ import { PageHeader } from "@/components/page-header";
 import { SectionHeader } from "@/components/section-header";
 import { StatCard } from "@/components/stat-card";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
+import { ActiveUsersChart } from "@/features/dashboard/active-users-chart";
+import { ArpuLtvCards } from "@/features/dashboard/arpu-ltv-cards";
+import { ChurnChart } from "@/features/dashboard/churn-chart";
+import { CohortRetentionHeatmap } from "@/features/dashboard/cohort-retention-heatmap";
+import { ConversionChart } from "@/features/dashboard/conversion-chart";
+import { InfraHealthChart } from "@/features/dashboard/infra-health-chart";
+import { ReferralFunnelChart } from "@/features/dashboard/referral-funnel-chart";
+import { RevenueSeriesChart } from "@/features/dashboard/revenue-series-chart";
 import { RetentionSection } from "@/features/retention/retention-section";
 import { useBrandFilter } from "@/hooks/use-brand-filter";
 import { can } from "@/lib/access-control";
@@ -97,10 +105,20 @@ export function OverviewPage() {
             <StatCard label="14 дней" icon={CalendarClock} value={num(overview.data?.expiringSoon.in14d)} />
             <StatCard label="30 дней" icon={CalendarClock} value={num(overview.data?.expiringSoon.in30d)} />
           </div>
+
+          <SectionHeader title="Динамика" description="Ключевые показатели во времени — расширение сводки выше" />
+          <RevenueSeriesChart staff={staff.data} brandCodes={brandCodes} />
+          <CohortRetentionHeatmap staff={staff.data} brandCodes={brandCodes} />
+          <ActiveUsersChart staff={staff.data} brandCodes={brandCodes} />
+          <ConversionChart staff={staff.data} brandCodes={brandCodes} />
+          <ChurnChart staff={staff.data} brandCodes={brandCodes} />
+          <ArpuLtvCards staff={staff.data} brandCodes={brandCodes} />
+          <ReferralFunnelChart staff={staff.data} brandCodes={brandCodes} />
         </>
       )}
 
       <RetentionSection staff={staff.data} brandCodes={brandCodes} />
+      <InfraHealthChart staff={staff.data} />
     </AppShell>
   );
 }
