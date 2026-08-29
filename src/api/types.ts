@@ -93,6 +93,23 @@ export type AdminPopularityQuery = NonNullable<operations["getDashboardPopularit
 export type AcquisitionStatsRow = Schemas["AcquisitionStatsRow"];
 export type AdminAcquisitionQuery = NonNullable<operations["getAcquisitionStats"]["parameters"]["query"]>;
 
+export type RevenueSeriesPoint = Schemas["RevenueSeriesPoint"];
+export type CohortRetentionRow = Schemas["CohortRetentionRow"];
+export type ActiveUsersSeriesPoint = Schemas["ActiveUsersSeriesPoint"];
+export type ConversionSeriesPoint = Schemas["ConversionSeriesPoint"];
+export type ChurnSeriesPoint = Schemas["ChurnSeriesPoint"];
+export type ArpuLtvPoint = Schemas["ArpuLtvPoint"];
+export type InfraHealthSeriesPoint = Schemas["InfraHealthSeriesPoint"];
+export type ReferralFunnelSeriesPoint = Schemas["ReferralFunnelSeriesPoint"];
+export type AdminRevenueSeriesQuery = NonNullable<operations["getDashboardRevenueSeries"]["parameters"]["query"]>;
+export type AdminCohortRetentionQuery = NonNullable<operations["getDashboardCohortRetention"]["parameters"]["query"]>;
+export type AdminActiveUsersSeriesQuery = NonNullable<operations["getDashboardActiveUsersSeries"]["parameters"]["query"]>;
+export type AdminConversionSeriesQuery = NonNullable<operations["getDashboardConversionSeries"]["parameters"]["query"]>;
+export type AdminChurnSeriesQuery = NonNullable<operations["getDashboardChurnSeries"]["parameters"]["query"]>;
+export type AdminArpuLtvQuery = NonNullable<operations["getDashboardArpuLtv"]["parameters"]["query"]>;
+export type AdminInfraHealthSeriesQuery = NonNullable<operations["getDashboardInfraHealthSeries"]["parameters"]["query"]>;
+export type AdminReferralFunnelSeriesQuery = NonNullable<operations["getDashboardReferralFunnelSeries"]["parameters"]["query"]>;
+
 export type PaymentSummary = Schemas["PaymentSummary"];
 export type PaymentPage = Schemas["PaymentPage"];
 export type PaymentDetail = Schemas["PaymentDetail"];

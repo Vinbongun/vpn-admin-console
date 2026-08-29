@@ -1130,6 +1130,142 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/admin/v1/dashboard/revenue-series": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description MRR-normalized revenue per bucket (PAID orders only) - each order's real amount normalized to a 30-day equivalent via amount/periodDays*30, so mixed monthly/quarterly/ annual orders compare on one line chart instead of spiking on renewal months. rawAmount (unnormalized) is also included for actual cash collected. */
+        get: operations["getDashboardRevenueSeries"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/v1/dashboard/cohort-retention": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description Registration-month cohorts vs % still ACTIVE/TRIAL N months later - "how often do customers come back". monthOffset 0 is the signup month itself. Offsets a cohort hasn't reached yet are omitted (not shown as 0%) rather than misleadingly implying churn. */
+        get: operations["getDashboardCohortRetention"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/v1/dashboard/active-users-series": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description DAU/WAU/MAU proxy from subscriptions.last_active_at - there is no per-day activity log table in this schema, so this counts distinct subscriptions whose MOST RECENT activity fell in each bucket. This under-counts historical days for a customer still active today (their last_active_at keeps moving forward) - a real, honest signal, not a true reconstructed daily-actives history. A dedicated activity-log table would fix this properly. */
+        get: operations["getDashboardActiveUsersSeries"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/v1/dashboard/conversion-series": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description Of memberships that registered in each bucket, what % have EVER made a first paid order (as of now) - the standard signup-cohort conversion view, mirroring AcquisitionsService's own first-paid definition. */
+        get: operations["getDashboardConversionSeries"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/v1/dashboard/churn-series": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description Of subscriptions whose billing period ended (expiresAt) in each bucket, how many never got a follow-on ACTIVE/TRIAL subscription on the same membership - a real churn signal with no assumption about why they didn't renew. */
+        get: operations["getDashboardChurnSeries"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/v1/dashboard/arpu-ltv": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description ARPU (paid revenue / distinct paying customers) over the window, per currency, plus a textbook LTV approximation (ARPU / churn rate) - ltv is null when the window's churn rate isn't computable (no subscriptions expired in it), never a guessed default rate. */
+        get: operations["getDashboardArpuLtv"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/v1/dashboard/infra-health-series": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description Incidents opened/resolved per bucket by severity - not brand-scoped. A proxy for infra health trend since endpoints.health_status itself has no history table, only a current snapshot. */
+        get: operations["getDashboardInfraHealthSeries"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/v1/dashboard/referral-funnel-series": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description Referral redemptions + payout amounts per bucket - a time-series companion to GET /admin/v1/promo-codes/stats-by-partner's all-time-snapshot-per-partner view. */
+        get: operations["getDashboardReferralFunnelSeries"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/admin/v1/audit-events": {
         parameters: {
             query?: never;
@@ -1979,6 +2115,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/admin/v1/vps-instances/{id}/install-ssh-key": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** @description Enqueues an INSTALL_SSH_KEY job - "first contact" for a VPS that only has a registrar-issued root password (fresh purchase/import), installing our automation SSH key so every OTHER job type (which connect key-only) can reach it at all. Safe to re-run on a VPS that already has the key (idempotent). */
+        post: operations["installSshKeyOnVpsInstance"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/admin/v1/vps-instances/{id}/start": {
         parameters: {
             query?: never;
@@ -2357,6 +2510,23 @@ export interface paths {
         get: operations["listControlPlaneSourceConfigProfiles"];
         put?: never;
         post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/v1/infrastructure/sources/{id}/check-nodes-now": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** @description Manual counterpart to the remnawave-status-check cron (owner explicitly does not want manual node/panel status editing in the UI, only a periodic check plus this button). REMNAWAVE-only - checks live node connectivity against the endpoints already linked to this panel and opens/resolves infrastructure_incidents accordingly. */
+        post: operations["checkRemnawaveNodesNow"];
         delete?: never;
         options?: never;
         head?: never;
@@ -3169,6 +3339,71 @@ export interface components {
                 sampleCount?: number;
             }[];
         };
+        RevenueSeriesPoint: {
+            /**
+             * Format: date
+             * @description Bucket start date (day/week/month truncated).
+             */
+            bucket: string;
+            currency: string;
+            /** @description 30-day-normalized revenue for this bucket (amount/periodDays*30, summed). */
+            mrr: number;
+            /** @description Actual unnormalized paid amount summed for this bucket. */
+            rawAmount: number;
+        };
+        CohortRetentionRow: {
+            /** Format: date */
+            cohortMonth: string;
+            cohortSize: number;
+            retention: {
+                monthOffset: number;
+                activeCount: number;
+                retentionPercent: number;
+            }[];
+        };
+        ActiveUsersSeriesPoint: {
+            /** Format: date */
+            bucket: string;
+            /** @description Distinct subscriptions whose last_active_at fell in this bucket (see endpoint description for the historical-undercount caveat). */
+            activeSubscriptions: number;
+        };
+        ConversionSeriesPoint: {
+            /** Format: date */
+            bucket: string;
+            registrations: number;
+            conversions: number;
+            conversionRatePercent: number;
+        };
+        ChurnSeriesPoint: {
+            /** Format: date */
+            bucket: string;
+            expiredCount: number;
+            churnedCount: number;
+            churnRatePercent: number;
+        };
+        ArpuLtvPoint: {
+            currency: string;
+            arpu: number;
+            /** @description Null when the window's churn rate is not computable (no expirations in it). */
+            ltv: number | null;
+            payers: number;
+        };
+        InfraHealthSeriesPoint: {
+            /** Format: date */
+            bucket: string;
+            /** @enum {string} */
+            severity: "INFO" | "WARNING" | "CRITICAL";
+            opened: number;
+            resolved: number;
+        };
+        ReferralFunnelSeriesPoint: {
+            /** Format: date */
+            bucket: string;
+            redemptions: number;
+            payoutPending: number;
+            payoutConfirmed: number;
+            currency?: string | null;
+        };
         RetentionSummary: {
             graceDays: number;
             /** @description ACTIVE/TRIAL subscriptions past the grace period with no observed traffic */
@@ -3952,7 +4187,13 @@ export interface components {
         };
     };
     responses: never;
-    parameters: never;
+    parameters: {
+        /** @description Comma-separated brand codes; omit for all brands combined. */
+        DashboardSeriesBrandCodes: string;
+        DashboardSeriesInterval: "day" | "week" | "month";
+        /** @description How many days back from now the series window covers. */
+        DashboardSeriesDays: number;
+    };
     requestBodies: never;
     headers: never;
     pathItems: never;
@@ -6594,6 +6835,268 @@ export interface operations {
             };
         };
     };
+    getDashboardRevenueSeries: {
+        parameters: {
+            query?: {
+                /** @description Comma-separated brand codes; omit for all brands combined. */
+                brandCodes?: components["parameters"]["DashboardSeriesBrandCodes"];
+                interval?: components["parameters"]["DashboardSeriesInterval"];
+                /** @description How many days back from now the series window covers. */
+                days?: components["parameters"]["DashboardSeriesDays"];
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK; requires finance.read */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RevenueSeriesPoint"][];
+                };
+            };
+            /** @description Missing finance.read permission */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    getDashboardCohortRetention: {
+        parameters: {
+            query?: {
+                /** @description Comma-separated brand codes; omit for all brands combined. */
+                brandCodes?: string;
+                /** @description How many registration-month cohorts to include, most recent first. */
+                cohorts?: number;
+                /** @description How many months of retention to track per cohort. */
+                months?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK; requires finance.read */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CohortRetentionRow"][];
+                };
+            };
+            /** @description Missing finance.read permission */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    getDashboardActiveUsersSeries: {
+        parameters: {
+            query?: {
+                /** @description Comma-separated brand codes; omit for all brands combined. */
+                brandCodes?: components["parameters"]["DashboardSeriesBrandCodes"];
+                interval?: components["parameters"]["DashboardSeriesInterval"];
+                /** @description How many days back from now the series window covers. */
+                days?: components["parameters"]["DashboardSeriesDays"];
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK; requires finance.read */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ActiveUsersSeriesPoint"][];
+                };
+            };
+            /** @description Missing finance.read permission */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    getDashboardConversionSeries: {
+        parameters: {
+            query?: {
+                /** @description Comma-separated brand codes; omit for all brands combined. */
+                brandCodes?: components["parameters"]["DashboardSeriesBrandCodes"];
+                interval?: components["parameters"]["DashboardSeriesInterval"];
+                /** @description How many days back from now the series window covers. */
+                days?: components["parameters"]["DashboardSeriesDays"];
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK; requires finance.read */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ConversionSeriesPoint"][];
+                };
+            };
+            /** @description Missing finance.read permission */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    getDashboardChurnSeries: {
+        parameters: {
+            query?: {
+                /** @description Comma-separated brand codes; omit for all brands combined. */
+                brandCodes?: components["parameters"]["DashboardSeriesBrandCodes"];
+                interval?: components["parameters"]["DashboardSeriesInterval"];
+                /** @description How many days back from now the series window covers. */
+                days?: components["parameters"]["DashboardSeriesDays"];
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK; requires finance.read */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ChurnSeriesPoint"][];
+                };
+            };
+            /** @description Missing finance.read permission */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    getDashboardArpuLtv: {
+        parameters: {
+            query?: {
+                /** @description Comma-separated brand codes; omit for all brands combined. */
+                brandCodes?: components["parameters"]["DashboardSeriesBrandCodes"];
+                /** @description How many days back from now the series window covers. */
+                days?: components["parameters"]["DashboardSeriesDays"];
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK; requires finance.read */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ArpuLtvPoint"][];
+                };
+            };
+            /** @description Missing finance.read permission */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    getDashboardInfraHealthSeries: {
+        parameters: {
+            query?: {
+                interval?: components["parameters"]["DashboardSeriesInterval"];
+                /** @description How many days back from now the series window covers. */
+                days?: components["parameters"]["DashboardSeriesDays"];
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK; requires infrastructure.read */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["InfraHealthSeriesPoint"][];
+                };
+            };
+            /** @description Missing infrastructure.read permission */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    getDashboardReferralFunnelSeries: {
+        parameters: {
+            query?: {
+                /** @description Comma-separated brand codes; omit for all brands combined. */
+                brandCodes?: components["parameters"]["DashboardSeriesBrandCodes"];
+                interval?: components["parameters"]["DashboardSeriesInterval"];
+                /** @description How many days back from now the series window covers. */
+                days?: components["parameters"]["DashboardSeriesDays"];
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK; requires finance.read */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ReferralFunnelSeriesPoint"][];
+                };
+            };
+            /** @description Missing finance.read permission */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
     listAdminAuditEvents: {
         parameters: {
             query?: {
@@ -8539,6 +9042,42 @@ export interface operations {
             };
         };
     };
+    installSshKeyOnVpsInstance: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Job enqueued (or deduped) */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["VpsAutomationJobRef"];
+                };
+            };
+            /** @description Missing vps.write permission */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description VPS instance not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
     startVpsServices: {
         parameters: {
             query?: never;
@@ -9362,6 +9901,47 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["ConfigProfileSummary"][];
+                };
+            };
+            /** @description Source is not REMNAWAVE */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Control plane source not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    checkRemnawaveNodesNow: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /** @description Live nodes checked on the panel */
+                        checked: number;
+                        /** @description Endpoints whose health_status changed as a result */
+                        changed: number;
+                    };
                 };
             };
             /** @description Source is not REMNAWAVE */
