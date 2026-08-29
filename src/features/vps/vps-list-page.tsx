@@ -9,6 +9,7 @@ import { useState } from "react";
 import { toast } from "sonner";
 import { adminApi, ApiError } from "@/api/client";
 import type { VpsInstance } from "@/api/types";
+import { CountryFlag } from "@/components/country-flag";
 import { DataTable } from "@/components/data-table";
 import { StatCard } from "@/components/stat-card";
 import { StatusBadge } from "@/components/status-badge";
@@ -78,6 +79,20 @@ export function VpsListPage() {
   const columns: ColumnDef<VpsInstance>[] = [
     { accessorKey: "code", header: "Код", cell: ({ row }) => <span className="font-medium">{row.original.code}</span> },
     { accessorKey: "host", header: "Хост" },
+    {
+      id: "datacenter",
+      header: "Локация",
+      cell: ({ row }) => {
+        const vps = row.original;
+        if (!vps.datacenterName) return "—";
+        return (
+          <span className="flex items-center gap-1.5">
+            <CountryFlag code={vps.datacenterCountryCode} />
+            {vps.datacenterName}
+          </span>
+        );
+      },
+    },
     { id: "status", header: "Статус", cell: ({ row }) => <StatusBadge status={row.original.status} /> },
     {
       id: "providerType",
