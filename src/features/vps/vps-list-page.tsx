@@ -97,13 +97,18 @@ export function VpsListPage() {
     {
       id: "providerType",
       header: "Способ добавления",
+      cell: ({ row }) => <Badge variant="outline">{row.original.providerType === "MANUAL" ? "Вручную" : "API"}</Badge>,
+    },
+    {
+      id: "registrar",
+      header: "Регистратор",
       cell: ({ row }) => {
         const vps = row.original;
-        if (vps.providerType === "MANUAL") return <Badge variant="outline">Вручную</Badge>;
+        if (vps.providerType === "MANUAL") return "—";
         const registrarCode = vps.registrarAccountId ? registrarCodeById.get(vps.registrarAccountId) : undefined;
         return (
           <div className="flex items-center gap-1.5">
-            <Badge variant="outline">Через API ({vps.providerType})</Badge>
+            <Badge variant="outline">{vps.providerType}</Badge>
             {registrarCode && (
               <Link
                 href={`/infrastructure/vps-purchase/${vps.registrarAccountId}`}

@@ -8,6 +8,7 @@ import { toast } from "sonner";
 import { adminApi, ApiError } from "@/api/client";
 import type { VpsHistoryEntry } from "@/api/types";
 import { AppShell } from "@/components/app-shell";
+import { CountryFlag } from "@/components/country-flag";
 import { ErrorState } from "@/components/error-state";
 import { StatusBadge } from "@/components/status-badge";
 import { Button } from "@/components/ui/button";
@@ -200,7 +201,7 @@ export function VpsDetailPage({ vpsId }: { vpsId: string }) {
             <CardContent>
               <div className="grid gap-4 sm:grid-cols-2">
                 <Field label="SSH" value={`${data.sshUser}@${data.host}:${data.sshPort}`} />
-                <Field label="Способ добавления" value={data.providerType === "MANUAL" ? "Вручную" : `Через API (${data.providerType})`} />
+                <Field label="Способ добавления" value={data.providerType === "MANUAL" ? "Вручную" : "API"} />
                 {data.registrarAccountId && (
                   <Field
                     label="Регистратор"
@@ -217,7 +218,19 @@ export function VpsDetailPage({ vpsId }: { vpsId: string }) {
                 )}
                 <Field label="Последняя проверка здоровья" value={formatDate(data.lastHealthCheckAt)} />
                 <Field label="Домен панели" value={data.domainFqdn ?? "—"} />
-                <Field label="Локация" value={data.datacenterName ?? "—"} />
+                <Field
+                  label="Локация"
+                  value={
+                    data.datacenterName ? (
+                      <span className="flex items-center gap-1.5">
+                        <CountryFlag code={data.datacenterCountryCode} />
+                        {data.datacenterName}
+                      </span>
+                    ) : (
+                      "—"
+                    )
+                  }
+                />
                 <Field label="Стоимость покупки" value={formatMoney(data.purchaseCostCents, data.currency)} />
                 <Field label="Дата покупки" value={formatDate(data.purchasedAt)} />
                 <Field label="Дата истечения" value={data.expireDate ? formatDate(data.expireDate) : "—"} />
