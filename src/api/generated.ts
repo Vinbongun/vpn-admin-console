@@ -3806,6 +3806,11 @@ export interface components {
              * @example Финляндия
              */
             datacenterName?: string | null;
+            /**
+             * @description ISO 3166-1 alpha-2, for flag rendering - mirrors ControlPlaneSourceSummary.countryCode.
+             * @example FI
+             */
+            datacenterCountryCode?: string | null;
         };
         VpsDeployedProtocol: {
             protocolCode?: string;
@@ -3885,6 +3890,13 @@ export interface components {
             autoProlong?: boolean;
             /** Format: date */
             expireDate?: string;
+            /**
+             * Format: uuid
+             * @description Manually link this VPS to a Remnawave node that already exists on a panel outside our own install-remnawave-node flow (that flow sets this automatically). Get the node's uuid from GET .../infrastructure/sources/{id}'s nodes list. Set together with controlPlaneSourceId - one without the other is not meaningful.
+             */
+            remnawaveNodeUuid?: string;
+            /** Format: uuid */
+            controlPlaneSourceId?: string;
         };
         VpsAutomationJobRef: {
             /** Format: uuid */
