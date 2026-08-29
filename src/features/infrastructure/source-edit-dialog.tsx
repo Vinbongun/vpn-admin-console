@@ -2,6 +2,7 @@
 
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { RefreshCwIcon } from "lucide-react";
 import { useState } from "react";
 import { Controller, useForm, useWatch } from "react-hook-form";
 import { toast } from "sonner";
@@ -114,13 +115,31 @@ function LinkedVpsSection({ sourceId }: { sourceId: string }) {
   );
 }
 
-function NodesSection({ sourceId }: { sourceId: string }) {
+function NodesSection({ sourceId, mayWrite }: { sourceId: string; mayWrite: boolean }) {
+  const queryClient = useQueryClient();
   const detail = useQuery({ queryKey: ["admin-infrastructure-source-detail", sourceId], queryFn: () => adminApi.getControlPlaneSourceDetail(sourceId), retry: false });
   const nodes = detail.data?.nodes ?? [];
 
+  const checkNowMutation = useMutation({
+    mutationFn: () => adminApi.checkNodesNow(sourceId),
+    onSuccess: async ({ checked, changed }) => {
+      toast.success(`Проверено нод: ${checked}, изменилось: ${changed}.`);
+      await queryClient.invalidateQueries({ queryKey: ["admin-infrastructure-source-detail", sourceId] });
+    },
+    onError: (error) => toast.error(error instanceof ApiError ? apiErrorMessage(error) : "Не удалось проверить ноды."),
+  });
+
   return (
     <div className="space-y-2">
-      <p className="text-sm font-medium">Ноды ({detail.isLoading ? "…" : nodes.length})</p>
+      <div className="flex items-center justify-between gap-2">
+        <p className="text-sm font-medium">Ноды ({detail.isLoading ? "…" : nodes.length})</p>
+        {mayWrite && (
+          <Button size="sm" type="button" variant="outline" disabled={checkNowMutation.isPending} onClick={() => checkNowMutation.mutate()}>
+            {checkNowMutation.isPending ? <Spinner /> : <RefreshCwIcon />}
+            Проверить сейчас
+          </Button>
+        )}
+      </div>
       {detail.isLoading ? (
         <p className="text-sm text-muted-foreground">Загрузка…</p>
       ) : detail.isError ? (
@@ -258,7 +277,7 @@ function SourceEditBody({ source, mayWrite, onClose }: { source: ControlPlaneSou
         </FieldGroup>
         <div className="mt-4 flex flex-col gap-4">
           <CredentialsSection source={source} mayWrite={mayWrite} />
-          {source.providerType === "REMNAWAVE" && <NodesSection sourceId={source.id} />}
+          {source.providerType === "REMNAWAVE" && <NodesSection sourceId={source.id} mayWrite={mayWrite} />}
           <LinkedVpsSection sourceId={source.id} />
         </div>
         <DialogFooter className="mt-4">

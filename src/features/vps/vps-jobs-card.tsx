@@ -22,6 +22,12 @@ const quickJobs: JobButton[] = [
   { label: "Health-check", description: "Дешёвая проверка: load average, диск, порты, контейнеры. Уже гоняется фоном каждые 10-15 мин.", run: adminApi.healthCheckVpsInstance },
   { label: "Бэкап", description: "Локальный бэкап конфигурации сервера (не БД) — sshd/fail2ban/sysctl/ufw/docker/crontab.", run: adminApi.backupVpsInstance },
   { label: "Запустить", description: "SSH-уровневый запуск Docker-контейнеров на сервере.", run: adminApi.startVpsServices },
+  {
+    label: "Установить SSH-ключ",
+    description:
+      "Ставит ключ автоматизации на сервер, у которого пока есть только пароль регистратора — обязательно перед первым health-check/бэкапом на свежекупленном VPS.",
+    run: adminApi.installSshKeyOnVpsInstance,
+  },
 ];
 
 // "Средние" - плановое обслуживание или временно затрагивает работающих клиентов, обычного попапа достаточно.
