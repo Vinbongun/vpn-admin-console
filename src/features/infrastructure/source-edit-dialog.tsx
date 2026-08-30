@@ -3,6 +3,7 @@
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { RefreshCwIcon } from "lucide-react";
+import Link from "next/link";
 import { useState } from "react";
 import { Controller, useForm } from "react-hook-form";
 import { toast } from "sonner";
@@ -104,10 +105,10 @@ function LinkedVpsSection({ sourceId }: { sourceId: string }) {
       ) : (
         <div className="flex flex-col gap-1">
           {linked.map((vps) => (
-            <div key={vps.id} className="flex items-center justify-between gap-2 rounded-md border px-2.5 py-1.5 text-sm">
-              <span className="font-medium">{vps.code}</span>
+            <Link key={vps.id} href={`/infrastructure/vps/${vps.id}`} className="flex items-center justify-between gap-2 rounded-md border px-2.5 py-1.5 text-sm hover:bg-accent">
+              <span className="font-medium underline">{vps.code}</span>
               <span className="text-xs text-muted-foreground">{vps.host}</span>
-            </div>
+            </Link>
           ))}
         </div>
       )}
@@ -151,7 +152,12 @@ function NodesSection({ sourceId, mayWrite }: { sourceId: string; mayWrite: bool
           {nodes.map((node) => (
             <div key={node.uuid} className="flex flex-wrap items-center justify-between gap-2 rounded-md border px-2.5 py-1.5 text-sm">
               <span className="font-medium">
-                {node.name} {node.vpsInstanceCode && <span className="font-normal text-muted-foreground">({node.vpsInstanceCode})</span>}
+                {node.name}{" "}
+                {node.vpsInstanceCode && node.vpsInstanceId && (
+                  <Link href={`/infrastructure/vps/${node.vpsInstanceId}`} className="font-normal text-muted-foreground underline">
+                    ({node.vpsInstanceCode})
+                  </Link>
+                )}
               </span>
               <div className="flex items-center gap-2 text-xs text-muted-foreground">
                 <CountryFlag code={node.countryCode} />

@@ -1,6 +1,7 @@
 "use client";
 
 import { useMutation, useQueryClient } from "@tanstack/react-query";
+import Link from "next/link";
 import { useState } from "react";
 import { toast } from "sonner";
 import { adminApi, ApiError } from "@/api/client";
@@ -113,12 +114,14 @@ export function PanelProtocolCard({ vps, mayWrite }: { vps: VpsInstanceDetail; m
       </CardHeader>
       <CardContent className="flex flex-col gap-4">
         <div className="flex flex-wrap items-center gap-2 text-sm">
-          {vps.panelCode ? (
+          {vps.panelCode && vps.controlPlaneSourceId ? (
             <>
               <span className="text-muted-foreground">Панель:</span>
-              <Badge variant="outline">
-                {vps.panelCode} ({vps.panelProviderType})
-              </Badge>
+              <Link href={`/infrastructure/panels-and-servers?source=${vps.controlPlaneSourceId}`}>
+                <Badge variant="outline" className="cursor-pointer hover:bg-accent">
+                  {vps.panelCode} ({vps.panelProviderType})
+                </Badge>
+              </Link>
             </>
           ) : (
             <span className="text-muted-foreground">Без панели.</span>

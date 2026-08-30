@@ -215,8 +215,20 @@ export function DomainDetailPage({ domainId }: { domainId: string }) {
                 />
                 <Field label="Режим DNS" value={data.dnsMode} />
                 <Field
-                  label="Привязка к панели/ноде"
-                  value={data.controlPlaneSourceId ? (sourceNameById.get(data.controlPlaneSourceId) ?? data.controlPlaneSourceId) : "Не привязан"}
+                  label="Привязка к панели/серверу"
+                  value={
+                    data.controlPlaneSourceId ? (
+                      <Link href={`/infrastructure/panels-and-servers?source=${data.controlPlaneSourceId}`} className="underline">
+                        {sourceNameById.get(data.controlPlaneSourceId) ?? data.controlPlaneSourceId}
+                      </Link>
+                    ) : data.vpsInstanceId ? (
+                      <Link href={`/infrastructure/vps/${data.vpsInstanceId}`} className="underline">
+                        VPS без панели
+                      </Link>
+                    ) : (
+                      "Не привязан"
+                    )
+                  }
                 />
                 <Field label="Ref у регистратора" value={data.registrarDomainRef ?? "—"} />
                 {data.archivedAt && <Field label="В архиве с" value={formatDate(data.archivedAt)} />}

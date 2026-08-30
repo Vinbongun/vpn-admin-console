@@ -2,6 +2,7 @@
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import type { ColumnDef } from "@tanstack/react-table";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useMemo, useState } from "react";
 import { toast } from "sonner";
 import { adminApi, ApiError } from "@/api/client";
@@ -38,12 +39,16 @@ function providerLabel(providerType: string) {
 
 function PanelsCard() {
   const queryClient = useQueryClient();
+  const router = useRouter();
+  const searchParams = useSearchParams();
   const staff = useQuery({ queryKey: ["staff-session"], queryFn: adminApi.getSession, retry: false });
   const mayWrite = can(staff.data, "infrastructure.write");
   const sources = useQuery({ queryKey: ["admin-infrastructure-sources"], queryFn: adminApi.listControlPlaneSources, retry: false });
   const [syncingId, setSyncingId] = useState<string>();
   const [bulkSyncing, setBulkSyncing] = useState(false);
-  const [selectedSourceId, setSelectedSourceId] = useState<string>();
+  // Deep-link support: other pages (VPS detail, domain detail, endpoints) link a panel as
+  // /infrastructure/panels-and-servers?source={id} instead of duplicating the source-edit UI.
+  const [selectedSourceId, setSelectedSourceId] = useState<string | undefined>(searchParams.get("source") ?? undefined);
   const [sourceCountryFilter, setSourceCountryFilter] = useState("all");
   const anySyncing = bulkSyncing || Boolean(syncingId);
   const syncMutation = useMutation({
@@ -204,7 +209,11 @@ function PanelsCard() {
 
       <SourceEditDialog
         source={sources.data?.find((source) => source.id === selectedSourceId)}
-        onOpenChange={(open) => !open && setSelectedSourceId(undefined)}
+        onOpenChange={(open) => {
+          if (open) return;
+          setSelectedSourceId(undefined);
+          if (searchParams.get("source")) router.replace("/infrastructure/panels-and-servers");
+        }}
         mayWrite={mayWrite}
       />
     </Card>

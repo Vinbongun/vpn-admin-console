@@ -4104,6 +4104,8 @@ export interface components {
         InfrastructureEndpointSummary: {
             /** Format: uuid */
             id: string;
+            /** Format: uuid */
+            sourceId: string;
             sourceCode: string;
             name: string;
             countryCode: string;

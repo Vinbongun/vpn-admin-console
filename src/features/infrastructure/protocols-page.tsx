@@ -33,7 +33,15 @@ const columns: ColumnDef<InfrastructureEndpointSummary>[] = [
       </span>
     ),
   },
-  { accessorKey: "sourceCode", header: "Панель" },
+  {
+    id: "source",
+    header: "Панель",
+    cell: ({ row }) => (
+      <Link href={`/infrastructure/panels-and-servers?source=${row.original.sourceId}`} className="underline" onClick={(event) => event.stopPropagation()}>
+        {row.original.sourceCode}
+      </Link>
+    ),
+  },
   {
     id: "node",
     header: "Нода",
