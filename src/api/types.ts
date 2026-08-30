@@ -190,6 +190,7 @@ export type ChangeVpsServerPassword = NonNullable<operations["changeVpsServerPas
 export type UpdateVpsPaymentMethod = NonNullable<operations["updateVpsPaymentMethod"]["requestBody"]>["content"]["application/json"];
 export type RegistrarServerSummary = Schemas["RegistrarServerSummary"];
 export type InstallRemnawaveNode = Schemas["InstallRemnawaveNode"];
+export type InstallReverseProxy = Schemas["InstallReverseProxy"];
 export type ControlPlaneSourceDetail = Schemas["ControlPlaneSourceDetail"];
 export type RemnawaveNodeSummary = Schemas["RemnawaveNodeSummary"];
 export type ConfigProfileSummary = Schemas["ConfigProfileSummary"];

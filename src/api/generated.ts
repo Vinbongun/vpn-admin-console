@@ -2131,6 +2131,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/admin/v1/vps-instances/{id}/install-reverse-proxy": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** @description Enqueues an INSTALL_REVERSE_PROXY job - installs NGINX/Caddy + real Let's Encrypt TLS in front of the panel already installed on this VPS, using a domain already assigned to it (see POST /domains/{id}/assign). 3x-ui only for now - Remnawave needs a materially different flow (panel/subscription/SelfSteal sub-domains) and is not built yet. */
+        post: operations["installReverseProxyOnVpsInstance"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/admin/v1/vps-instances/{id}/install-ssh-key": {
         parameters: {
             query?: never;
@@ -3906,6 +3923,13 @@ export interface components {
             name?: string;
             /** @default 2222 */
             port: number;
+        };
+        InstallReverseProxy: {
+            /**
+             * Format: uuid
+             * @description Must already be assigned to this VPS's panel via POST /domains/{id}/assign.
+             */
+            domainId: string;
         };
         /** @description Manual-entry editing for purchase metadata - every field optional, only what's provided is updated (existing values are preserved otherwise). Not a job trigger. */
         UpdateVpsInstanceMetadata: {
@@ -9130,6 +9154,46 @@ export interface operations {
             };
             /** @description Panel is not REMNAWAVE */
             422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    installReverseProxyOnVpsInstance: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["InstallReverseProxy"];
+            };
+        };
+        responses: {
+            /** @description Job enqueued */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["VpsAutomationJobRef"];
+                };
+            };
+            /** @description Domain not assigned to this VPS's panel */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description VPS instance or domain not found */
+            404: {
                 headers: {
                     [name: string]: unknown;
                 };

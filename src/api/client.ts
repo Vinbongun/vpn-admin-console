@@ -51,6 +51,7 @@ import type {
   ExtendSubscription,
   GenerateDomainCandidatesRequest,
   InstallRemnawaveNode,
+  InstallReverseProxy,
   IssuedSubscriptionToken,
   PasswordLogin,
   PlatformSetting,
@@ -272,6 +273,9 @@ export const adminApi = {
   // Attaches to an EXISTING REMNAWAVE panel - backend calls that panel's own API (create node + mint SECRET_KEY) before enqueueing the SSH job.
   installRemnawaveNodeOnVpsInstance: async (id: string, body: InstallRemnawaveNode) =>
     unwrap<VpsAutomationJobRef>(await client.POST("/admin/v1/vps-instances/{id}/install-remnawave-node", { params: { path: { id } }, body, headers: staffHeaders() })),
+  // 3x-ui only for now - domainId must already be assigned to this VPS's panel via assignDomain().
+  installReverseProxyOnVpsInstance: async (id: string, body: InstallReverseProxy) =>
+    unwrap<VpsAutomationJobRef>(await client.POST("/admin/v1/vps-instances/{id}/install-reverse-proxy", { params: { path: { id } }, body, headers: staffHeaders() })),
   startVpsServices: async (id: string) => unwrap<VpsAutomationJobRef>(await client.POST("/admin/v1/vps-instances/{id}/start", { params: { path: { id } }, headers: staffHeaders() })),
   stopVpsServices: async (id: string) => unwrap<VpsAutomationJobRef>(await client.POST("/admin/v1/vps-instances/{id}/stop", { params: { path: { id } }, headers: staffHeaders() })),
   // No request body - the backend enqueues the job on the id alone; typed confirmation (host/IP) is a frontend-only safety gate.

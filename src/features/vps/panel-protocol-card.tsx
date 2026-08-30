@@ -1,6 +1,6 @@
 "use client";
 
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import Link from "next/link";
 import { useState } from "react";
 import { toast } from "sonner";
@@ -10,6 +10,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Dialog, DialogClose, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Select, SelectContent, SelectGroup, SelectItem, SelectLabel, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Spinner } from "@/components/ui/spinner";
 import { InstallRemnawaveNodeDialog } from "@/features/vps/install-remnawave-node-dialog";
 
@@ -103,6 +104,81 @@ function InstallRemnawavePanelDialog({ vps }: { vps: VpsInstanceDetail }) {
   );
 }
 
+/** 3x-ui only for now (see VpsAutomationService.enqueueReverseProxyInstall) - assigns the picked
+ *  free domain to this VPS's panel, then enqueues the install in one step. */
+function InstallReverseProxyDialog({ vps }: { vps: VpsInstanceDetail }) {
+  const [open, setOpen] = useState(false);
+  const [domainId, setDomainId] = useState("");
+  const queryClient = useQueryClient();
+  const domains = useQuery({ queryKey: ["admin-domains", "all"], queryFn: () => adminApi.listDomains(), retry: false, enabled: open });
+  const freeDomains = (domains.data?.domains ?? []).filter((domain) => !domain.controlPlaneSourceId && !domain.vpsInstanceId && !domain.archivedAt);
+
+  const mutation = useMutation({
+    mutationFn: async () => {
+      await adminApi.assignDomain(domainId, { controlPlaneSourceId: vps.controlPlaneSourceId ?? undefined });
+      return adminApi.installReverseProxyOnVpsInstance(vps.id, { domainId });
+    },
+    onSuccess: async () => {
+      toast.success("Домен привязан, задача установки reverse-proxy + TLS поставлена.");
+      setOpen(false);
+      setDomainId("");
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ["admin-vps-instance", vps.id] }),
+        queryClient.invalidateQueries({ queryKey: ["admin-domains"] }),
+      ]);
+    },
+    onError: (error) => toast.error(error instanceof ApiError ? apiErrorMessage(error) : "Не удалось поставить задачу."),
+  });
+
+  return (
+    <Dialog open={open} onOpenChange={(next) => { setOpen(next); if (!next) setDomainId(""); }}>
+      <DialogTrigger render={<Button size="sm" variant="outline" />}>Привязать домен + TLS</DialogTrigger>
+      <DialogContent className="sm:max-w-md">
+        <DialogHeader>
+          <DialogTitle>Привязать домен и установить reverse-proxy + TLS</DialogTitle>
+          <DialogDescription>
+            Выберите свободный домен — панель переключится на него по HTTPS, на корне появится статичная заглушка вместо самой панели.
+          </DialogDescription>
+        </DialogHeader>
+        {domains.isLoading ? (
+          <p className="text-sm text-muted-foreground">Загрузка доменов…</p>
+        ) : freeDomains.length === 0 ? (
+          <p className="text-sm text-muted-foreground">
+            Нет свободных доменов. Купите домен на странице{" "}
+            <Link href="/infrastructure/domains" className="underline">
+              «Домены»
+            </Link>{" "}
+            и вернитесь сюда.
+          </p>
+        ) : (
+          <Select items={freeDomains.map((domain) => ({ value: domain.id, label: domain.fqdn }))} value={domainId} onValueChange={(value) => setDomainId(value ?? "")}>
+            <SelectTrigger className="w-full">
+              <SelectValue placeholder="Выберите домен" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectGroup>
+                <SelectLabel>Свободные домены</SelectLabel>
+                {freeDomains.map((domain) => (
+                  <SelectItem key={domain.id} value={domain.id}>
+                    {domain.fqdn}
+                  </SelectItem>
+                ))}
+              </SelectGroup>
+            </SelectContent>
+          </Select>
+        )}
+        <DialogFooter>
+          <DialogClose render={<Button type="button" variant="outline" />}>Отмена</DialogClose>
+          <Button disabled={!domainId || mutation.isPending} onClick={() => mutation.mutate()}>
+            {mutation.isPending && <Spinner />}
+            Привязать и установить
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
 export function PanelProtocolCard({ vps, mayWrite }: { vps: VpsInstanceDetail; mayWrite: boolean }) {
   const hasInstallReport = (vps.latestReports ?? []).some((report) => report.jobType === "INSTALL_PANEL");
 
@@ -122,6 +198,11 @@ export function PanelProtocolCard({ vps, mayWrite }: { vps: VpsInstanceDetail; m
                   {vps.panelCode} ({vps.panelProviderType})
                 </Badge>
               </Link>
+              {vps.domainFqdn ? (
+                <Badge variant="outline">{vps.domainFqdn} · TLS</Badge>
+              ) : (
+                mayWrite && vps.panelProviderType === "3X_UI" && <InstallReverseProxyDialog vps={vps} />
+              )}
             </>
           ) : (
             <span className="text-muted-foreground">Без панели.</span>
