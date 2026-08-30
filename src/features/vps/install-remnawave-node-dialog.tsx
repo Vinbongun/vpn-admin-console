@@ -5,6 +5,7 @@ import { useState } from "react";
 import { toast } from "sonner";
 import { adminApi, ApiError } from "@/api/client";
 import type { VpsInstance } from "@/api/types";
+import { CountryFlag } from "@/components/country-flag";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Dialog, DialogClose, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
@@ -24,7 +25,6 @@ export function InstallRemnawaveNodeDialog({ vps }: { vps: VpsInstance }) {
   const [panelSourceId, setPanelSourceId] = useState("");
   const [configProfileUuid, setConfigProfileUuid] = useState("");
   const [activeInboundUuids, setActiveInboundUuids] = useState<string[]>([]);
-  const [countryCode, setCountryCode] = useState("");
   const [name, setName] = useState("");
   const [port, setPort] = useState("2222");
   const queryClient = useQueryClient();
@@ -33,7 +33,6 @@ export function InstallRemnawaveNodeDialog({ vps }: { vps: VpsInstance }) {
     setPanelSourceId("");
     setConfigProfileUuid("");
     setActiveInboundUuids([]);
-    setCountryCode("");
     setName("");
     setPort("2222");
   };
@@ -55,7 +54,6 @@ export function InstallRemnawaveNodeDialog({ vps }: { vps: VpsInstance }) {
         panelSourceId,
         configProfileUuid,
         activeInboundUuids,
-        countryCode: countryCode.trim().toUpperCase(),
         port: Number(port) || 2222,
         ...(name.trim() ? { name: name.trim() } : {}),
       }),
@@ -70,7 +68,7 @@ export function InstallRemnawaveNodeDialog({ vps }: { vps: VpsInstance }) {
 
   const toggleInbound = (uuid: string) => setActiveInboundUuids((prev) => (prev.includes(uuid) ? prev.filter((value) => value !== uuid) : [...prev, uuid]));
 
-  const canSubmit = Boolean(panelSourceId && configProfileUuid && activeInboundUuids.length > 0 && /^[A-Za-z]{2}$/.test(countryCode.trim())) && !mutation.isPending;
+  const canSubmit = Boolean(panelSourceId && configProfileUuid && activeInboundUuids.length > 0 && vps.datacenterCountryCode) && !mutation.isPending;
 
   return (
     <Dialog
@@ -170,8 +168,17 @@ export function InstallRemnawaveNodeDialog({ vps }: { vps: VpsInstance }) {
 
           <div className="grid grid-cols-2 gap-3">
             <div className="space-y-2">
-              <Label htmlFor="remnawave-node-country">Страна (2 буквы)</Label>
-              <Input id="remnawave-node-country" placeholder="NL" maxLength={2} value={countryCode} onChange={(event) => setCountryCode(event.target.value)} />
+              <Label>Страна</Label>
+              {vps.datacenterCountryCode ? (
+                <p className="flex h-9 items-center gap-1.5 text-sm">
+                  <CountryFlag code={vps.datacenterCountryCode} />
+                  {vps.datacenterCountryCode}
+                </p>
+              ) : (
+                <p className="text-xs text-destructive">
+                  У этого VPS не известна страна дата-центра — присоединить ноду нельзя, пока она не определена (см. карточку VPS).
+                </p>
+              )}
             </div>
             <div className="space-y-2">
               <Label htmlFor="remnawave-node-port">Порт</Label>

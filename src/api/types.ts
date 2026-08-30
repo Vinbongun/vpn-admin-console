@@ -63,7 +63,6 @@ export type SetPlanPrice = NonNullable<operations["setPlanPrice"]["requestBody"]
 export type CreatePlan = NonNullable<operations["createAdminPlan"]["requestBody"]>["content"]["application/json"];
 export type UpdatePlan = NonNullable<operations["updateAdminPlan"]["requestBody"]>["content"]["application/json"];
 export type ExtendSubscription = Schemas["ExtendSubscription"];
-export type SyncSourceInventory = NonNullable<operations["syncControlPlaneSource"]["requestBody"]>["content"]["application/json"];
 export type CreateControlPlaneSource = operations["createControlPlaneSource"]["requestBody"]["content"]["application/json"];
 export type SetControlPlaneSourceCredentials = operations["setControlPlaneSourceCredentials"]["requestBody"]["content"]["application/json"];
 export type UpdateControlPlaneSource = operations["updateControlPlaneSource"]["requestBody"]["content"]["application/json"];
@@ -150,6 +149,7 @@ export type PlatformSetting = Omit<Schemas["PlatformSetting"], "key" | "value"> 
 export type UpdatePlatformSetting = { value: RateLimitValue | number };
 
 export type Domain = Schemas["Domain"];
+export type AssignDomain = Schemas["AssignDomain"];
 export type RegistrarAccountSummary = Schemas["RegistrarAccountSummary"];
 export type PurchaseDomainItem = Schemas["PurchaseDomainItem"];
 export type PurchaseDomainsRequest = Schemas["PurchaseDomainsRequest"];

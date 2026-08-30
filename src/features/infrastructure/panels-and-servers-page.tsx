@@ -47,7 +47,7 @@ function PanelsCard() {
   const [sourceCountryFilter, setSourceCountryFilter] = useState("all");
   const anySyncing = bulkSyncing || Boolean(syncingId);
   const syncMutation = useMutation({
-    mutationFn: ({ id, countryCode }: { id: string; countryCode?: string }) => adminApi.syncSource(id, countryCode ? { countryCode } : {}),
+    mutationFn: ({ id }: { id: string }) => adminApi.syncSource(id),
     onMutate: ({ id }) => setSyncingId(id),
     onSuccess: async (result) => {
       toast.success(`Найдено серверов: ${result.count}`);
@@ -73,17 +73,12 @@ function PanelsCard() {
     for (let i = 0; i < targets.length; i++) {
       const source = targets[i];
       setSyncingId(source.id);
-      const needsCountry = source.providerType === "3X_UI" && !source.countryCode;
-      if (needsCountry) {
-        failures.push({ code: source.code, message: "Не задана страна панели — заполните её в редактировании панели" });
-      } else {
-        try {
-          const result = await adminApi.syncSource(source.id, source.countryCode ? { countryCode: source.countryCode } : {});
-          okCount += 1;
-          void result;
-        } catch (error) {
-          failures.push({ code: source.code, message: error instanceof ApiError ? apiErrorMessage(error) : "Не удалось синхронизировать" });
-        }
+      try {
+        const result = await adminApi.syncSource(source.id);
+        okCount += 1;
+        void result;
+      } catch (error) {
+        failures.push({ code: source.code, message: error instanceof ApiError ? apiErrorMessage(error) : "Не удалось синхронизировать" });
       }
       if (i < targets.length - 1) await new Promise((resolve) => setTimeout(resolve, 400));
     }
@@ -126,15 +121,13 @@ function PanelsCard() {
         header: "Синхронизация",
         cell: ({ row }) => {
           const source = row.original;
-          const needsCountry = source.providerType === "3X_UI" && !source.countryCode;
           return (
             <div className="flex items-center gap-2" onClick={(event) => event.stopPropagation()}>
               <Button
                 size="sm"
                 variant="outline"
-                disabled={anySyncing || needsCountry}
-                title={needsCountry ? "3x-ui не сообщает страну панели сама — задайте её в редактировании панели, чтобы синхронизировать" : undefined}
-                onClick={() => syncMutation.mutate({ id: source.id, countryCode: source.countryCode ?? undefined })}
+                disabled={anySyncing}
+                onClick={() => syncMutation.mutate({ id: source.id })}
               >
                 {syncingId === source.id && <Spinner />}
                 Синхронизировать с панелью

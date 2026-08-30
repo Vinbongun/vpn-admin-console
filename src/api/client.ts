@@ -32,6 +32,7 @@ import type {
   AdminSubscriptionQuery,
   AdminVpsInstanceQuery,
   AdminZonePricingQuery,
+  AssignDomain,
   ChangeVpsServerPassword,
   ConfigProfileSummary,
   ControlPlaneSourceDetail,
@@ -72,7 +73,6 @@ import type {
   SetPlanPrice,
   StaffOtpVerify,
   StaffProfile,
-  SyncSourceInventory,
   SyncVpsTariffCatalog,
   UpdateBrand,
   UpdateControlPlaneSource,
@@ -166,7 +166,7 @@ export const adminApi = {
     unwrap(await client.PUT("/admin/v1/infrastructure/sources/{id}/credentials", { params: { path: { id: sourceId } }, body, headers: staffHeaders() })),
   listControlPlaneSourceConfigProfiles: async (sourceId: string) =>
     unwrap<ConfigProfileSummary[]>(await client.GET("/admin/v1/infrastructure/sources/{id}/config-profiles", { params: { path: { id: sourceId } }, headers: staffHeaders() })),
-  syncSource: async (sourceId: string, body: SyncSourceInventory = {}) => unwrap(await client.POST("/admin/v1/infrastructure/sources/{id}/sync", { params: { path: { id: sourceId } }, body, headers: staffHeaders() })),
+  syncSource: async (sourceId: string) => unwrap(await client.POST("/admin/v1/infrastructure/sources/{id}/sync", { params: { path: { id: sourceId } }, headers: staffHeaders() })),
   // Manual counterpart to the remnawave-status-check cron - REMNAWAVE-only, checks live node connectivity and opens/resolves infrastructure_incidents accordingly.
   checkNodesNow: async (sourceId: string) =>
     unwrap<{ checked: number; changed: number }>(await client.POST("/admin/v1/infrastructure/sources/{id}/check-nodes-now", { params: { path: { id: sourceId } }, headers: staffHeaders() })),
@@ -233,6 +233,8 @@ export const adminApi = {
   setDomainAutoRenew: async (domainId: string, enabled: boolean) =>
     unwrap<void>(await client.PATCH("/admin/v1/domains/{id}/auto-renew", { params: { path: { id: domainId } }, body: { enabled }, headers: staffHeaders() })),
   syncDomain: async (domainId: string) => unwrap<void>(await client.POST("/admin/v1/domains/{id}/sync", { params: { path: { id: domainId } }, headers: staffHeaders() })),
+  assignDomain: async (domainId: string, body: AssignDomain) =>
+    unwrap<Domain>(await client.POST("/admin/v1/domains/{id}/assign", { params: { path: { id: domainId } }, body, headers: staffHeaders() })),
   unlinkDomain: async (domainId: string) => unwrap<void>(await client.POST("/admin/v1/domains/{id}/unlink", { params: { path: { id: domainId } }, headers: staffHeaders() })),
   archiveDomain: async (domainId: string) => unwrap<void>(await client.POST("/admin/v1/domains/{id}/archive", { params: { path: { id: domainId } }, headers: staffHeaders() })),
   updateDomainMetadata: async (domainId: string, body: UpdateDomainMetadata) =>

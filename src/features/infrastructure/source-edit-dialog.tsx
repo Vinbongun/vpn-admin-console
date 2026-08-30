@@ -4,7 +4,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { RefreshCwIcon } from "lucide-react";
 import { useState } from "react";
-import { Controller, useForm, useWatch } from "react-hook-form";
+import { Controller, useForm } from "react-hook-form";
 import { toast } from "sonner";
 import { adminApi, ApiError } from "@/api/client";
 import type { ControlPlaneSourceSummary } from "@/api/types";
@@ -194,18 +194,15 @@ function SourceEditBody({ source, mayWrite, onClose }: { source: ControlPlaneSou
     defaultValues: {
       code: source.code,
       status: source.status as UpdateSourceValues["status"],
-      countryCode: source.countryCode ?? "",
       comment: source.comment ?? "",
     },
   });
-  const countryCode = useWatch({ control: form.control, name: "countryCode" });
 
   const mutation = useMutation({
     mutationFn: (values: UpdateSourceValues) =>
       adminApi.updateControlPlaneSource(source.id, {
         code: values.code,
         status: values.status,
-        ...(values.countryCode ? { countryCode: values.countryCode } : {}),
         comment: values.comment,
       }),
     onSuccess: async () => {
@@ -261,13 +258,18 @@ function SourceEditBody({ source, mayWrite, onClose }: { source: ControlPlaneSou
               </Field>
             )}
           />
-          <Field data-invalid={Boolean(form.formState.errors.countryCode)}>
-            <FieldLabel htmlFor="source-edit-country">
-              Страна панели {countryCode && <CountryFlag code={countryCode} className="ml-1" />}
-            </FieldLabel>
-            <Input id="source-edit-country" disabled={!mayWrite} placeholder="Например DE" maxLength={2} {...form.register("countryCode")} />
-            <FieldError errors={[form.formState.errors.countryCode]} />
-            <p className="text-xs text-muted-foreground">Нужна для синхронизации 3x-ui-панелей — у их API нет своего понятия страны.</p>
+          <Field>
+            <FieldLabel>Страна</FieldLabel>
+            {source.countryCode ? (
+              <p className="flex h-9 items-center gap-1.5 text-sm">
+                <CountryFlag code={source.countryCode} />
+                {source.countryCode}
+              </p>
+            ) : (
+              <p className="text-xs text-muted-foreground">
+                Пока неизвестна — определяется автоматически от VPS, на котором стоит эта панель, при следующей синхронизации.
+              </p>
+            )}
           </Field>
           <Field data-invalid={Boolean(form.formState.errors.comment)}>
             <FieldLabel htmlFor="source-edit-comment">Комментарий</FieldLabel>

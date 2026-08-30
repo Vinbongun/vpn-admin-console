@@ -1597,6 +1597,22 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/admin/v1/domains/{id}/assign": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["assignDomain"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/admin/v1/domains/{id}/unlink": {
         parameters: {
             query?: never;
@@ -3546,12 +3562,24 @@ export interface components {
              * @description The panel/node this domain is assigned to, if any - at most one domain per panel/node.
              */
             controlPlaneSourceId?: string | null;
+            /**
+             * Format: uuid
+             * @description The bare VPS (standalone protocol, no panel at all) this domain is assigned to, if any - mutually exclusive with controlPlaneSourceId, at most one of the two is set.
+             */
+            vpsInstanceId?: string | null;
             /** Format: date-time */
             archivedAt?: string | null;
             /** Format: date-time */
             createdAt?: string;
             /** @description Staff-only local label, never sent to the registrar/WHOIS/DNS. */
             internalLabel?: string | null;
+        };
+        /** @description Exactly one of the two targets must be set. */
+        AssignDomain: {
+            /** Format: uuid */
+            controlPlaneSourceId?: string;
+            /** Format: uuid */
+            vpsInstanceId?: string;
         };
         DomainDnsRecord: {
             /**
@@ -3874,7 +3902,6 @@ export interface components {
              */
             configProfileUuid: string;
             activeInboundUuids: string[];
-            countryCode: string;
             /** @description Defaults to the VPS's own code if omitted. */
             name?: string;
             /** @default 2222 */
@@ -7913,6 +7940,60 @@ export interface operations {
             };
         };
     };
+    assignDomain: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": components["schemas"]["AssignDomain"];
+            };
+        };
+        responses: {
+            /** @description Assigns a free (unassigned) domain to exactly one of a panel or a bare VPS. */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Domain"];
+                };
+            };
+            /** @description Neither or both of controlPlaneSourceId/vpsInstanceId provided */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Missing domains.write permission */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Domain not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Domain already assigned */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
     unlinkDomain: {
         parameters: {
             query?: never;
@@ -9981,16 +10062,9 @@ export interface operations {
             };
             cookie?: never;
         };
-        requestBody?: {
-            content: {
-                "application/json": {
-                    /** @description Needed for 3X_UI sources - 3x-ui's own API has no concept of which country a panel is in. Optional: falls back to the source's own stored countryCode (PATCH .../sources/{id}) when omitted, so a "sync all panels" button can call this with no body at all. Not needed for REMNAWAVE sources. 400 if neither is available for a 3X_UI source. */
-                    countryCode?: string;
-                };
-            };
-        };
+        requestBody?: never;
         responses: {
-            /** @description Pulls the current inbound/user list from the live panel and upserts it into `endpoints` - this is what makes a newly-added inbound actually selectable in an endpoint group, instead of requiring a manual database insert. */
+            /** @description Pulls the current inbound/user list from the live panel and upserts it into `endpoints` - this is what makes a newly-added inbound actually selectable in an endpoint group, instead of requiring a manual database insert. Server wizard phase 0.4: country is no longer client-supplied - for a 3X_UI source it is always derived from the VPS this source is installed on (control_plane_source_id -> vps_instances. datacenter_country_code), and backfilled onto control_plane_sources.country_code. */
             201: {
                 headers: {
                     [name: string]: unknown;

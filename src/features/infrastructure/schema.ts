@@ -39,11 +39,6 @@ export const updateSourceSchema = z.object({
     .toUpperCase()
     .regex(/^[A-Z0-9_]{2,64}$/, "2–64 символов: A-Z, 0-9, _"),
   status: z.enum(sourceStatuses),
-  countryCode: z
-    .string()
-    .trim()
-    .toUpperCase()
-    .refine((value) => value === "" || /^[A-Z]{2}$/.test(value), "2 буквы (ISO alpha-2) или пусто"),
   comment: z.string().trim().max(2000, "До 2000 символов"),
 });
 export type UpdateSourceValues = z.infer<typeof updateSourceSchema>;
