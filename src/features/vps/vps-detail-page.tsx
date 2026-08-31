@@ -179,113 +179,122 @@ export function VpsDetailPage({ vpsId }: { vpsId: string }) {
       ) : vps.isError || !data ? (
         <ErrorState description="Не удалось получить карточку VPS." />
       ) : (
-        <div className="mx-auto flex w-full max-w-3xl flex-col gap-6">
-          <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border p-4">
-            <div>
-              <div className="flex items-center gap-2">
-                <ServerIcon className="size-4 text-muted-foreground" />
-                <h1 className="font-heading text-lg font-semibold tracking-tight">{data.code}</h1>
-                <StatusBadge status={data.status} />
-              </div>
-              <p className="text-sm text-muted-foreground">
-                {data.host} · {data.id}
-              </p>
-            </div>
-            {mayWrite && <EditPurchaseInfoDialog vps={data} />}
-          </div>
-
-          <Card>
-            <CardHeader>
-              <CardTitle>Основные данные</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="grid gap-4 sm:grid-cols-2">
-                <Field label="SSH" value={`${data.sshUser}@${data.host}:${data.sshPort}`} />
-                <Field label="Способ добавления" value={data.providerType === "MANUAL" ? "Вручную" : "API"} />
-                {data.registrarAccountId && (
-                  <Field
-                    label="Регистратор"
-                    value={
-                      registrarAccount ? (
-                        <Link href={`/infrastructure/vps-purchase/${data.registrarAccountId}`} className="underline">
-                          {registrarAccount.code}
-                        </Link>
-                      ) : (
-                        "—"
-                      )
-                    }
-                  />
-                )}
-                <Field label="Последняя проверка здоровья" value={formatDate(data.lastHealthCheckAt)} />
-                <Field label="Домен панели" value={data.domainFqdn ?? "—"} />
-                <Field
-                  label="Локация"
-                  value={
-                    data.datacenterName ? (
-                      <span className="flex items-center gap-1.5">
-                        <CountryFlag code={data.datacenterCountryCode} />
-                        {data.datacenterName}
-                      </span>
-                    ) : (
-                      "—"
-                    )
-                  }
-                />
-                <Field label="Стоимость покупки" value={formatMoney(data.purchaseCostCents, data.currency)} />
-                <Field label="Дата покупки" value={formatDate(data.purchasedAt)} />
-                <Field label="Дата истечения" value={data.expireDate ? formatDate(data.expireDate) : "—"} />
-                <Field label="Авто-продление" value={data.autoProlong ? "включено" : "выключено"} />
-                {data.archivedAt && <Field label="В архиве с" value={formatDate(data.archivedAt)} />}
-              </div>
-            </CardContent>
-          </Card>
-
-          <PanelProtocolCard vps={data} mayWrite={mayWrite} />
-
-          <VpsJobsCard vps={data} mayWrite={mayWrite} />
-
-          <Card>
-            <CardHeader>
-              <CardTitle>Последние отчёты</CardTitle>
-              <CardDescription>Последний отчёт по каждому типу задачи — формат зависит от типа, не унифицирован</CardDescription>
-            </CardHeader>
-            <CardContent>
-              {!data.latestReports || data.latestReports.length === 0 ? (
-                <p className="text-sm text-muted-foreground">Отчётов пока нет.</p>
-              ) : (
-                <div className="flex flex-col gap-2">
-                  {data.latestReports.map((report, index) => (
-                    <Collapsible key={index}>
-                      <CollapsibleTrigger
-                        render={
-                          <button
-                            type="button"
-                            className="flex w-full items-center justify-between gap-2 rounded-md border p-2.5 text-left text-sm hover:bg-accent"
-                          />
-                        }
-                      >
-                        <span className="font-medium">{report.jobType}</span>
-                        <span className="flex items-center gap-2 text-xs text-muted-foreground">
-                          {formatDate(report.createdAt)}
-                          <ChevronDownIcon className="size-4" />
-                        </span>
-                      </CollapsibleTrigger>
-                      <CollapsibleContent>
-                        <pre className="mt-2 overflow-x-auto rounded-md border bg-muted p-3 text-xs">{JSON.stringify(report.reportPayload, null, 2)}</pre>
-                      </CollapsibleContent>
-                    </Collapsible>
-                  ))}
+        (() => {
+          const hasRegistrarCard = data.providerType !== "MANUAL" && Boolean(data.registrarAccountId) && Boolean(data.registrarItemRef);
+          return (
+            <div className="mx-auto grid w-full max-w-5xl gap-6 lg:grid-cols-2">
+              <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border p-4 lg:col-span-2">
+                <div>
+                  <div className="flex items-center gap-2">
+                    <ServerIcon className="size-4 text-muted-foreground" />
+                    <h1 className="font-heading text-lg font-semibold tracking-tight">{data.code}</h1>
+                    <StatusBadge status={data.status} />
+                  </div>
+                  <p className="text-sm text-muted-foreground">
+                    {data.host} · {data.id}
+                  </p>
                 </div>
+                {mayWrite && <EditPurchaseInfoDialog vps={data} />}
+              </div>
+
+              <Card className="lg:col-span-2">
+                <CardHeader>
+                  <CardTitle>Основные данные</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="grid gap-4 sm:grid-cols-2">
+                    <Field label="SSH" value={`${data.sshUser}@${data.host}:${data.sshPort}`} />
+                    <Field label="Способ добавления" value={data.providerType === "MANUAL" ? "Вручную" : "API"} />
+                    {data.registrarAccountId && (
+                      <Field
+                        label="Регистратор"
+                        value={
+                          registrarAccount ? (
+                            <Link href={`/infrastructure/vps-purchase/${data.registrarAccountId}`} className="underline">
+                              {registrarAccount.code}
+                            </Link>
+                          ) : (
+                            "—"
+                          )
+                        }
+                      />
+                    )}
+                    <Field label="Последняя проверка здоровья" value={formatDate(data.lastHealthCheckAt)} />
+                    <Field label="Домен панели" value={data.domainFqdn ?? "—"} />
+                    <Field
+                      label="Локация"
+                      value={
+                        data.datacenterName ? (
+                          <span className="flex items-center gap-1.5">
+                            <CountryFlag code={data.datacenterCountryCode} />
+                            {data.datacenterName}
+                          </span>
+                        ) : (
+                          "—"
+                        )
+                      }
+                    />
+                    <Field label="Стоимость покупки" value={formatMoney(data.purchaseCostCents, data.currency)} />
+                    <Field label="Дата покупки" value={formatDate(data.purchasedAt)} />
+                    <Field label="Дата истечения" value={data.expireDate ? formatDate(data.expireDate) : "—"} />
+                    <Field label="Авто-продление" value={data.autoProlong ? "включено" : "выключено"} />
+                    {data.archivedAt && <Field label="В архиве с" value={formatDate(data.archivedAt)} />}
+                  </div>
+                </CardContent>
+              </Card>
+
+              <div className={hasRegistrarCard ? undefined : "lg:col-span-2"}>
+                <PanelProtocolCard vps={data} mayWrite={mayWrite} />
+              </div>
+
+              {hasRegistrarCard && data.registrarAccountId && data.registrarItemRef && (
+                <QwinsServerCard registrarAccountId={data.registrarAccountId} itemId={data.registrarItemRef} />
               )}
-            </CardContent>
-          </Card>
 
-          {data.providerType !== "MANUAL" && data.registrarAccountId && data.registrarItemRef && (
-            <QwinsServerCard registrarAccountId={data.registrarAccountId} itemId={data.registrarItemRef} />
-          )}
+              <VpsJobsCard vps={data} mayWrite={mayWrite} />
 
-          <DangerZoneCard vps={data} mayWrite={mayWrite} mayDecommission={mayDecommission} />
-        </div>
+              <Card className="lg:col-span-2">
+                <CardHeader>
+                  <CardTitle>Последние отчёты</CardTitle>
+                  <CardDescription>Последний отчёт по каждому типу задачи — формат зависит от типа, не унифицирован</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  {!data.latestReports || data.latestReports.length === 0 ? (
+                    <p className="text-sm text-muted-foreground">Отчётов пока нет.</p>
+                  ) : (
+                    <div className="flex flex-col gap-2">
+                      {data.latestReports.map((report, index) => (
+                        <Collapsible key={index}>
+                          <CollapsibleTrigger
+                            render={
+                              <button
+                                type="button"
+                                className="flex w-full items-center justify-between gap-2 rounded-md border p-2.5 text-left text-sm hover:bg-accent"
+                              />
+                            }
+                          >
+                            <span className="font-medium">{report.jobType}</span>
+                            <span className="flex items-center gap-2 text-xs text-muted-foreground">
+                              {formatDate(report.createdAt)}
+                              <ChevronDownIcon className="size-4" />
+                            </span>
+                          </CollapsibleTrigger>
+                          <CollapsibleContent>
+                            <pre className="mt-2 overflow-x-auto rounded-md border bg-muted p-3 text-xs">{JSON.stringify(report.reportPayload, null, 2)}</pre>
+                          </CollapsibleContent>
+                        </Collapsible>
+                      ))}
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+
+              <div className="lg:col-span-2">
+                <DangerZoneCard vps={data} mayWrite={mayWrite} mayDecommission={mayDecommission} />
+              </div>
+            </div>
+          );
+        })()
       )}
     </AppShell>
   );
