@@ -12,6 +12,7 @@ import type { ControlPlaneSourceSummary } from "@/api/types";
 import { Badge } from "@/components/ui/badge";
 import { CountryFlag } from "@/components/country-flag";
 import { CredentialField } from "@/components/credential-field";
+import { StatusBadge } from "@/components/status-badge";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogClose, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Field, FieldError, FieldGroup, FieldLabel } from "@/components/ui/field";
@@ -32,6 +33,62 @@ function apiErrorMessage(error: ApiError): string {
   const details = error.details as { message?: string | string[] } | undefined;
   const message = details?.message;
   return (Array.isArray(message) ? message.join(", ") : message) ?? error.message;
+}
+
+/**
+ * Shared by the header (panel + version summary) and PanelAccessSection (actual credential
+ * values) - one query, same cache key, so having both read it isn't a duplicate network call.
+ * `panelVersion`/`xrayVersion` don't exist in any install report yet (tracked separately as
+ * follow-up work) - reading them defensively means the header degrades to "версия неизвестна"
+ * today and starts showing real values the moment that field exists, no further frontend change.
+ */
+function usePanelInstallReport(source: ControlPlaneSourceSummary) {
+  const isPanelType = source.providerType === "3X_UI" || source.providerType === "REMNAWAVE";
+  const jobType = source.providerType === "REMNAWAVE" ? "INSTALL_REMNAWAVE_PANEL" : "INSTALL_PANEL";
+  const vpsInstances = useQuery({ queryKey: ["admin-vps-instances", "all"], queryFn: () => adminApi.listVpsInstances(), retry: false });
+  const linkedIds = (vpsInstances.data ?? []).filter((vps) => vps.controlPlaneSourceId === source.id).map((vps) => vps.id);
+
+  const automation = useQuery({
+    queryKey: ["admin-source-automation-credentials", source.id, linkedIds.join(",")],
+    queryFn: async () => {
+      const details = await Promise.all(linkedIds.map((id) => adminApi.getVpsInstance(id)));
+      for (const detail of details) {
+        const report = (detail.latestReports ?? []).find((entry) => entry.jobType === jobType);
+        if (report) return { report, domainFqdn: detail.domainFqdn };
+      }
+      return undefined;
+    },
+    enabled: isPanelType && linkedIds.length > 0,
+    retry: false,
+  });
+
+  const isLoading = vpsInstances.isLoading || (isPanelType && linkedIds.length > 0 && automation.isLoading);
+  const payload = automation.data?.report.reportPayload as Record<string, unknown> | undefined;
+  return { isLoading, payload, domainFqdn: automation.data?.domainFqdn, isPanelType };
+}
+
+/**
+ * Replaces the old static "Провайдер: X — не редактируется" line - shows what's actually
+ * installed right now, not just the provider type. Panel/Xray version fields don't exist in any
+ * report yet (see usePanelInstallReport) - shows an honest "неизвестна" until that lands, rather
+ * than a fake number.
+ */
+function PanelVersionInfo({ source }: { source: ControlPlaneSourceSummary }) {
+  const { isLoading, payload, isPanelType } = usePanelInstallReport(source);
+  if (!isPanelType) return <DialogDescription>Провайдер: {providerLabel(source.providerType)}</DialogDescription>;
+
+  const panelVersion = typeof payload?.panelVersion === "string" ? payload.panelVersion : undefined;
+  const xrayVersion = typeof payload?.xrayVersion === "string" ? payload.xrayVersion : undefined;
+
+  return (
+    <DialogDescription render={<div />}>
+      <span>Панель: {providerLabel(source.providerType)}</span>
+      <span className="mx-1.5">·</span>
+      <span>версия панели: {isLoading ? "…" : (panelVersion ?? "неизвестна")}</span>
+      <span className="mx-1.5">·</span>
+      <span>Xray: {isLoading ? "…" : (xrayVersion ?? "неизвестна")}</span>
+    </DialogDescription>
+  );
 }
 
 /**
@@ -96,31 +153,10 @@ function ManualCredentialsForm({ source, mayWrite }: { source: ControlPlaneSourc
  * that's the only way it could ever get set up in the first place.
  */
 function PanelAccessSection({ source, mayWrite }: { source: ControlPlaneSourceSummary; mayWrite: boolean }) {
-  const isPanelType = source.providerType === "3X_UI" || source.providerType === "REMNAWAVE";
-  const jobType = source.providerType === "REMNAWAVE" ? "INSTALL_REMNAWAVE_PANEL" : "INSTALL_PANEL";
-  const vpsInstances = useQuery({ queryKey: ["admin-vps-instances", "all"], queryFn: () => adminApi.listVpsInstances(), retry: false });
-  const linkedIds = (vpsInstances.data ?? []).filter((vps) => vps.controlPlaneSourceId === source.id).map((vps) => vps.id);
-
-  const automation = useQuery({
-    queryKey: ["admin-source-automation-credentials", source.id, linkedIds.join(",")],
-    queryFn: async () => {
-      const details = await Promise.all(linkedIds.map((id) => adminApi.getVpsInstance(id)));
-      for (const detail of details) {
-        const report = (detail.latestReports ?? []).find((entry) => entry.jobType === jobType);
-        if (report) return { report, domainFqdn: detail.domainFqdn };
-      }
-      return undefined;
-    },
-    enabled: isPanelType && linkedIds.length > 0,
-    retry: false,
-  });
-
-  const loading = vpsInstances.isLoading || (isPanelType && linkedIds.length > 0 && automation.isLoading);
-  const payload = automation.data?.report.reportPayload as Record<string, unknown> | undefined;
+  const { isLoading: loading, payload, domainFqdn } = usePanelInstallReport(source);
   const username = (typeof payload?.username === "string" ? payload.username : typeof payload?.adminUsername === "string" ? payload.adminUsername : undefined);
   const password = (typeof payload?.password === "string" ? payload.password : typeof payload?.adminPassword === "string" ? payload.adminPassword : undefined);
   const ipUrl = typeof payload?.baseUrl === "string" ? payload.baseUrl : undefined;
-  const domainFqdn = automation.data?.domainFqdn;
   const webBasePath = typeof payload?.webBasePath === "string" ? payload.webBasePath : "";
   const domainUrl = domainFqdn ? `https://${domainFqdn}${webBasePath}` : undefined;
   const hasAutomationCredentials = Boolean(username || password || ipUrl);
@@ -131,22 +167,23 @@ function PanelAccessSection({ source, mayWrite }: { source: ControlPlaneSourceSu
       {loading ? (
         <p className="text-sm text-muted-foreground">Загрузка…</p>
       ) : hasAutomationCredentials ? (
-        <>
-          <p className="text-xs text-muted-foreground">Подтянуто из отчёта установки — задать вручную нельзя, значения появляются сами после установки/переустановки.</p>
+        // Every value gets its own full-width row - a domain URL can easily run 40-50+ characters
+        // and truncating it inside a half-width column defeats the point of showing it at all.
+        <div className="flex flex-col gap-3">
+          {ipUrl && <CredentialField label="Путь через IP" value={ipUrl} href={ipUrl} />}
+          {domainUrl ? (
+            <CredentialField label="Путь через домен" value={domainUrl} href={domainUrl} />
+          ) : (
+            <div className="flex flex-col gap-1">
+              <span className="text-xs text-muted-foreground">Путь через домен</span>
+              <span className="text-sm text-muted-foreground">Домен не привязан</span>
+            </div>
+          )}
           <div className="grid gap-3 sm:grid-cols-2">
-            {ipUrl && <CredentialField label="Путь через IP" value={ipUrl} href={ipUrl} />}
-            {domainUrl ? (
-              <CredentialField label="Путь через домен" value={domainUrl} href={domainUrl} />
-            ) : (
-              <div className="flex flex-col gap-1">
-                <span className="text-xs text-muted-foreground">Путь через домен</span>
-                <span className="text-sm text-muted-foreground">Домен не привязан</span>
-              </div>
-            )}
             {username && <CredentialField label="Логин" value={username} />}
             {password && <CredentialField label="Пароль" value={password} maskable />}
           </div>
-        </>
+        </div>
       ) : (
         <ManualCredentialsForm source={source} mayWrite={mayWrite} />
       )}
@@ -254,7 +291,7 @@ export function SourceEditDialog({
 }) {
   return (
     <Dialog open={Boolean(source)} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-3xl">{source && <SourceEditBody key={source.id} source={source} mayWrite={mayWrite} onClose={() => onOpenChange(false)} />}</DialogContent>
+      <DialogContent className="sm:max-w-4xl">{source && <SourceEditBody key={source.id} source={source} mayWrite={mayWrite} onClose={() => onOpenChange(false)} />}</DialogContent>
     </Dialog>
   );
 }
@@ -290,11 +327,9 @@ function SourceEditBody({ source, mayWrite, onClose }: { source: ControlPlaneSou
       <DialogHeader>
         <DialogTitle className="flex items-center gap-2">
           {source.code}
-          <Badge variant={source.status === "ACTIVE" ? "default" : "outline"} className="font-normal">
-            {source.status}
-          </Badge>
+          <StatusBadge status={source.status} />
         </DialogTitle>
-        <DialogDescription>Провайдер: {providerLabel(source.providerType)} — не редактируется, задаётся только при создании.</DialogDescription>
+        <PanelVersionInfo source={source} />
       </DialogHeader>
       {/*
         A plain div, not a <form> - this dialog nests several independent mutations (panel fields,
@@ -323,20 +358,26 @@ function SourceEditBody({ source, mayWrite, onClose }: { source: ControlPlaneSou
                 </p>
               )}
             </Field>
-            <Field data-invalid={Boolean(form.formState.errors.comment)}>
-              <FieldLabel htmlFor="source-edit-comment">Комментарий</FieldLabel>
-              <Textarea id="source-edit-comment" disabled={!mayWrite} rows={3} {...form.register("comment")} />
-              <FieldError errors={[form.formState.errors.comment]} />
-            </Field>
           </FieldGroup>
 
+          <LinkedVpsSection sourceId={source.id} />
+        </div>
+
+        <div className="mt-4">
           <PanelAccessSection source={source} mayWrite={mayWrite} />
         </div>
 
-        <div className="mt-4 flex flex-col gap-4">
-          {source.providerType === "REMNAWAVE" && <NodesSection sourceId={source.id} mayWrite={mayWrite} />}
-          <LinkedVpsSection sourceId={source.id} />
-        </div>
+        {source.providerType === "REMNAWAVE" && (
+          <div className="mt-4">
+            <NodesSection sourceId={source.id} mayWrite={mayWrite} />
+          </div>
+        )}
+
+        <Field data-invalid={Boolean(form.formState.errors.comment)} className="mt-4">
+          <FieldLabel htmlFor="source-edit-comment">Комментарий</FieldLabel>
+          <Textarea id="source-edit-comment" disabled={!mayWrite} rows={3} {...form.register("comment")} />
+          <FieldError errors={[form.formState.errors.comment]} />
+        </Field>
 
         <DialogFooter className="mt-4">
           <DialogClose render={<Button type="button" variant="outline" />}>Закрыть</DialogClose>

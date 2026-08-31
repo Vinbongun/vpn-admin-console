@@ -11,15 +11,16 @@ import { AppShell } from "@/components/app-shell";
 import { CountryFlag } from "@/components/country-flag";
 import { DataTable } from "@/components/data-table";
 import { PageHeader } from "@/components/page-header";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardAction, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectGroup, SelectItem, SelectLabel, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Spinner } from "@/components/ui/spinner";
+import { StatusBadge } from "@/components/status-badge";
 import { CreateSourceDialog } from "@/features/infrastructure/create-source-dialog";
 import { SourceEditDialog } from "@/features/infrastructure/source-edit-dialog";
 import { VpsListPage } from "@/features/vps/vps-list-page";
 import { can } from "@/lib/access-control";
+import { countryNameRu } from "@/lib/country-name";
 
 function apiErrorMessage(error: ApiError): string {
   const details = error.details as { message?: string | string[] } | undefined;
@@ -105,9 +106,27 @@ function PanelsCard() {
 
   const columns = useMemo<ColumnDef<ControlPlaneSourceSummary>[]>(
     () => [
-      { accessorKey: "code", header: "Панель", cell: ({ row }) => <span className="font-medium">{row.original.code}</span> },
+      {
+        accessorKey: "code",
+        header: "Панель",
+        cell: ({ row }) => {
+          const source = row.original;
+          const countryName = countryNameRu(source.countryCode);
+          return (
+            <div>
+              <p className="font-medium">{source.code}</p>
+              {source.countryCode && (
+                <p className="flex items-center gap-1 text-xs text-muted-foreground">
+                  <CountryFlag code={source.countryCode} />
+                  {countryName ?? source.countryCode}
+                </p>
+              )}
+            </div>
+          );
+        },
+      },
       { id: "provider", header: "Провайдер", cell: ({ row }) => providerLabel(row.original.providerType) },
-      { id: "status", header: "Статус", cell: ({ row }) => <Badge>{row.original.status}</Badge> },
+      { id: "status", header: "Статус", cell: ({ row }) => <StatusBadge status={row.original.status} /> },
       {
         id: "lastInventory",
         header: "Последняя синхронизация",
@@ -173,7 +192,7 @@ function PanelsCard() {
         {sourceCountries.length > 0 && (
           <div className="mb-4 max-w-64">
             <Select
-              items={[{ value: "all", label: "Все страны" }, ...sourceCountries.map((code) => ({ value: code, label: code }))]}
+              items={[{ value: "all", label: "Все страны" }, ...sourceCountries.map((code) => ({ value: code, label: countryNameRu(code) ?? code }))]}
               value={sourceCountryFilter}
               onValueChange={(value) => setSourceCountryFilter(value ?? "all")}
             >
@@ -187,7 +206,7 @@ function PanelsCard() {
                   {sourceCountries.map((code) => (
                     <SelectItem key={code} value={code}>
                       <CountryFlag code={code} className="mr-1" />
-                      {code}
+                      {countryNameRu(code) ?? code}
                     </SelectItem>
                   ))}
                 </SelectGroup>
