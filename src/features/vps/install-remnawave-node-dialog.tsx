@@ -1,6 +1,7 @@
 "use client";
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { NetworkIcon } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
 import { adminApi, ApiError } from "@/api/client";
@@ -11,6 +12,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Dialog, DialogClose, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { OptionTile, OptionTileDescription, OptionTileTitle } from "@/components/option-tile";
 import { Select, SelectContent, SelectGroup, SelectItem, SelectLabel, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Spinner } from "@/components/ui/spinner";
 
@@ -78,7 +80,10 @@ export function InstallRemnawaveNodeDialog({ vps }: { vps: VpsInstance }) {
         if (!next) reset();
       }}
     >
-      <DialogTrigger render={<Button size="sm" variant="outline" />}>Присоединить как ноду Remnawave</DialogTrigger>
+      <DialogTrigger render={<OptionTile icon={NetworkIcon} />}>
+        <OptionTileTitle>Нода Remnawave</OptionTileTitle>
+        <OptionTileDescription>Присоединить к уже существующей панели</OptionTileDescription>
+      </DialogTrigger>
       <DialogContent className="sm:max-w-lg">
         <DialogHeader>
           <DialogTitle>Присоединить {vps.code} как ноду Remnawave</DialogTitle>

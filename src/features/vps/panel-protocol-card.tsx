@@ -1,15 +1,16 @@
 "use client";
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { ChevronRightIcon, GlobeIcon, LayoutDashboardIcon, ServerIcon, ShieldCheckIcon } from "lucide-react";
 import Link from "next/link";
 import { useState } from "react";
 import { toast } from "sonner";
 import { adminApi, ApiError } from "@/api/client";
 import type { VpsInstanceDetail } from "@/api/types";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Dialog, DialogClose, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { OptionTile, OptionTileDescription, OptionTileTitle } from "@/components/option-tile";
 import { Select, SelectContent, SelectGroup, SelectItem, SelectLabel, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Spinner } from "@/components/ui/spinner";
 import { InstallRemnawaveNodeDialog } from "@/features/vps/install-remnawave-node-dialog";
@@ -35,7 +36,10 @@ function InstallPanelDialog({ vps, alreadyInstalled }: { vps: VpsInstanceDetail;
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger render={<Button size="sm" variant="outline" />}>{alreadyInstalled ? "Переустановить панель (3x-ui)" : "Установить панель (3x-ui)"}</DialogTrigger>
+      <DialogTrigger render={<OptionTile icon={ServerIcon} />}>
+        <OptionTileTitle>{alreadyInstalled ? "Переустановить 3x-ui" : "3x-ui"}</OptionTileTitle>
+        <OptionTileDescription>Панель и нода в одном контейнере</OptionTileDescription>
+      </DialogTrigger>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
           <DialogTitle>{alreadyInstalled ? "Переустановить" : "Установить"} панель 3x-ui?</DialogTitle>
@@ -80,7 +84,10 @@ function InstallRemnawavePanelDialog({ vps }: { vps: VpsInstanceDetail }) {
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger render={<Button size="sm" variant="outline" />}>Установить панель Remnawave</DialogTrigger>
+      <DialogTrigger render={<OptionTile icon={LayoutDashboardIcon} />}>
+        <OptionTileTitle>Панель Remnawave</OptionTileTitle>
+        <OptionTileDescription>Отдельная панель — ноды ставятся на другие серверы</OptionTileDescription>
+      </DialogTrigger>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
           <DialogTitle>Установить панель Remnawave?</DialogTitle>
@@ -176,6 +183,34 @@ function InstallReverseProxyDialog({ vps }: { vps: VpsInstanceDetail }) {
   );
 }
 
+function IdentityRow({ icon: Icon, title, subtitle, action, href }: { icon: typeof ServerIcon; title: string; subtitle: string; action?: React.ReactNode; href?: string }) {
+  const body = (
+    <div className="flex flex-1 items-center gap-3 min-w-0">
+      <div className="flex size-9 shrink-0 items-center justify-center rounded-md bg-muted">
+        <Icon className="size-4.5 text-muted-foreground" />
+      </div>
+      <div className="min-w-0">
+        <p className="truncate text-sm font-medium">{title}</p>
+        <p className="truncate text-xs text-muted-foreground">{subtitle}</p>
+      </div>
+    </div>
+  );
+
+  return (
+    <div className="flex items-center gap-3 rounded-lg border p-3">
+      {href ? (
+        <Link href={href} className="flex flex-1 items-center gap-3 min-w-0">
+          {body}
+          {!action && <ChevronRightIcon className="size-4 shrink-0 text-muted-foreground" />}
+        </Link>
+      ) : (
+        body
+      )}
+      {action}
+    </div>
+  );
+}
+
 export function PanelProtocolCard({ vps, mayWrite }: { vps: VpsInstanceDetail; mayWrite: boolean }) {
   const hasInstallReport = (vps.latestReports ?? []).some((report) => report.jobType === "INSTALL_PANEL");
 
@@ -185,39 +220,36 @@ export function PanelProtocolCard({ vps, mayWrite }: { vps: VpsInstanceDetail; m
         <CardTitle>Панель / протокол</CardTitle>
         <CardDescription>Что установлено на этом сервере, и управление установкой</CardDescription>
       </CardHeader>
-      <CardContent className="flex flex-col gap-4">
-        <div className="flex flex-wrap items-center gap-2 text-sm">
-          {vps.panelCode && vps.controlPlaneSourceId ? (
-            <>
-              <span className="text-muted-foreground">Панель:</span>
-              <Link href={`/infrastructure/panels-and-servers?source=${vps.controlPlaneSourceId}`}>
-                <Badge variant="outline" className="cursor-pointer hover:bg-accent">
-                  {vps.panelCode} ({vps.panelProviderType})
-                </Badge>
-              </Link>
-              {vps.domainFqdn ? (
-                <Badge variant="outline">{vps.domainFqdn} · TLS</Badge>
-              ) : (
-                mayWrite && vps.panelProviderType === "3X_UI" && <InstallReverseProxyDialog vps={vps} />
-              )}
-            </>
-          ) : (
-            <span className="text-muted-foreground">Без панели.</span>
-          )}
-        </div>
+      <CardContent className="flex flex-col gap-3">
+        {vps.panelCode && vps.controlPlaneSourceId ? (
+          <>
+            <IdentityRow
+              icon={vps.panelProviderType === "REMNAWAVE" ? LayoutDashboardIcon : ServerIcon}
+              title={vps.panelCode}
+              subtitle={vps.panelProviderType === "3X_UI" ? "3x-ui" : "Remnawave"}
+              href={`/infrastructure/panels-and-servers?source=${vps.controlPlaneSourceId}`}
+            />
+            <IdentityRow
+              icon={vps.domainFqdn ? ShieldCheckIcon : GlobeIcon}
+              title={vps.domainFqdn ?? "Домен не привязан"}
+              subtitle={vps.domainFqdn ? "HTTPS с настоящим сертификатом" : "работает по IP без шифрования"}
+              action={!vps.domainFqdn && mayWrite && vps.panelProviderType === "3X_UI" ? <InstallReverseProxyDialog vps={vps} /> : undefined}
+            />
+          </>
+        ) : (
+          <p className="text-sm text-muted-foreground">На этом сервере пока ничего не установлено.</p>
+        )}
 
         {vps.deployedProtocols && vps.deployedProtocols.length > 0 && (
-          <div className="flex flex-wrap gap-2">
+          <div className="flex flex-col gap-2">
             {vps.deployedProtocols.map((protocol, index) => (
-              <Badge key={index} variant="outline">
-                {protocol.protocolCode} · {protocol.deploymentMethod} · {protocol.status}
-              </Badge>
+              <IdentityRow key={index} icon={ServerIcon} title={protocol.protocolCode ?? "—"} subtitle={`${protocol.deploymentMethod} · ${protocol.status}`} />
             ))}
           </div>
         )}
 
         {mayWrite && !vps.panelCode && (
-          <div className="flex flex-wrap gap-2">
+          <div className="flex flex-col gap-2 sm:flex-row">
             <InstallPanelDialog vps={vps} alreadyInstalled={hasInstallReport} />
             <InstallRemnawavePanelDialog vps={vps} />
             <InstallRemnawaveNodeDialog vps={vps} />
