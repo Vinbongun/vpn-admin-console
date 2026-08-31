@@ -10,6 +10,7 @@ import { toast } from "sonner";
 import { adminApi, ApiError } from "@/api/client";
 import type { ControlPlaneSourceSummary } from "@/api/types";
 import { CountryFlag } from "@/components/country-flag";
+import { CredentialField } from "@/components/credential-field";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogClose, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -87,6 +88,64 @@ function CredentialsSection({ source, mayWrite }: { source: ControlPlaneSourceSu
             Сменить credentials
           </Button>
         ))}
+    </div>
+  );
+}
+
+/**
+ * Panels our own automation installs (3x-ui, Remnawave) - the CredentialsSection above is
+ * deliberately write-only (it's the right behavior for a source whose secret came from someone
+ * else typing it in), but for these two, the login/password/address are known to us the moment
+ * the install job succeeds. Reads them straight out of the linked VPS's latest INSTALL_PANEL /
+ * INSTALL_REMNAWAVE_PANEL report - the same job report LinkedVpsSection's own query already has
+ * cached at the list level, just needing each candidate VPS's own detail to see its reports.
+ * A source added manually (not through our install flow) simply has no such report, in which
+ * case this renders nothing.
+ */
+function AutomationCredentialsSection({ source }: { source: ControlPlaneSourceSummary }) {
+  const jobType = source.providerType === "REMNAWAVE" ? "INSTALL_REMNAWAVE_PANEL" : "INSTALL_PANEL";
+  const vpsInstances = useQuery({ queryKey: ["admin-vps-instances", "all"], queryFn: () => adminApi.listVpsInstances(), retry: false });
+  const linkedIds = (vpsInstances.data ?? []).filter((vps) => vps.controlPlaneSourceId === source.id).map((vps) => vps.id);
+
+  const credentials = useQuery({
+    queryKey: ["admin-source-automation-credentials", source.id, linkedIds.join(",")],
+    queryFn: async () => {
+      const details = await Promise.all(linkedIds.map((id) => adminApi.getVpsInstance(id)));
+      for (const detail of details) {
+        const report = (detail.latestReports ?? []).find((entry) => entry.jobType === jobType);
+        if (report) return { report, domainFqdn: detail.domainFqdn };
+      }
+      return undefined;
+    },
+    enabled: linkedIds.length > 0,
+    retry: false,
+  });
+
+  if (source.providerType !== "3X_UI" && source.providerType !== "REMNAWAVE") return null;
+  if (vpsInstances.isLoading || credentials.isLoading) return null;
+  const payload = credentials.data?.report.reportPayload as Record<string, unknown> | undefined;
+  const username = typeof payload?.username === "string" ? payload.username : undefined;
+  const password = typeof payload?.password === "string" ? payload.password : undefined;
+  const baseUrl = typeof payload?.baseUrl === "string" ? payload.baseUrl : undefined;
+  if (!username && !password && !baseUrl) {
+    return (
+      <div className="space-y-2">
+        <p className="text-sm font-medium">Креды панели</p>
+        <p className="text-sm text-muted-foreground">Нет отчёта нашей автоустановки — похоже, панель добавлена вручную.</p>
+      </div>
+    );
+  }
+  const panelUrl = credentials.data?.domainFqdn && typeof payload?.webBasePath === "string" ? `https://${credentials.data.domainFqdn}${payload.webBasePath}` : baseUrl;
+
+  return (
+    <div className="space-y-2">
+      <p className="text-sm font-medium">Креды панели</p>
+      <p className="text-xs text-muted-foreground">Из последнего отчёта установки — актуальны для того, что реально сейчас развёрнуто.</p>
+      <div className="grid gap-3 rounded-md border p-3 sm:grid-cols-2">
+        {panelUrl && <CredentialField label="Адрес панели" value={panelUrl} href={panelUrl} />}
+        {username && <CredentialField label="Логин" value={username} />}
+        {password && <CredentialField label="Пароль" value={password} maskable />}
+      </div>
     </div>
   );
 }
@@ -285,6 +344,7 @@ function SourceEditBody({ source, mayWrite, onClose }: { source: ControlPlaneSou
         </FieldGroup>
         <div className="mt-4 flex flex-col gap-4">
           <CredentialsSection source={source} mayWrite={mayWrite} />
+          <AutomationCredentialsSection source={source} />
           {source.providerType === "REMNAWAVE" && <NodesSection sourceId={source.id} mayWrite={mayWrite} />}
           <LinkedVpsSection sourceId={source.id} />
         </div>

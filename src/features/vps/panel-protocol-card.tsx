@@ -1,13 +1,11 @@
 "use client";
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { EyeIcon, EyeOffIcon } from "lucide-react";
 import Link from "next/link";
 import { useState } from "react";
 import { toast } from "sonner";
 import { adminApi, ApiError } from "@/api/client";
 import type { VpsInstanceDetail } from "@/api/types";
-import { CopyButton } from "@/components/copy-button";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -178,119 +176,54 @@ function InstallReverseProxyDialog({ vps }: { vps: VpsInstanceDetail }) {
   );
 }
 
-/** Read-only field with the value masked by default (for a password) or shown plainly (for a
- *  login/URL), always with its own copy button - reads straight from the install job's own
- *  report, the only place these values exist (never re-fetched, never stored anywhere else). */
-function CredentialField({ label, value, maskable, href }: { label: string; value: string; maskable?: boolean; href?: string }) {
-  const [revealed, setRevealed] = useState(!maskable);
-  const displayValue = maskable && !revealed ? "•".repeat(Math.min(value.length, 16)) : value;
-
-  return (
-    <div className="flex flex-col gap-1">
-      <span className="text-xs text-muted-foreground">{label}</span>
-      <div className="flex items-center gap-1.5">
-        {href ? (
-          <Link href={href} target="_blank" rel="noreferrer" className="truncate font-mono text-sm underline">
-            {displayValue}
-          </Link>
-        ) : (
-          <span className="truncate font-mono text-sm">{displayValue}</span>
-        )}
-        {maskable && (
-          <Button type="button" size="icon-sm" variant="outline" className="shrink-0" onClick={() => setRevealed((prev) => !prev)}>
-            {revealed ? <EyeOffIcon /> : <EyeIcon />}
-          </Button>
-        )}
-        <CopyButton value={value} />
-      </div>
-    </div>
-  );
-}
-
-/**
- * Reads the panel's own login/password/baseUrl straight out of the latest INSTALL_PANEL /
- * INSTALL_REMNAWAVE_PANEL report - previously only visible buried inside the collapsed raw JSON
- * under "Последние отчёты". Nothing is fetched or stored separately; if a panel was reinstalled
- * (new random port/login), the latest report already reflects that.
- */
-function PanelCredentialsCard({ vps }: { vps: VpsInstanceDetail }) {
-  const jobType = vps.panelProviderType === "REMNAWAVE" ? "INSTALL_REMNAWAVE_PANEL" : "INSTALL_PANEL";
-  const report = (vps.latestReports ?? []).find((entry) => entry.jobType === jobType);
-  const payload = report?.reportPayload as Record<string, unknown> | undefined;
-  const username = typeof payload?.username === "string" ? payload.username : undefined;
-  const password = typeof payload?.password === "string" ? payload.password : undefined;
-  const baseUrl = typeof payload?.baseUrl === "string" ? payload.baseUrl : undefined;
-  if (!username && !password && !baseUrl) return null;
-
-  const panelUrl = vps.domainFqdn && typeof payload?.webBasePath === "string" ? `https://${vps.domainFqdn}${payload.webBasePath}` : baseUrl;
-
-  return (
-    <Card>
-      <CardHeader>
-        <CardTitle>Креды панели</CardTitle>
-        <CardDescription>Из последнего отчёта установки — актуальны для того, что реально сейчас развёрнуто на сервере.</CardDescription>
-      </CardHeader>
-      <CardContent className="grid gap-3 sm:grid-cols-2">
-        {panelUrl && <CredentialField label="Адрес панели" value={panelUrl} href={panelUrl} />}
-        {username && <CredentialField label="Логин" value={username} />}
-        {password && <CredentialField label="Пароль" value={password} maskable />}
-      </CardContent>
-    </Card>
-  );
-}
-
 export function PanelProtocolCard({ vps, mayWrite }: { vps: VpsInstanceDetail; mayWrite: boolean }) {
   const hasInstallReport = (vps.latestReports ?? []).some((report) => report.jobType === "INSTALL_PANEL");
 
   return (
-    <>
-      <Card>
-        <CardHeader>
-          <CardTitle>Панель / протокол</CardTitle>
-          <CardDescription>Что установлено на этом сервере, и управление установкой</CardDescription>
-        </CardHeader>
-        <CardContent className="flex flex-col gap-4">
-          <div className="flex flex-wrap items-center gap-2 text-sm">
-            {vps.panelCode && vps.controlPlaneSourceId ? (
-              <>
-                <span className="text-muted-foreground">Панель:</span>
-                <Link href={`/infrastructure/panels-and-servers?source=${vps.controlPlaneSourceId}`}>
-                  <Badge variant="outline" className="cursor-pointer hover:bg-accent">
-                    {vps.panelCode} ({vps.panelProviderType})
-                  </Badge>
-                </Link>
-                {vps.domainFqdn ? (
-                  <Badge variant="outline">{vps.domainFqdn} · TLS</Badge>
-                ) : (
-                  mayWrite && vps.panelProviderType === "3X_UI" && <InstallReverseProxyDialog vps={vps} />
-                )}
-              </>
-            ) : (
-              <span className="text-muted-foreground">Без панели.</span>
-            )}
-          </div>
-
-          {vps.deployedProtocols && vps.deployedProtocols.length > 0 && (
-            <div className="flex flex-wrap gap-2">
-              {vps.deployedProtocols.map((protocol, index) => (
-                <Badge key={index} variant="outline">
-                  {protocol.protocolCode} · {protocol.deploymentMethod} · {protocol.status}
+    <Card>
+      <CardHeader>
+        <CardTitle>Панель / протокол</CardTitle>
+        <CardDescription>Что установлено на этом сервере, и управление установкой</CardDescription>
+      </CardHeader>
+      <CardContent className="flex flex-col gap-4">
+        <div className="flex flex-wrap items-center gap-2 text-sm">
+          {vps.panelCode && vps.controlPlaneSourceId ? (
+            <>
+              <span className="text-muted-foreground">Панель:</span>
+              <Link href={`/infrastructure/panels-and-servers?source=${vps.controlPlaneSourceId}`}>
+                <Badge variant="outline" className="cursor-pointer hover:bg-accent">
+                  {vps.panelCode} ({vps.panelProviderType})
                 </Badge>
-              ))}
-            </div>
+              </Link>
+              {vps.domainFqdn ? (
+                <Badge variant="outline">{vps.domainFqdn} · TLS</Badge>
+              ) : (
+                mayWrite && vps.panelProviderType === "3X_UI" && <InstallReverseProxyDialog vps={vps} />
+              )}
+            </>
+          ) : (
+            <span className="text-muted-foreground">Без панели.</span>
           )}
+        </div>
 
-          {mayWrite && !vps.panelCode && (
-            <div className="flex flex-wrap gap-2">
-              <InstallPanelDialog vps={vps} alreadyInstalled={hasInstallReport} />
-              <InstallRemnawavePanelDialog vps={vps} />
-              <InstallRemnawaveNodeDialog vps={vps} />
-            </div>
-          )}
-        </CardContent>
-      </Card>
+        {vps.deployedProtocols && vps.deployedProtocols.length > 0 && (
+          <div className="flex flex-wrap gap-2">
+            {vps.deployedProtocols.map((protocol, index) => (
+              <Badge key={index} variant="outline">
+                {protocol.protocolCode} · {protocol.deploymentMethod} · {protocol.status}
+              </Badge>
+            ))}
+          </div>
+        )}
 
-      {vps.panelCode && <PanelCredentialsCard vps={vps} />}
-    </>
+        {mayWrite && !vps.panelCode && (
+          <div className="flex flex-wrap gap-2">
+            <InstallPanelDialog vps={vps} alreadyInstalled={hasInstallReport} />
+            <InstallRemnawavePanelDialog vps={vps} />
+            <InstallRemnawaveNodeDialog vps={vps} />
+          </div>
+        )}
+      </CardContent>
+    </Card>
   );
 }
