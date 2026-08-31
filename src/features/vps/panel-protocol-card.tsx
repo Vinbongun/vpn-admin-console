@@ -1,11 +1,13 @@
 "use client";
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { EyeIcon, EyeOffIcon } from "lucide-react";
 import Link from "next/link";
 import { useState } from "react";
 import { toast } from "sonner";
 import { adminApi, ApiError } from "@/api/client";
 import type { VpsInstanceDetail } from "@/api/types";
+import { CopyButton } from "@/components/copy-button";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -41,16 +43,13 @@ function InstallPanelDialog({ vps, alreadyInstalled }: { vps: VpsInstanceDetail;
           <DialogTitle>{alreadyInstalled ? "Переустановить" : "Установить"} панель 3x-ui?</DialogTitle>
           <DialogDescription render={<div />}>
             <ul className="list-disc space-y-1.5 pl-4">
-              <li>Панель поднимется на порту 2053 с логином/паролем admin/admin, без TLS/домена — порт и логин не рандомизируются (ограничение образа).</li>
-              <li>
-                Панель <b>не регистрируется в системе автоматически</b> — после установки нужно зайти по <code>http://&lt;host&gt;:2053</code>, сменить
-                пароль, настроить API-доступ и зарегистрировать панель вручную через «+ Добавить панель».
-              </li>
-              <li>После успешной задачи привязка к панели у VPS останется пустой — это ожидаемо, не ошибка.</li>
+              <li>Порт, путь панели (webBasePath) и логин/пароль генерируются случайно и видны после установки в блоке «Креды панели» ниже.</li>
+              <li>Панель регистрируется в системе автоматически — отдельно заходить и добавлять её через «+ Добавить панель» не нужно.</li>
+              <li>Без домена панель работает по голому IP без TLS — привяжите домен кнопкой «Привязать домен + TLS», когда будете готовы.</li>
               {alreadyInstalled && (
                 <li>
-                  Повторный запуск безопасен (контейнер не пересоздаётся, если конфиг не менялся) — если пароль admin/admin уже был
-                  сменён, в отчёте задачи <span className="font-mono">defaultLoginVerified: false</span> означает именно это, а не сбой.
+                  Если панель уже была установлена и настроена ранее (кастомный порт/логин), повторный запуск откажется её переустанавливать — сначала
+                  выполните <span className="font-mono">docker compose down -v</span> на сервере вручную.
                 </li>
               )}
             </ul>
@@ -179,54 +178,119 @@ function InstallReverseProxyDialog({ vps }: { vps: VpsInstanceDetail }) {
   );
 }
 
-export function PanelProtocolCard({ vps, mayWrite }: { vps: VpsInstanceDetail; mayWrite: boolean }) {
-  const hasInstallReport = (vps.latestReports ?? []).some((report) => report.jobType === "INSTALL_PANEL");
+/** Read-only field with the value masked by default (for a password) or shown plainly (for a
+ *  login/URL), always with its own copy button - reads straight from the install job's own
+ *  report, the only place these values exist (never re-fetched, never stored anywhere else). */
+function CredentialField({ label, value, maskable, href }: { label: string; value: string; maskable?: boolean; href?: string }) {
+  const [revealed, setRevealed] = useState(!maskable);
+  const displayValue = maskable && !revealed ? "•".repeat(Math.min(value.length, 16)) : value;
+
+  return (
+    <div className="flex flex-col gap-1">
+      <span className="text-xs text-muted-foreground">{label}</span>
+      <div className="flex items-center gap-1.5">
+        {href ? (
+          <Link href={href} target="_blank" rel="noreferrer" className="truncate font-mono text-sm underline">
+            {displayValue}
+          </Link>
+        ) : (
+          <span className="truncate font-mono text-sm">{displayValue}</span>
+        )}
+        {maskable && (
+          <Button type="button" size="icon-sm" variant="outline" className="shrink-0" onClick={() => setRevealed((prev) => !prev)}>
+            {revealed ? <EyeOffIcon /> : <EyeIcon />}
+          </Button>
+        )}
+        <CopyButton value={value} />
+      </div>
+    </div>
+  );
+}
+
+/**
+ * Reads the panel's own login/password/baseUrl straight out of the latest INSTALL_PANEL /
+ * INSTALL_REMNAWAVE_PANEL report - previously only visible buried inside the collapsed raw JSON
+ * under "Последние отчёты". Nothing is fetched or stored separately; if a panel was reinstalled
+ * (new random port/login), the latest report already reflects that.
+ */
+function PanelCredentialsCard({ vps }: { vps: VpsInstanceDetail }) {
+  const jobType = vps.panelProviderType === "REMNAWAVE" ? "INSTALL_REMNAWAVE_PANEL" : "INSTALL_PANEL";
+  const report = (vps.latestReports ?? []).find((entry) => entry.jobType === jobType);
+  const payload = report?.reportPayload as Record<string, unknown> | undefined;
+  const username = typeof payload?.username === "string" ? payload.username : undefined;
+  const password = typeof payload?.password === "string" ? payload.password : undefined;
+  const baseUrl = typeof payload?.baseUrl === "string" ? payload.baseUrl : undefined;
+  if (!username && !password && !baseUrl) return null;
+
+  const panelUrl = vps.domainFqdn && typeof payload?.webBasePath === "string" ? `https://${vps.domainFqdn}${payload.webBasePath}` : baseUrl;
 
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Панель / протокол</CardTitle>
-        <CardDescription>Что установлено на этом сервере, и управление установкой</CardDescription>
+        <CardTitle>Креды панели</CardTitle>
+        <CardDescription>Из последнего отчёта установки — актуальны для того, что реально сейчас развёрнуто на сервере.</CardDescription>
       </CardHeader>
-      <CardContent className="flex flex-col gap-4">
-        <div className="flex flex-wrap items-center gap-2 text-sm">
-          {vps.panelCode && vps.controlPlaneSourceId ? (
-            <>
-              <span className="text-muted-foreground">Панель:</span>
-              <Link href={`/infrastructure/panels-and-servers?source=${vps.controlPlaneSourceId}`}>
-                <Badge variant="outline" className="cursor-pointer hover:bg-accent">
-                  {vps.panelCode} ({vps.panelProviderType})
-                </Badge>
-              </Link>
-              {vps.domainFqdn ? (
-                <Badge variant="outline">{vps.domainFqdn} · TLS</Badge>
-              ) : (
-                mayWrite && vps.panelProviderType === "3X_UI" && <InstallReverseProxyDialog vps={vps} />
-              )}
-            </>
-          ) : (
-            <span className="text-muted-foreground">Без панели.</span>
-          )}
-        </div>
-
-        {vps.deployedProtocols && vps.deployedProtocols.length > 0 && (
-          <div className="flex flex-wrap gap-2">
-            {vps.deployedProtocols.map((protocol, index) => (
-              <Badge key={index} variant="outline">
-                {protocol.protocolCode} · {protocol.deploymentMethod} · {protocol.status}
-              </Badge>
-            ))}
-          </div>
-        )}
-
-        {mayWrite && !vps.panelCode && (
-          <div className="flex flex-wrap gap-2">
-            <InstallPanelDialog vps={vps} alreadyInstalled={hasInstallReport} />
-            <InstallRemnawavePanelDialog vps={vps} />
-            <InstallRemnawaveNodeDialog vps={vps} />
-          </div>
-        )}
+      <CardContent className="grid gap-3 sm:grid-cols-2">
+        {panelUrl && <CredentialField label="Адрес панели" value={panelUrl} href={panelUrl} />}
+        {username && <CredentialField label="Логин" value={username} />}
+        {password && <CredentialField label="Пароль" value={password} maskable />}
       </CardContent>
     </Card>
+  );
+}
+
+export function PanelProtocolCard({ vps, mayWrite }: { vps: VpsInstanceDetail; mayWrite: boolean }) {
+  const hasInstallReport = (vps.latestReports ?? []).some((report) => report.jobType === "INSTALL_PANEL");
+
+  return (
+    <>
+      <Card>
+        <CardHeader>
+          <CardTitle>Панель / протокол</CardTitle>
+          <CardDescription>Что установлено на этом сервере, и управление установкой</CardDescription>
+        </CardHeader>
+        <CardContent className="flex flex-col gap-4">
+          <div className="flex flex-wrap items-center gap-2 text-sm">
+            {vps.panelCode && vps.controlPlaneSourceId ? (
+              <>
+                <span className="text-muted-foreground">Панель:</span>
+                <Link href={`/infrastructure/panels-and-servers?source=${vps.controlPlaneSourceId}`}>
+                  <Badge variant="outline" className="cursor-pointer hover:bg-accent">
+                    {vps.panelCode} ({vps.panelProviderType})
+                  </Badge>
+                </Link>
+                {vps.domainFqdn ? (
+                  <Badge variant="outline">{vps.domainFqdn} · TLS</Badge>
+                ) : (
+                  mayWrite && vps.panelProviderType === "3X_UI" && <InstallReverseProxyDialog vps={vps} />
+                )}
+              </>
+            ) : (
+              <span className="text-muted-foreground">Без панели.</span>
+            )}
+          </div>
+
+          {vps.deployedProtocols && vps.deployedProtocols.length > 0 && (
+            <div className="flex flex-wrap gap-2">
+              {vps.deployedProtocols.map((protocol, index) => (
+                <Badge key={index} variant="outline">
+                  {protocol.protocolCode} · {protocol.deploymentMethod} · {protocol.status}
+                </Badge>
+              ))}
+            </div>
+          )}
+
+          {mayWrite && !vps.panelCode && (
+            <div className="flex flex-wrap gap-2">
+              <InstallPanelDialog vps={vps} alreadyInstalled={hasInstallReport} />
+              <InstallRemnawavePanelDialog vps={vps} />
+              <InstallRemnawaveNodeDialog vps={vps} />
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      {vps.panelCode && <PanelCredentialsCard vps={vps} />}
+    </>
   );
 }

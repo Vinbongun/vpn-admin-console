@@ -3868,7 +3868,7 @@ export interface components {
         };
         VpsAutomationReportSummary: {
             /** @enum {string} */
-            jobType?: "BOOTSTRAP" | "TEST" | "HEALTH_CHECK" | "UPDATE" | "BACKUP" | "DECOMMISSION" | "START_SERVICES" | "STOP_SERVICES" | "INSTALL_PANEL" | "INSTALL_REMNAWAVE_PANEL" | "INSTALL_REMNAWAVE_NODE";
+            jobType?: "BOOTSTRAP" | "TEST" | "HEALTH_CHECK" | "UPDATE" | "BACKUP" | "DECOMMISSION" | "START_SERVICES" | "STOP_SERVICES" | "INSTALL_PANEL" | "INSTALL_REMNAWAVE_PANEL" | "INSTALL_REMNAWAVE_NODE" | "INSTALL_SSH_KEY" | "INSTALL_REVERSE_PROXY";
             /** @description Raw JSON as written by the matching Ansible role. */
             reportPayload?: Record<string, never>;
             /** Format: date-time */
@@ -3965,7 +3965,7 @@ export interface components {
             sshPort?: number;
             sshUser?: string;
             /** @enum {string} */
-            jobType?: "BOOTSTRAP" | "TEST" | "HEALTH_CHECK" | "UPDATE" | "BACKUP" | "DECOMMISSION" | "START_SERVICES" | "STOP_SERVICES" | "INSTALL_PANEL" | "INSTALL_REMNAWAVE_PANEL" | "INSTALL_REMNAWAVE_NODE";
+            jobType?: "BOOTSTRAP" | "TEST" | "HEALTH_CHECK" | "UPDATE" | "BACKUP" | "DECOMMISSION" | "START_SERVICES" | "STOP_SERVICES" | "INSTALL_PANEL" | "INSTALL_REMNAWAVE_PANEL" | "INSTALL_REMNAWAVE_NODE" | "INSTALL_SSH_KEY" | "INSTALL_REVERSE_PROXY";
             extraParams?: Record<string, never> | null;
         };
         VpsAutomationJobReport: {
