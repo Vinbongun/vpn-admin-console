@@ -53,6 +53,7 @@ export function VpsListPage() {
   const router = useRouter();
   const queryClient = useQueryClient();
   const [statusFilter, setStatusFilter] = useState<VpsInstance["status"] | "all">("all");
+  const [registrarFilter, setRegistrarFilter] = useState<string>("all");
 
   const staff = useQuery({ queryKey: ["staff-session"], queryFn: adminApi.getSession, retry: false });
   const mayWrite = can(staff.data, "vps.write");
@@ -62,7 +63,6 @@ export function VpsListPage() {
     retry: false,
   });
   const registrarAccounts = useQuery({ queryKey: ["admin-vps-registrar-accounts"], queryFn: adminApi.listVpsRegistrarAccounts, retry: false });
-  const registrarCodeById = new Map((registrarAccounts.data ?? []).map((account) => [account.id, account.code]));
 
   const healthCheckAllMutation = useMutation({
     mutationFn: () => adminApi.healthCheckAllVpsInstances(),
@@ -75,6 +75,8 @@ export function VpsListPage() {
 
   const counts = new Map(statuses.map((status) => [status, 0]));
   for (const vps of vpsInstances.data ?? []) counts.set(vps.status, (counts.get(vps.status) ?? 0) + 1);
+
+  const filteredInstances = registrarFilter === "all" ? (vpsInstances.data ?? []) : (vpsInstances.data ?? []).filter((vps) => vps.registrarAccountId === registrarFilter);
 
   const columns: ColumnDef<VpsInstance>[] = [
     { accessorKey: "code", header: "Код", cell: ({ row }) => <span className="font-medium">{row.original.code}</span> },
@@ -105,21 +107,7 @@ export function VpsListPage() {
       cell: ({ row }) => {
         const vps = row.original;
         if (vps.providerType === "MANUAL") return "—";
-        const registrarCode = vps.registrarAccountId ? registrarCodeById.get(vps.registrarAccountId) : undefined;
-        return (
-          <div className="flex items-center gap-1.5">
-            <Badge variant="outline">{vps.providerType}</Badge>
-            {registrarCode && (
-              <Link
-                href={`/infrastructure/vps-purchase/${vps.registrarAccountId}`}
-                className="text-xs text-muted-foreground underline"
-                onClick={(event) => event.stopPropagation()}
-              >
-                {registrarCode}
-              </Link>
-            )}
-          </div>
-        );
+        return <Badge variant="outline">{vps.providerType}</Badge>;
       },
     },
     {
@@ -167,32 +155,57 @@ export function VpsListPage() {
           ))}
         </div>
 
-        <div className="max-w-64">
-          <Select
-            items={[{ value: "all", label: "Все статусы" }, ...statuses.map((status) => ({ value: status, label: statusLabels[status] }))]}
-            value={statusFilter}
-            onValueChange={(value) => setStatusFilter((value as typeof statusFilter) ?? "all")}
-          >
-            <SelectTrigger aria-label="Статус VPS">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectGroup>
-                <SelectLabel>Статус</SelectLabel>
-                <SelectItem value="all">Все статусы</SelectItem>
-                {statuses.map((status) => (
-                  <SelectItem key={status} value={status}>
-                    {statusLabels[status]}
-                  </SelectItem>
-                ))}
-              </SelectGroup>
-            </SelectContent>
-          </Select>
+        <div className="flex flex-wrap gap-3">
+          <div className="max-w-64">
+            <Select
+              items={[{ value: "all", label: "Все статусы" }, ...statuses.map((status) => ({ value: status, label: statusLabels[status] }))]}
+              value={statusFilter}
+              onValueChange={(value) => setStatusFilter((value as typeof statusFilter) ?? "all")}
+            >
+              <SelectTrigger aria-label="Статус VPS">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectGroup>
+                  <SelectLabel>Статус</SelectLabel>
+                  <SelectItem value="all">Все статусы</SelectItem>
+                  {statuses.map((status) => (
+                    <SelectItem key={status} value={status}>
+                      {statusLabels[status]}
+                    </SelectItem>
+                  ))}
+                </SelectGroup>
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div className="max-w-64">
+            <Select
+              items={[{ value: "all", label: "Все регистраторы" }, ...(registrarAccounts.data ?? []).map((account) => ({ value: account.id, label: account.code }))]}
+              value={registrarFilter}
+              onValueChange={(value) => setRegistrarFilter(value ?? "all")}
+            >
+              <SelectTrigger aria-label="Регистратор VPS">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectGroup>
+                  <SelectLabel>Регистратор</SelectLabel>
+                  <SelectItem value="all">Все регистраторы</SelectItem>
+                  {(registrarAccounts.data ?? []).map((account) => (
+                    <SelectItem key={account.id} value={account.id}>
+                      {account.code}
+                    </SelectItem>
+                  ))}
+                </SelectGroup>
+              </SelectContent>
+            </Select>
+          </div>
         </div>
 
         <DataTable
           columns={columns}
-          data={vpsInstances.data ?? []}
+          data={filteredInstances}
           isLoading={vpsInstances.isLoading}
           isError={vpsInstances.isError}
           errorMessage="Не удалось получить список VPS."
