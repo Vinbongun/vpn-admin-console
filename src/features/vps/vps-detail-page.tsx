@@ -6,7 +6,7 @@ import Link from "next/link";
 import { useState } from "react";
 import { toast } from "sonner";
 import { adminApi, ApiError } from "@/api/client";
-import type { VpsHistoryEntry } from "@/api/types";
+import type { VpsHistoryEntry, VpsInstanceDetail } from "@/api/types";
 import { AppShell } from "@/components/app-shell";
 import { CountryFlag } from "@/components/country-flag";
 import { ErrorState } from "@/components/error-state";
@@ -19,6 +19,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Spinner } from "@/components/ui/spinner";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { DangerZoneCard } from "@/features/vps/danger-zone-card";
 import { EditPurchaseInfoDialog } from "@/features/vps/edit-purchase-info-dialog";
 import { PanelProtocolCard } from "@/features/vps/panel-protocol-card";
@@ -96,52 +97,116 @@ function QwinsServerCard({ registrarAccountId, itemId }: { registrarAccountId: s
     onSuccess: () => toast.success("Перезагрузка запрошена."),
     onError: (error) => toast.error(error instanceof ApiError ? apiErrorMessage(error) : "Не удалось перезагрузить сервер."),
   });
-  const history = useQuery({
-    queryKey: ["admin-vps-server-history", registrarAccountId, itemId],
-    queryFn: () => adminApi.getVpsServerHistory(registrarAccountId, itemId),
-    retry: false,
-  });
-  const sortedHistory = [...(history.data ?? [])].sort((a, b) => b.changeDate.localeCompare(a.changeDate));
 
   return (
     <Card>
       <CardHeader>
         <CardTitle>Сервер регистратора</CardTitle>
-        <CardDescription>Куплен через регистратора — действия и история изменений услуги</CardDescription>
+        <CardDescription>Куплен через регистратора — действия над услугой. История изменений и отчёты — в карточке ниже.</CardDescription>
       </CardHeader>
-      <CardContent className="flex flex-col gap-4">
-        <div className="flex flex-wrap gap-2">
-          <Button size="sm" variant="outline" disabled={rebootMutation.isPending} onClick={() => rebootMutation.mutate()}>
-            {rebootMutation.isPending && <Spinner />}
-            Перезагрузить
-          </Button>
-          <ChangePasswordDialog registrarAccountId={registrarAccountId} itemId={itemId} />
+      <CardContent className="flex flex-wrap gap-2">
+        <Button size="sm" variant="outline" disabled={rebootMutation.isPending} onClick={() => rebootMutation.mutate()}>
+          {rebootMutation.isPending && <Spinner />}
+          Перезагрузить
+        </Button>
+        <ChangePasswordDialog registrarAccountId={registrarAccountId} itemId={itemId} />
+      </CardContent>
+    </Card>
+  );
+}
+
+/** Объединяет "Последние отчёты" (наши ansible-задачи) и "История" (лог регистратора) в одну
+ *  карточку с вкладками — раньше история изменений была зарыта внутри QwinsServerCard вперемешку
+ *  с кнопками действий, а отчёты жили в отдельной карточке ниже. Для MANUAL-серверов вкладки
+ *  истории нет вообще (регистратор её не ведёт) — тогда рендерится просто список отчётов без Tabs. */
+function ReportsHistoryCard({ vps, registrarAccountId, itemId }: { vps: VpsInstanceDetail; registrarAccountId?: string | null; itemId?: string | null }) {
+  const hasHistory = Boolean(registrarAccountId && itemId);
+  const history = useQuery({
+    queryKey: ["admin-vps-server-history", registrarAccountId, itemId],
+    queryFn: () => adminApi.getVpsServerHistory(registrarAccountId!, itemId!),
+    retry: false,
+    enabled: hasHistory,
+  });
+  const sortedHistory = [...(history.data ?? [])].sort((a, b) => b.changeDate.localeCompare(a.changeDate));
+
+  const reportsContent =
+    !vps.latestReports || vps.latestReports.length === 0 ? (
+      <p className="text-sm text-muted-foreground">Отчётов пока нет.</p>
+    ) : (
+      <div className="flex flex-col gap-2">
+        {vps.latestReports.map((report, index) => (
+          <Collapsible key={index}>
+            <CollapsibleTrigger
+              render={<button type="button" className="flex w-full items-center justify-between gap-2 rounded-md border p-2.5 text-left text-sm hover:bg-accent" />}
+            >
+              <span className="font-medium">{report.jobType}</span>
+              <span className="flex items-center gap-2 text-xs text-muted-foreground">
+                {formatDate(report.createdAt)}
+                <ChevronDownIcon className="size-4" />
+              </span>
+            </CollapsibleTrigger>
+            <CollapsibleContent>
+              <pre className="mt-2 overflow-x-auto rounded-md border bg-muted p-3 text-xs">{JSON.stringify(report.reportPayload, null, 2)}</pre>
+            </CollapsibleContent>
+          </Collapsible>
+        ))}
+      </div>
+    );
+
+  const historyContent = history.isLoading ? (
+    <Skeleton className="h-16 w-full" />
+  ) : history.isError ? (
+    <ErrorState description="Не удалось получить историю сервера." />
+  ) : sortedHistory.length === 0 ? (
+    <p className="text-sm text-muted-foreground">История пуста.</p>
+  ) : (
+    <div className="flex flex-col gap-2">
+      {sortedHistory.map((entry: VpsHistoryEntry, index) => (
+        <div key={index} className="rounded-md border p-2.5 text-sm">
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <span>{entry.description}</span>
+            <span className="text-xs text-muted-foreground">{formatDate(entry.changeDate)}</span>
+          </div>
+          <p className="text-xs text-muted-foreground">
+            {entry.user}
+            {entry.ip ? ` · ${entry.ip}` : ""}
+          </p>
         </div>
-        <div>
-          <p className="mb-2 text-sm font-medium text-muted-foreground">История изменений</p>
-          {history.isLoading ? (
-            <Skeleton className="h-16 w-full" />
-          ) : history.isError ? (
-            <ErrorState description="Не удалось получить историю сервера." />
-          ) : sortedHistory.length === 0 ? (
-            <p className="text-sm text-muted-foreground">История пуста.</p>
-          ) : (
-            <div className="flex flex-col gap-2">
-              {sortedHistory.map((entry: VpsHistoryEntry, index) => (
-                <div key={index} className="rounded-md border p-2.5 text-sm">
-                  <div className="flex flex-wrap items-center justify-between gap-2">
-                    <span>{entry.description}</span>
-                    <span className="text-xs text-muted-foreground">{formatDate(entry.changeDate)}</span>
-                  </div>
-                  <p className="text-xs text-muted-foreground">
-                    {entry.user}
-                    {entry.ip ? ` · ${entry.ip}` : ""}
-                  </p>
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
+      ))}
+    </div>
+  );
+
+  if (!hasHistory) {
+    return (
+      <Card className="lg:col-span-2">
+        <CardHeader>
+          <CardTitle>Последние отчёты</CardTitle>
+          <CardDescription>Последний отчёт по каждому типу задачи — формат зависит от типа, не унифицирован</CardDescription>
+        </CardHeader>
+        <CardContent>{reportsContent}</CardContent>
+      </Card>
+    );
+  }
+
+  return (
+    <Card className="lg:col-span-2">
+      <CardHeader>
+        <CardTitle>Отчёты и история</CardTitle>
+        <CardDescription>Отчёты наших задач автоматизации и история изменений услуги у регистратора</CardDescription>
+      </CardHeader>
+      <CardContent>
+        <Tabs defaultValue="reports">
+          <TabsList>
+            <TabsTrigger value="reports">Отчёты</TabsTrigger>
+            <TabsTrigger value="history">История</TabsTrigger>
+          </TabsList>
+          <TabsContent value="reports" className="mt-3">
+            {reportsContent}
+          </TabsContent>
+          <TabsContent value="history" className="mt-3">
+            {historyContent}
+          </TabsContent>
+        </Tabs>
       </CardContent>
     </Card>
   );
@@ -151,7 +216,6 @@ export function VpsDetailPage({ vpsId }: { vpsId: string }) {
   const queryClient = useQueryClient();
   const staff = useQuery({ queryKey: ["staff-session"], queryFn: adminApi.getSession, retry: false });
   const mayWrite = can(staff.data, "vps.write");
-  const mayDecommission = can(staff.data, "vps.decommission");
   const vps = useQuery({ queryKey: ["admin-vps-instance", vpsId], queryFn: () => adminApi.getVpsInstance(vpsId), retry: false });
   const data = vps.data;
   const registrarAccounts = useQuery({ queryKey: ["admin-vps-registrar-accounts"], queryFn: adminApi.listVpsRegistrarAccounts, retry: false, enabled: Boolean(data?.registrarAccountId) });
@@ -256,44 +320,10 @@ export function VpsDetailPage({ vpsId }: { vpsId: string }) {
 
               <VpsJobsCard vps={data} mayWrite={mayWrite} />
 
-              <Card className="lg:col-span-2">
-                <CardHeader>
-                  <CardTitle>Последние отчёты</CardTitle>
-                  <CardDescription>Последний отчёт по каждому типу задачи — формат зависит от типа, не унифицирован</CardDescription>
-                </CardHeader>
-                <CardContent>
-                  {!data.latestReports || data.latestReports.length === 0 ? (
-                    <p className="text-sm text-muted-foreground">Отчётов пока нет.</p>
-                  ) : (
-                    <div className="flex flex-col gap-2">
-                      {data.latestReports.map((report, index) => (
-                        <Collapsible key={index}>
-                          <CollapsibleTrigger
-                            render={
-                              <button
-                                type="button"
-                                className="flex w-full items-center justify-between gap-2 rounded-md border p-2.5 text-left text-sm hover:bg-accent"
-                              />
-                            }
-                          >
-                            <span className="font-medium">{report.jobType}</span>
-                            <span className="flex items-center gap-2 text-xs text-muted-foreground">
-                              {formatDate(report.createdAt)}
-                              <ChevronDownIcon className="size-4" />
-                            </span>
-                          </CollapsibleTrigger>
-                          <CollapsibleContent>
-                            <pre className="mt-2 overflow-x-auto rounded-md border bg-muted p-3 text-xs">{JSON.stringify(report.reportPayload, null, 2)}</pre>
-                          </CollapsibleContent>
-                        </Collapsible>
-                      ))}
-                    </div>
-                  )}
-                </CardContent>
-              </Card>
+              <ReportsHistoryCard vps={data} registrarAccountId={data.registrarAccountId} itemId={data.registrarItemRef} />
 
               <div className="lg:col-span-2">
-                <DangerZoneCard vps={data} mayWrite={mayWrite} mayDecommission={mayDecommission} />
+                <DangerZoneCard vps={data} mayWrite={mayWrite} />
               </div>
             </div>
           );

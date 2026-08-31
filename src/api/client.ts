@@ -319,4 +319,8 @@ export const adminApi = {
     unwrap<{ ok?: boolean }>(await client.POST("/admin/v1/vps-registrar-accounts/{id}/servers/{itemId}/change-password", { params: { path: { id, itemId } }, body, headers: staffHeaders() })),
   getVpsServerHistory: async (id: string, itemId: string) =>
     unwrap<VpsHistoryEntry[]>(await client.GET("/admin/v1/vps-registrar-accounts/{id}/servers/{itemId}/history", { params: { path: { id, itemId } }, headers: staffHeaders() })),
+  // Backend genuinely rejects this today (see VpsRegistrarProvider.reinstallOs() - real
+  // BILLmanager func never confirmed) - the button exists, calling it will show a clear error.
+  reinstallVpsServer: async (id: string, itemId: string) =>
+    unwrap<{ ok?: boolean }>(await client.POST("/admin/v1/vps-registrar-accounts/{id}/servers/{itemId}/reinstall", { params: { path: { id, itemId } }, headers: staffHeaders() })),
 };

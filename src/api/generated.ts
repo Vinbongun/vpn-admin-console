@@ -1864,6 +1864,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/admin/v1/vps-registrar-accounts/{id}/servers/{itemId}/reinstall": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** @description Wipes the server and reinstalls its OS - the single most destructive action this provider could take. NOT ACTUALLY IMPLEMENTED YET: the real BILLmanager func for this was never confirmed (doc or live), so every current provider rejects with a clear error. This endpoint exists so the permission model/frontend button are ready the moment a real implementation lands - do not expect it to work today. */
+        post: operations["reinstallVpsServer"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/admin/v1/vps-registrar-accounts/{id}/servers/{itemId}/history": {
         parameters: {
             query?: never;
@@ -8560,6 +8577,31 @@ export interface operations {
                 };
             };
         };
+        responses: {
+            /** @description OK */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        ok?: boolean;
+                    };
+                };
+            };
+        };
+    };
+    reinstallVpsServer: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+                itemId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
         responses: {
             /** @description OK */
             201: {
