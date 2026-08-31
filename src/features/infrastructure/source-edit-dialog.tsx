@@ -2,7 +2,7 @@
 
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { RefreshCwIcon } from "lucide-react";
+import { GlobeIcon, KeyRoundIcon, RefreshCwIcon, ServerIcon, UserIcon } from "lucide-react";
 import Link from "next/link";
 import { useState } from "react";
 import { useForm } from "react-hook-form";
@@ -14,13 +14,14 @@ import { CountryFlag } from "@/components/country-flag";
 import { CredentialField } from "@/components/credential-field";
 import { StatusBadge } from "@/components/status-badge";
 import { Button } from "@/components/ui/button";
-import { Dialog, DialogClose, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Dialog, DialogClose, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Field, FieldError, FieldGroup, FieldLabel } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 import { Spinner } from "@/components/ui/spinner";
 import { Textarea } from "@/components/ui/textarea";
 import { CredentialsFields } from "@/features/infrastructure/credentials-fields";
 import { rotateCredentialsSchema, updateSourceSchema, type RotateCredentialsValues, type UpdateSourceValues } from "@/features/infrastructure/schema";
+import { countryNameRu } from "@/lib/country-name";
 
 function providerLabel(providerType: string) {
   if (providerType === "3X_UI") return "3x-ui";
@@ -67,27 +68,46 @@ function usePanelInstallReport(source: ControlPlaneSourceSummary) {
   return { isLoading, payload, domainFqdn: automation.data?.domainFqdn, isPanelType };
 }
 
-/**
- * Replaces the old static "Провайдер: X — не редактируется" line - shows what's actually
- * installed right now, not just the provider type. Panel/Xray version fields don't exist in any
- * report yet (see usePanelInstallReport) - shows an honest "неизвестна" until that lands, rather
- * than a fake number.
- */
-function PanelVersionInfo({ source }: { source: ControlPlaneSourceSummary }) {
-  const { isLoading, payload, isPanelType } = usePanelInstallReport(source);
-  if (!isPanelType) return <DialogDescription>Провайдер: {providerLabel(source.providerType)}</DialogDescription>;
+function InfoRow({ label, value }: { label: string; value: React.ReactNode }) {
+  return (
+    <div className="flex items-center justify-between gap-3 rounded-md border bg-card px-3 py-2.5">
+      <span className="text-sm font-medium">{label}</span>
+      <span className="text-sm text-muted-foreground">{value}</span>
+    </div>
+  );
+}
 
+/**
+ * Replaces the old static "Провайдер: X — не редактируется" description line and the separate
+ * "Страна" form field - one stack of info cards covering location, panel/protocol type, and
+ * what's actually installed right now. Panel/Xray version fields don't exist in any report yet
+ * (see usePanelInstallReport) - shows an honest "неизвестна" until that lands, rather than a
+ * fake number.
+ */
+function PanelInfoCards({ source }: { source: ControlPlaneSourceSummary }) {
+  const { isLoading, payload, isPanelType } = usePanelInstallReport(source);
   const panelVersion = typeof payload?.panelVersion === "string" ? payload.panelVersion : undefined;
   const xrayVersion = typeof payload?.xrayVersion === "string" ? payload.xrayVersion : undefined;
 
   return (
-    <DialogDescription render={<div />}>
-      <span>Панель: {providerLabel(source.providerType)}</span>
-      <span className="mx-1.5">·</span>
-      <span>версия панели: {isLoading ? "…" : (panelVersion ?? "неизвестна")}</span>
-      <span className="mx-1.5">·</span>
-      <span>Xray: {isLoading ? "…" : (xrayVersion ?? "неизвестна")}</span>
-    </DialogDescription>
+    <div className="space-y-2">
+      <InfoRow
+        label="Локация"
+        value={
+          source.countryCode ? (
+            <span className="flex items-center gap-1.5">
+              <CountryFlag code={source.countryCode} />
+              {countryNameRu(source.countryCode) ?? source.countryCode}
+            </span>
+          ) : (
+            "Пока неизвестна"
+          )
+        }
+      />
+      <InfoRow label="Тип" value={providerLabel(source.providerType)} />
+      {isPanelType && <InfoRow label="Версия панели" value={isLoading ? "…" : (panelVersion ?? "неизвестна")} />}
+      {isPanelType && <InfoRow label="Версия Xray" value={isLoading ? "…" : (xrayVersion ?? "неизвестна")} />}
+    </div>
   );
 }
 
@@ -170,18 +190,21 @@ function PanelAccessSection({ source, mayWrite }: { source: ControlPlaneSourceSu
         // Every value gets its own full-width row - a domain URL can easily run 40-50+ characters
         // and truncating it inside a half-width column defeats the point of showing it at all.
         <div className="flex flex-col gap-3">
-          {ipUrl && <CredentialField label="Путь через IP" value={ipUrl} href={ipUrl} />}
+          {ipUrl && <CredentialField label="Путь через IP" value={ipUrl} href={ipUrl} icon={ServerIcon} />}
           {domainUrl ? (
-            <CredentialField label="Путь через домен" value={domainUrl} href={domainUrl} />
+            <CredentialField label="Путь через домен" value={domainUrl} href={domainUrl} icon={GlobeIcon} />
           ) : (
-            <div className="flex flex-col gap-1">
-              <span className="text-xs text-muted-foreground">Путь через домен</span>
-              <span className="text-sm text-muted-foreground">Домен не привязан</span>
+            <div className="space-y-1.5">
+              <p className="text-sm font-medium">Путь через домен</p>
+              <div className="flex items-center gap-2 rounded-md border bg-muted/30 px-3 py-2">
+                <GlobeIcon className="size-4 shrink-0 text-muted-foreground" />
+                <span className="text-sm text-muted-foreground">Домен не привязан</span>
+              </div>
             </div>
           )}
           <div className="grid gap-3 sm:grid-cols-2">
-            {username && <CredentialField label="Логин" value={username} />}
-            {password && <CredentialField label="Пароль" value={password} maskable />}
+            {username && <CredentialField label="Логин" value={username} icon={UserIcon} />}
+            {password && <CredentialField label="Пароль" value={password} icon={KeyRoundIcon} maskable />}
           </div>
         </div>
       ) : (
@@ -329,7 +352,6 @@ function SourceEditBody({ source, mayWrite, onClose }: { source: ControlPlaneSou
           {source.code}
           <StatusBadge status={source.status} />
         </DialogTitle>
-        <PanelVersionInfo source={source} />
       </DialogHeader>
       {/*
         A plain div, not a <form> - this dialog nests several independent mutations (panel fields,
@@ -339,26 +361,16 @@ function SourceEditBody({ source, mayWrite, onClose }: { source: ControlPlaneSou
       */}
       <div className="contents">
         <div className="grid gap-4 sm:grid-cols-2">
-          <FieldGroup>
-            <Field data-invalid={Boolean(form.formState.errors.code)}>
-              <FieldLabel htmlFor="source-edit-code">Код панели</FieldLabel>
-              <Input id="source-edit-code" disabled={!mayWrite} {...form.register("code")} />
-              <FieldError errors={[form.formState.errors.code]} />
-            </Field>
-            <Field>
-              <FieldLabel>Страна</FieldLabel>
-              {source.countryCode ? (
-                <p className="flex h-9 items-center gap-1.5 text-sm">
-                  <CountryFlag code={source.countryCode} />
-                  {source.countryCode}
-                </p>
-              ) : (
-                <p className="text-xs text-muted-foreground">
-                  Пока неизвестна — определяется автоматически от VPS, на котором стоит эта панель, при следующей синхронизации.
-                </p>
-              )}
-            </Field>
-          </FieldGroup>
+          <div className="space-y-4">
+            <FieldGroup>
+              <Field data-invalid={Boolean(form.formState.errors.code)}>
+                <FieldLabel htmlFor="source-edit-code">Код панели</FieldLabel>
+                <Input id="source-edit-code" disabled={!mayWrite} {...form.register("code")} />
+                <FieldError errors={[form.formState.errors.code]} />
+              </Field>
+            </FieldGroup>
+            <PanelInfoCards source={source} />
+          </div>
 
           <LinkedVpsSection sourceId={source.id} />
         </div>
