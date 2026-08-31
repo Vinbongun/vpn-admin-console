@@ -1,12 +1,13 @@
 "use client";
 
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { PencilIcon } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
 import { adminApi, ApiError } from "@/api/client";
 import type { VpsInstance } from "@/api/types";
 import { Button } from "@/components/ui/button";
+import { CountryFlag } from "@/components/country-flag";
 import { Dialog, DialogClose, DialogContent, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -33,6 +34,7 @@ function formFrom(vps: VpsInstance) {
     currency: vps.currency ?? "",
     period: vps.period != null ? String(vps.period) : "",
     autoProlong: vps.autoProlong,
+    datacenterCountryCode: vps.datacenterCountryCode ?? "",
   };
 }
 
@@ -40,6 +42,8 @@ export function EditPurchaseInfoDialog({ vps }: { vps: VpsInstance }) {
   const [open, setOpen] = useState(false);
   const [form, setForm] = useState(() => formFrom(vps));
   const queryClient = useQueryClient();
+  const isManual = vps.providerType === "MANUAL";
+  const countries = useQuery({ queryKey: ["reference-countries"], queryFn: adminApi.listReferenceCountries, retry: false, enabled: open && isManual });
 
   const mutation = useMutation({
     mutationFn: () =>
@@ -50,6 +54,9 @@ export function EditPurchaseInfoDialog({ vps }: { vps: VpsInstance }) {
         ...(form.currency ? { currency: form.currency } : {}),
         ...(form.period ? { period: Number(form.period) } : {}),
         autoProlong: form.autoProlong,
+        // Только для MANUAL - у API-купленного сервера локация всегда приходит от регистратора,
+        // бэкенд сам отклонит попытку задать это поле для не-MANUAL (см. updateMetadata()).
+        ...(isManual && form.datacenterCountryCode ? { datacenterCountryCode: form.datacenterCountryCode } : {}),
       }),
     onSuccess: async () => {
       toast.success("Данные о покупке обновлены.");
@@ -127,6 +134,43 @@ export function EditPurchaseInfoDialog({ vps }: { vps: VpsInstance }) {
           <div className="flex items-center justify-between gap-2 pt-6">
             <Label htmlFor="edit-vps-auto-prolong">Авто-продление</Label>
             <Switch id="edit-vps-auto-prolong" checked={form.autoProlong} onCheckedChange={(checked) => setForm((prev) => ({ ...prev, autoProlong: checked }))} />
+          </div>
+          <div className="space-y-2 sm:col-span-2">
+            <Label htmlFor="edit-vps-country">Страна дата-центра</Label>
+            {isManual ? (
+              <Select
+                items={(countries.data ?? []).map((entry) => ({ value: entry.code, label: entry.name }))}
+                value={form.datacenterCountryCode}
+                onValueChange={(value) => setForm((prev) => ({ ...prev, datacenterCountryCode: value ?? "" }))}
+              >
+                <SelectTrigger id="edit-vps-country" className="w-full">
+                  <SelectValue placeholder={countries.isLoading ? "Загрузка…" : "Выберите страну"} />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectGroup>
+                    <SelectLabel>Страна</SelectLabel>
+                    {(countries.data ?? []).map((entry) => (
+                      <SelectItem key={entry.code} value={entry.code}>
+                        <CountryFlag code={entry.code} className="mr-1" />
+                        {entry.name}
+                      </SelectItem>
+                    ))}
+                  </SelectGroup>
+                </SelectContent>
+              </Select>
+            ) : (
+              <p className="flex h-9 items-center gap-1.5 text-sm text-muted-foreground">
+                {vps.datacenterCountryCode ? (
+                  <>
+                    <CountryFlag code={vps.datacenterCountryCode} />
+                    {vps.datacenterCountryName ?? vps.datacenterCountryCode}
+                  </>
+                ) : (
+                  "—"
+                )}
+                <span className="text-xs">(задаётся регистратором при покупке)</span>
+              </p>
+            )}
           </div>
         </div>
         <DialogFooter>

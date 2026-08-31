@@ -1932,6 +1932,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/admin/v1/reference/countries": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description The one shared country registry every country name in the admin console is resolved from - open to any authenticated staff member (no specific permission required), used for dropdowns like manually setting a MANUAL VPS's location. */
+        get: operations["listReferenceCountries"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/admin/v1/vps-instances": {
         parameters: {
             query?: never;
@@ -3795,6 +3812,15 @@ export interface components {
             /** @description Only populated on the call where CREDENTIALS_RETRIEVED is first reached. */
             createdVpsInstanceIds?: string[];
         };
+        CountryReferenceEntry: {
+            /**
+             * @description ISO 3166-1 alpha-2.
+             * @example DE
+             */
+            code: string;
+            /** @example Германия */
+            name: string;
+        };
         VpsInstance: {
             /** Format: uuid */
             id: string;
@@ -3856,6 +3882,11 @@ export interface components {
              * @example FI
              */
             datacenterCountryCode?: string | null;
+            /**
+             * @description Resolved from datacenterCountryCode via the shared country registry - the frontend must never translate a country code itself, this is always the source of truth.
+             * @example Финляндия
+             */
+            datacenterCountryName?: string | null;
         };
         VpsDeployedProtocol: {
             protocolCode?: string;
@@ -3948,6 +3979,11 @@ export interface components {
             remnawaveNodeUuid?: string;
             /** Format: uuid */
             controlPlaneSourceId?: string;
+            /**
+             * @description Manual location entry - only accepted for a MANUAL-provider VPS (400 otherwise, since an API-purchased server's location always comes from the registrar). Must be a code present in GET .../reference/countries, not an arbitrary two-letter string.
+             * @example DE
+             */
+            datacenterCountryCode?: string;
         };
         VpsAutomationJobRef: {
             /** Format: uuid */
@@ -4071,6 +4107,11 @@ export interface components {
             };
             /** @description ISO 3166-1 alpha-2 code of where the control panel itself is hosted. */
             countryCode?: string | null;
+            /**
+             * @description Resolved from countryCode via the shared country registry - the frontend must never translate a country code itself, this is always the source of truth.
+             * @example Германия
+             */
+            countryName?: string | null;
             comment?: string | null;
             /** @description Where this panel/server was bought (hosting provider or reseller name). */
             purchasedFrom?: string | null;
@@ -8649,6 +8690,26 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content?: never;
+            };
+        };
+    };
+    listReferenceCountries: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Every country this platform's reference registry knows, code + Russian display name */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CountryReferenceEntry"][];
+                };
             };
         };
     };

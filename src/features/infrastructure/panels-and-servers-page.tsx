@@ -22,7 +22,6 @@ import { SourceEditDialog } from "@/features/infrastructure/source-edit-dialog";
 import { VpsListPage } from "@/features/vps/vps-list-page";
 import { can } from "@/lib/access-control";
 import { isPanelProviderType, providerLabel } from "@/lib/control-plane-provider";
-import { countryNameRu } from "@/lib/country-name";
 
 function apiErrorMessage(error: ApiError): string {
   const details = error.details as { message?: string | string[] } | undefined;
@@ -35,14 +34,13 @@ function formatDate(value?: string | null) {
 }
 
 function sourceIdentityCell(source: ControlPlaneSourceSummary) {
-  const countryName = countryNameRu(source.countryCode);
   return (
     <div>
       <p className="font-medium">{source.code}</p>
       {source.countryCode && (
         <p className="flex items-center gap-1 text-xs text-muted-foreground">
           <CountryFlag code={source.countryCode} />
-          {countryName ?? source.countryCode}
+          {source.countryName ?? source.countryCode}
         </p>
       )}
     </div>
@@ -164,7 +162,9 @@ function PanelsCard() {
     [syncingId, anySyncing, mayWrite],
   );
 
-  const sourceCountries = [...new Set((sources.data ?? []).map((source) => source.countryCode).filter(Boolean))].sort();
+  const sourceCountryOptions = [
+    ...new Map((sources.data ?? []).filter((source) => source.countryCode).map((source) => [source.countryCode as string, source.countryName ?? source.countryCode])).entries(),
+  ].sort(([, a], [, b]) => (a ?? "").localeCompare(b ?? ""));
   const filteredSources = sourceCountryFilter === "all" ? (sources.data ?? []) : (sources.data ?? []).filter((source) => source.countryCode === sourceCountryFilter);
 
   return (
@@ -183,10 +183,10 @@ function PanelsCard() {
         </CardAction>
       </CardHeader>
       <CardContent>
-        {sourceCountries.length > 0 && (
+        {sourceCountryOptions.length > 0 && (
           <div className="mb-4 max-w-64">
             <Select
-              items={[{ value: "all", label: "Все страны" }, ...sourceCountries.map((code) => ({ value: code, label: countryNameRu(code) ?? code }))]}
+              items={[{ value: "all", label: "Все страны" }, ...sourceCountryOptions.map(([code, name]) => ({ value: code, label: name ?? code }))]}
               value={sourceCountryFilter}
               onValueChange={(value) => setSourceCountryFilter(value ?? "all")}
             >
@@ -197,10 +197,10 @@ function PanelsCard() {
                 <SelectGroup>
                   <SelectLabel>Страна панели</SelectLabel>
                   <SelectItem value="all">Все страны</SelectItem>
-                  {sourceCountries.map((code) => (
+                  {sourceCountryOptions.map(([code, name]) => (
                     <SelectItem key={code} value={code}>
                       <CountryFlag code={code} className="mr-1" />
-                      {countryNameRu(code) ?? code}
+                      {name ?? code}
                     </SelectItem>
                   ))}
                 </SelectGroup>

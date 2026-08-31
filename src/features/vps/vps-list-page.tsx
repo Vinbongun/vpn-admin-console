@@ -86,11 +86,15 @@ export function VpsListPage() {
       header: "Локация",
       cell: ({ row }) => {
         const vps = row.original;
-        if (!vps.datacenterName) return "—";
+        // datacenterName только у API-купленных серверов (из каталога регистратора) - у MANUAL
+        // его никогда нет, даже после того как staff вручную задал страну (см.
+        // edit-purchase-info-dialog.tsx), поэтому падаем на страну как таковую, не на "—".
+        const label = vps.datacenterName ?? vps.datacenterCountryName;
+        if (!label) return "—";
         return (
           <span className="flex items-center gap-1.5">
             <CountryFlag code={vps.datacenterCountryCode} />
-            {vps.datacenterName}
+            {label}
           </span>
         );
       },

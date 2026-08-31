@@ -22,7 +22,6 @@ import { Textarea } from "@/components/ui/textarea";
 import { CredentialsFields } from "@/features/infrastructure/credentials-fields";
 import { rotateCredentialsSchema, updateSourceSchema, type RotateCredentialsValues, type UpdateSourceValues } from "@/features/infrastructure/schema";
 import { isPanelProviderType, providerLabel } from "@/lib/control-plane-provider";
-import { countryNameRu } from "@/lib/country-name";
 
 function apiErrorMessage(error: ApiError): string {
   if (error.status === 409) return "Панель с таким кодом уже существует.";
@@ -91,7 +90,7 @@ function PanelInfoCards({ source }: { source: ControlPlaneSourceSummary }) {
         source.countryCode ? (
           <span className="flex items-center gap-1.5">
             <CountryFlag code={source.countryCode} />
-            {countryNameRu(source.countryCode) ?? source.countryCode}
+            {source.countryName ?? source.countryCode}
           </span>
         ) : (
           "Пока неизвестна"

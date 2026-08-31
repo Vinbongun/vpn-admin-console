@@ -177,7 +177,7 @@ export function InstallRemnawaveNodeDialog({ vps }: { vps: VpsInstance }) {
               {vps.datacenterCountryCode ? (
                 <p className="flex h-9 items-center gap-1.5 text-sm">
                   <CountryFlag code={vps.datacenterCountryCode} />
-                  {vps.datacenterCountryCode}
+                  {vps.datacenterCountryName ?? vps.datacenterCountryCode}
                 </p>
               ) : (
                 <p className="text-xs text-destructive">

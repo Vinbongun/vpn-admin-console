@@ -36,6 +36,7 @@ import type {
   ChangeVpsServerPassword,
   ConfigProfileSummary,
   ControlPlaneSourceDetail,
+  CountryReferenceEntry,
   CreateBrand,
   CreateControlPlaneSource,
   CreateEndpointGroup,
@@ -158,6 +159,7 @@ export const adminApi = {
   listAuditEvents: async (query: AdminAuditQuery = {}) => unwrap(await client.GET("/admin/v1/audit-events", { params: { query }, headers: staffHeaders() })),
   getInfrastructureSummary: async () => unwrap(await client.GET("/admin/v1/infrastructure/summary", { headers: staffHeaders() })),
   listControlPlaneSources: async () => unwrap(await client.GET("/admin/v1/infrastructure/sources", { headers: staffHeaders() })),
+  listReferenceCountries: async () => unwrap<CountryReferenceEntry[]>(await client.GET("/admin/v1/reference/countries", { headers: staffHeaders() })),
   getControlPlaneSourceDetail: async (sourceId: string) =>
     unwrap<ControlPlaneSourceDetail>(await client.GET("/admin/v1/infrastructure/sources/{id}", { params: { path: { id: sourceId } }, headers: staffHeaders() })),
   createControlPlaneSource: async (body: CreateControlPlaneSource) => unwrap(await client.POST("/admin/v1/infrastructure/sources", { body, headers: staffHeaders() })),

@@ -33,6 +33,7 @@ export type AuditEventSummary = Schemas["AuditEventSummary"];
 export type AuditEventPage = Schemas["AuditEventPage"];
 export type InfrastructureSummary = Schemas["InfrastructureSummary"];
 export type ControlPlaneSourceSummary = Schemas["ControlPlaneSourceSummary"];
+export type CountryReferenceEntry = Schemas["CountryReferenceEntry"];
 export type InfrastructureEndpointSummary = Schemas["InfrastructureEndpointSummary"];
 export type InfrastructureEndpointPage = Schemas["InfrastructureEndpointPage"];
 export type InfrastructureIncidentSummary = Schemas["InfrastructureIncidentSummary"];
