@@ -5,22 +5,21 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { RefreshCwIcon } from "lucide-react";
 import Link from "next/link";
 import { useState } from "react";
-import { Controller, useForm } from "react-hook-form";
+import { useForm } from "react-hook-form";
 import { toast } from "sonner";
 import { adminApi, ApiError } from "@/api/client";
 import type { ControlPlaneSourceSummary } from "@/api/types";
+import { Badge } from "@/components/ui/badge";
 import { CountryFlag } from "@/components/country-flag";
 import { CredentialField } from "@/components/credential-field";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogClose, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Field, FieldError, FieldGroup, FieldLabel } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
-import { Select, SelectContent, SelectGroup, SelectItem, SelectLabel, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Spinner } from "@/components/ui/spinner";
 import { Textarea } from "@/components/ui/textarea";
 import { CredentialsFields } from "@/features/infrastructure/credentials-fields";
-import { rotateCredentialsSchema, sourceStatuses, updateSourceSchema, type RotateCredentialsValues, type UpdateSourceValues } from "@/features/infrastructure/schema";
+import { rotateCredentialsSchema, updateSourceSchema, type RotateCredentialsValues, type UpdateSourceValues } from "@/features/infrastructure/schema";
 
 function providerLabel(providerType: string) {
   if (providerType === "3X_UI") return "3x-ui";
@@ -35,11 +34,13 @@ function apiErrorMessage(error: ApiError): string {
   return (Array.isArray(message) ? message.join(", ") : message) ?? error.message;
 }
 
-function formatDate(value?: string | null) {
-  return value ? new Date(value).toLocaleString("ru-RU", { timeZone: "Europe/Moscow" }) : "—";
-}
-
-function CredentialsSection({ source, mayWrite }: { source: ControlPlaneSourceSummary; mayWrite: boolean }) {
+/**
+ * Only reachable for a source with no automation install report (added manually through
+ * "+ Добавить панель", not via install-3x-ui/install-remnawave-panel) - the sole remaining way
+ * such a source can ever get credentials, since we have no way to read back what a human typed
+ * in. Deliberately write-only: current values are never displayed, only replaced wholesale.
+ */
+function ManualCredentialsForm({ source, mayWrite }: { source: ControlPlaneSourceSummary; mayWrite: boolean }) {
   const queryClient = useQueryClient();
   const [expanded, setExpanded] = useState(false);
   const form = useForm<RotateCredentialsValues>({ resolver: zodResolver(rotateCredentialsSchema), defaultValues: { baseUrl: "", apiToken: "" } });
@@ -56,21 +57,15 @@ function CredentialsSection({ source, mayWrite }: { source: ControlPlaneSourceSu
   });
 
   return (
-    <div className="flex flex-col gap-3 rounded-md border p-3">
-      <div className="flex items-center justify-between gap-2">
-        <p className="text-sm font-medium">Credentials</p>
-        <div className="flex items-center gap-2 text-xs text-muted-foreground">
-          {source.credentialsConfigured ? <Badge variant="outline">Настроены</Badge> : <Badge variant="destructive">Не настроены</Badge>}
-          {source.credentialsConfigured && source.credentialsRotatedAt && <span>обновлены {formatDate(source.credentialsRotatedAt)}</span>}
-        </div>
+    <div className="flex flex-col gap-3">
+      <div className="flex items-center gap-2 text-xs text-muted-foreground">
+        {source.credentialsConfigured ? <Badge variant="outline">Настроены</Badge> : <Badge variant="destructive">Не настроены</Badge>}
       </div>
+      <p className="text-xs text-muted-foreground">Панель добавлена вручную (не нашей автоустановкой) — текущие значения нигде не хранятся в открытом виде, заполните оба поля заново, чтобы заменить.</p>
       {mayWrite &&
         (expanded ? (
-          // A plain div, not a <form> - this section is one of several independent mutations inside
-          // the same dialog (see SourceEditBody), each with its own handleSubmit-on-click button.
           <div className="contents">
             <FieldGroup>
-              <p className="text-xs text-muted-foreground">Текущие значения нигде не хранятся в открытом виде — заполните оба поля заново, чтобы заменить.</p>
               <CredentialsFields form={form} optional={false} />
             </FieldGroup>
             <div className="flex gap-2 self-start">
@@ -93,21 +88,20 @@ function CredentialsSection({ source, mayWrite }: { source: ControlPlaneSourceSu
 }
 
 /**
- * Panels our own automation installs (3x-ui, Remnawave) - the CredentialsSection above is
- * deliberately write-only (it's the right behavior for a source whose secret came from someone
- * else typing it in), but for these two, the login/password/address are known to us the moment
- * the install job succeeds. Reads them straight out of the linked VPS's latest INSTALL_PANEL /
- * INSTALL_REMNAWAVE_PANEL report - the same job report LinkedVpsSection's own query already has
- * cached at the list level, just needing each candidate VPS's own detail to see its reports.
- * A source added manually (not through our install flow) simply has no such report, in which
- * case this renders nothing.
+ * The one and only "Доступ" block for a panel - never shows both an auto-fetched view and a
+ * manual write form at once. Panels our own automation installs (3x-ui, Remnawave) always have
+ * a real login/password/address known to us from the install job's own report the moment it
+ * succeeds - staff can never type these in by hand, they only ever come from a real install.
+ * A source added manually (no such report exists) falls back to ManualCredentialsForm, since
+ * that's the only way it could ever get set up in the first place.
  */
-function AutomationCredentialsSection({ source }: { source: ControlPlaneSourceSummary }) {
+function PanelAccessSection({ source, mayWrite }: { source: ControlPlaneSourceSummary; mayWrite: boolean }) {
+  const isPanelType = source.providerType === "3X_UI" || source.providerType === "REMNAWAVE";
   const jobType = source.providerType === "REMNAWAVE" ? "INSTALL_REMNAWAVE_PANEL" : "INSTALL_PANEL";
   const vpsInstances = useQuery({ queryKey: ["admin-vps-instances", "all"], queryFn: () => adminApi.listVpsInstances(), retry: false });
   const linkedIds = (vpsInstances.data ?? []).filter((vps) => vps.controlPlaneSourceId === source.id).map((vps) => vps.id);
 
-  const credentials = useQuery({
+  const automation = useQuery({
     queryKey: ["admin-source-automation-credentials", source.id, linkedIds.join(",")],
     queryFn: async () => {
       const details = await Promise.all(linkedIds.map((id) => adminApi.getVpsInstance(id)));
@@ -117,35 +111,45 @@ function AutomationCredentialsSection({ source }: { source: ControlPlaneSourceSu
       }
       return undefined;
     },
-    enabled: linkedIds.length > 0,
+    enabled: isPanelType && linkedIds.length > 0,
     retry: false,
   });
 
-  if (source.providerType !== "3X_UI" && source.providerType !== "REMNAWAVE") return null;
-  if (vpsInstances.isLoading || credentials.isLoading) return null;
-  const payload = credentials.data?.report.reportPayload as Record<string, unknown> | undefined;
-  const username = typeof payload?.username === "string" ? payload.username : undefined;
-  const password = typeof payload?.password === "string" ? payload.password : undefined;
-  const baseUrl = typeof payload?.baseUrl === "string" ? payload.baseUrl : undefined;
-  if (!username && !password && !baseUrl) {
-    return (
-      <div className="space-y-2">
-        <p className="text-sm font-medium">Креды панели</p>
-        <p className="text-sm text-muted-foreground">Нет отчёта нашей автоустановки — похоже, панель добавлена вручную.</p>
-      </div>
-    );
-  }
-  const panelUrl = credentials.data?.domainFqdn && typeof payload?.webBasePath === "string" ? `https://${credentials.data.domainFqdn}${payload.webBasePath}` : baseUrl;
+  const loading = vpsInstances.isLoading || (isPanelType && linkedIds.length > 0 && automation.isLoading);
+  const payload = automation.data?.report.reportPayload as Record<string, unknown> | undefined;
+  const username = (typeof payload?.username === "string" ? payload.username : typeof payload?.adminUsername === "string" ? payload.adminUsername : undefined);
+  const password = (typeof payload?.password === "string" ? payload.password : typeof payload?.adminPassword === "string" ? payload.adminPassword : undefined);
+  const ipUrl = typeof payload?.baseUrl === "string" ? payload.baseUrl : undefined;
+  const domainFqdn = automation.data?.domainFqdn;
+  const webBasePath = typeof payload?.webBasePath === "string" ? payload.webBasePath : "";
+  const domainUrl = domainFqdn ? `https://${domainFqdn}${webBasePath}` : undefined;
+  const hasAutomationCredentials = Boolean(username || password || ipUrl);
 
   return (
-    <div className="space-y-2">
-      <p className="text-sm font-medium">Креды панели</p>
-      <p className="text-xs text-muted-foreground">Из последнего отчёта установки — актуальны для того, что реально сейчас развёрнуто.</p>
-      <div className="grid gap-3 rounded-md border p-3 sm:grid-cols-2">
-        {panelUrl && <CredentialField label="Адрес панели" value={panelUrl} href={panelUrl} />}
-        {username && <CredentialField label="Логин" value={username} />}
-        {password && <CredentialField label="Пароль" value={password} maskable />}
-      </div>
+    <div className="flex flex-col gap-3 rounded-md border p-3">
+      <p className="text-sm font-medium">Доступ</p>
+      {loading ? (
+        <p className="text-sm text-muted-foreground">Загрузка…</p>
+      ) : hasAutomationCredentials ? (
+        <>
+          <p className="text-xs text-muted-foreground">Подтянуто из отчёта установки — задать вручную нельзя, значения появляются сами после установки/переустановки.</p>
+          <div className="grid gap-3 sm:grid-cols-2">
+            {ipUrl && <CredentialField label="Путь через IP" value={ipUrl} href={ipUrl} />}
+            {domainUrl ? (
+              <CredentialField label="Путь через домен" value={domainUrl} href={domainUrl} />
+            ) : (
+              <div className="flex flex-col gap-1">
+                <span className="text-xs text-muted-foreground">Путь через домен</span>
+                <span className="text-sm text-muted-foreground">Домен не привязан</span>
+              </div>
+            )}
+            {username && <CredentialField label="Логин" value={username} />}
+            {password && <CredentialField label="Пароль" value={password} maskable />}
+          </div>
+        </>
+      ) : (
+        <ManualCredentialsForm source={source} mayWrite={mayWrite} />
+      )}
     </div>
   );
 }
@@ -202,10 +206,13 @@ function NodesSection({ sourceId, mayWrite }: { sourceId: string; mayWrite: bool
       </div>
       {detail.isLoading ? (
         <p className="text-sm text-muted-foreground">Загрузка…</p>
-      ) : detail.isError ? (
-        <p className="text-sm text-destructive">Не удалось получить список нод.</p>
       ) : nodes.length === 0 ? (
-        <p className="text-sm text-muted-foreground">У панели пока нет нод — либо credentials не настроены, либо ноды ещё не добавлены.</p>
+        // Never red here - a panel with genuinely no nodes yet is a normal, expected state, not
+        // a failure; a real fetch error (detail.isError) still isn't alarming enough to warrant
+        // destructive styling, it's just different wording of the same muted message.
+        <p className="text-sm text-muted-foreground">
+          {detail.isError ? "Не удалось получить список нод — попробуйте обновить позже." : "У панели пока нет нод — либо credentials не настроены, либо ноды ещё не добавлены."}
+        </p>
       ) : (
         <div className="flex flex-col gap-1">
           {nodes.map((node) => (
@@ -247,7 +254,7 @@ export function SourceEditDialog({
 }) {
   return (
     <Dialog open={Boolean(source)} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-lg">{source && <SourceEditBody key={source.id} source={source} mayWrite={mayWrite} onClose={() => onOpenChange(false)} />}</DialogContent>
+      <DialogContent className="sm:max-w-3xl">{source && <SourceEditBody key={source.id} source={source} mayWrite={mayWrite} onClose={() => onOpenChange(false)} />}</DialogContent>
     </Dialog>
   );
 }
@@ -258,7 +265,6 @@ function SourceEditBody({ source, mayWrite, onClose }: { source: ControlPlaneSou
     resolver: zodResolver(updateSourceSchema),
     defaultValues: {
       code: source.code,
-      status: source.status as UpdateSourceValues["status"],
       comment: source.comment ?? "",
     },
   });
@@ -267,7 +273,6 @@ function SourceEditBody({ source, mayWrite, onClose }: { source: ControlPlaneSou
     mutationFn: (values: UpdateSourceValues) =>
       adminApi.updateControlPlaneSource(source.id, {
         code: values.code,
-        status: values.status,
         comment: values.comment,
       }),
     onSuccess: async () => {
@@ -283,71 +288,56 @@ function SourceEditBody({ source, mayWrite, onClose }: { source: ControlPlaneSou
   return (
     <>
       <DialogHeader>
-        <DialogTitle>{source.code}</DialogTitle>
+        <DialogTitle className="flex items-center gap-2">
+          {source.code}
+          <Badge variant={source.status === "ACTIVE" ? "default" : "outline"} className="font-normal">
+            {source.status}
+          </Badge>
+        </DialogTitle>
         <DialogDescription>Провайдер: {providerLabel(source.providerType)} — не редактируется, задаётся только при создании.</DialogDescription>
       </DialogHeader>
       {/*
-        A plain div, not a <form> - this dialog nests CredentialsSection/NodesSection/LinkedVpsSection
-        below the code/status/country/comment fields, and a <form> descendant of a <form> is invalid
-        HTML (also breaks which section's Enter key submits which mutation). "Сохранить" below calls
+        A plain div, not a <form> - this dialog nests several independent mutations (panel fields,
+        credentials, nodes) below each other, and a <form> descendant of a <form> is invalid HTML
+        (also breaks which section's Enter key submits which mutation). "Сохранить" below calls
         handleSubmit directly from onClick instead of relying on a submit event.
       */}
       <div className="contents">
-        <FieldGroup>
-          <Field data-invalid={Boolean(form.formState.errors.code)}>
-            <FieldLabel htmlFor="source-edit-code">Код панели</FieldLabel>
-            <Input id="source-edit-code" disabled={!mayWrite} {...form.register("code")} />
-            <FieldError errors={[form.formState.errors.code]} />
-          </Field>
-          <Controller
-            control={form.control}
-            name="status"
-            render={({ field }) => (
-              <Field>
-                <FieldLabel htmlFor="source-edit-status">Статус</FieldLabel>
-                <Select disabled={!mayWrite} items={sourceStatuses.map((value) => ({ value, label: value }))} value={field.value} onValueChange={(value) => field.onChange(value ?? "ACTIVE")}>
-                  <SelectTrigger id="source-edit-status" className="w-full">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectGroup>
-                      <SelectLabel>Статус</SelectLabel>
-                      {sourceStatuses.map((value) => (
-                        <SelectItem key={value} value={value}>
-                          {value}
-                        </SelectItem>
-                      ))}
-                    </SelectGroup>
-                  </SelectContent>
-                </Select>
-              </Field>
-            )}
-          />
-          <Field>
-            <FieldLabel>Страна</FieldLabel>
-            {source.countryCode ? (
-              <p className="flex h-9 items-center gap-1.5 text-sm">
-                <CountryFlag code={source.countryCode} />
-                {source.countryCode}
-              </p>
-            ) : (
-              <p className="text-xs text-muted-foreground">
-                Пока неизвестна — определяется автоматически от VPS, на котором стоит эта панель, при следующей синхронизации.
-              </p>
-            )}
-          </Field>
-          <Field data-invalid={Boolean(form.formState.errors.comment)}>
-            <FieldLabel htmlFor="source-edit-comment">Комментарий</FieldLabel>
-            <Textarea id="source-edit-comment" disabled={!mayWrite} rows={3} {...form.register("comment")} />
-            <FieldError errors={[form.formState.errors.comment]} />
-          </Field>
-        </FieldGroup>
+        <div className="grid gap-4 sm:grid-cols-2">
+          <FieldGroup>
+            <Field data-invalid={Boolean(form.formState.errors.code)}>
+              <FieldLabel htmlFor="source-edit-code">Код панели</FieldLabel>
+              <Input id="source-edit-code" disabled={!mayWrite} {...form.register("code")} />
+              <FieldError errors={[form.formState.errors.code]} />
+            </Field>
+            <Field>
+              <FieldLabel>Страна</FieldLabel>
+              {source.countryCode ? (
+                <p className="flex h-9 items-center gap-1.5 text-sm">
+                  <CountryFlag code={source.countryCode} />
+                  {source.countryCode}
+                </p>
+              ) : (
+                <p className="text-xs text-muted-foreground">
+                  Пока неизвестна — определяется автоматически от VPS, на котором стоит эта панель, при следующей синхронизации.
+                </p>
+              )}
+            </Field>
+            <Field data-invalid={Boolean(form.formState.errors.comment)}>
+              <FieldLabel htmlFor="source-edit-comment">Комментарий</FieldLabel>
+              <Textarea id="source-edit-comment" disabled={!mayWrite} rows={3} {...form.register("comment")} />
+              <FieldError errors={[form.formState.errors.comment]} />
+            </Field>
+          </FieldGroup>
+
+          <PanelAccessSection source={source} mayWrite={mayWrite} />
+        </div>
+
         <div className="mt-4 flex flex-col gap-4">
-          <CredentialsSection source={source} mayWrite={mayWrite} />
-          <AutomationCredentialsSection source={source} />
           {source.providerType === "REMNAWAVE" && <NodesSection sourceId={source.id} mayWrite={mayWrite} />}
           <LinkedVpsSection sourceId={source.id} />
         </div>
+
         <DialogFooter className="mt-4">
           <DialogClose render={<Button type="button" variant="outline" />}>Закрыть</DialogClose>
           {mayWrite && (

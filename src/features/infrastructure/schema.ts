@@ -32,13 +32,15 @@ export type RotateCredentialsValues = z.infer<typeof rotateCredentialsSchema>;
 // Поля покупки (где куплена/стоимость/валюта/период/следующая оплата) убраны из формы редактирования —
 // это устаревшая, довиртуальная модель "стоимость владения панелью" с тех времён, когда VPS и панель ещё
 // не различались как отдельные сущности. Реальная информация о покупке теперь живёт на VPS (vps_instances).
+// Статус здесь намеренно не редактируется (только отображается) — панель либо реально
+// зарегистрирована нашей автоустановкой, либо это активная запись стороннего источника;
+// staff не должен иметь возможность руками щёлкнуть её в ACTIVE/INACTIVE вручную.
 export const updateSourceSchema = z.object({
   code: z
     .string()
     .trim()
     .toUpperCase()
     .regex(/^[A-Z0-9_]{2,64}$/, "2–64 символов: A-Z, 0-9, _"),
-  status: z.enum(sourceStatuses),
   comment: z.string().trim().max(2000, "До 2000 символов"),
 });
 export type UpdateSourceValues = z.infer<typeof updateSourceSchema>;
