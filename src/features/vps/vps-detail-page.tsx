@@ -220,14 +220,17 @@ export function VpsDetailPage({ vpsId }: { vpsId: string }) {
                       />
                     )}
                     <Field label="Последняя проверка здоровья" value={formatDate(data.lastHealthCheckAt)} />
+                    <Field label="Дата последнего бэкапа" value={formatDate(data.latestReports?.find((report) => report.jobType === "BACKUP")?.createdAt)} />
                     <Field label="Домен панели" value={data.domainFqdn ?? "—"} />
                     <Field
                       label="Локация"
                       value={
-                        data.datacenterName ? (
+                        // datacenterName только у API-купленных серверов - у MANUAL его нет
+                        // никогда, даже после того как staff вручную задал страну ниже.
+                        (data.datacenterName ?? data.datacenterCountryName) ? (
                           <span className="flex items-center gap-1.5">
                             <CountryFlag code={data.datacenterCountryCode} />
-                            {data.datacenterName}
+                            {data.datacenterName ?? data.datacenterCountryName}
                           </span>
                         ) : (
                           "—"
