@@ -16,17 +16,13 @@ import { StatusBadge } from "@/components/status-badge";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogClose, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Field, FieldError, FieldGroup, FieldLabel } from "@/components/ui/field";
+import { Input } from "@/components/ui/input";
 import { Spinner } from "@/components/ui/spinner";
 import { Textarea } from "@/components/ui/textarea";
 import { CredentialsFields } from "@/features/infrastructure/credentials-fields";
 import { rotateCredentialsSchema, updateSourceSchema, type RotateCredentialsValues, type UpdateSourceValues } from "@/features/infrastructure/schema";
+import { isPanelProviderType, providerLabel } from "@/lib/control-plane-provider";
 import { countryNameRu } from "@/lib/country-name";
-
-function providerLabel(providerType: string) {
-  if (providerType === "3X_UI") return "3x-ui";
-  if (providerType === "REMNAWAVE") return "Remnawave";
-  return providerType;
-}
 
 function apiErrorMessage(error: ApiError): string {
   if (error.status === 409) return "Панель с таким кодом уже существует.";
@@ -43,7 +39,7 @@ function apiErrorMessage(error: ApiError): string {
  * today and starts showing real values the moment that field exists, no further frontend change.
  */
 function usePanelInstallReport(source: ControlPlaneSourceSummary) {
-  const isPanelType = source.providerType === "3X_UI" || source.providerType === "REMNAWAVE";
+  const isPanelType = isPanelProviderType(source.providerType);
   const jobType = source.providerType === "REMNAWAVE" ? "INSTALL_REMNAWAVE_PANEL" : "INSTALL_PANEL";
   const vpsInstances = useQuery({ queryKey: ["admin-vps-instances", "all"], queryFn: () => adminApi.listVpsInstances(), retry: false });
   const linkedIds = (vpsInstances.data ?? []).filter((vps) => vps.controlPlaneSourceId === source.id).map((vps) => vps.id);
@@ -88,27 +84,43 @@ function PanelInfoCards({ source }: { source: ControlPlaneSourceSummary }) {
   const panelVersion = typeof payload?.panelVersion === "string" ? payload.panelVersion : undefined;
   const xrayVersion = typeof payload?.xrayVersion === "string" ? payload.xrayVersion : undefined;
 
+  const locationRow = (
+    <InfoRow
+      label="Локация"
+      value={
+        source.countryCode ? (
+          <span className="flex items-center gap-1.5">
+            <CountryFlag code={source.countryCode} />
+            {countryNameRu(source.countryCode) ?? source.countryCode}
+          </span>
+        ) : (
+          "Пока неизвестна"
+        )
+      }
+    />
+  );
+  const typeRow = <InfoRow label="Тип" value={providerLabel(source.providerType)} />;
+
+  // A standalone protocol has no panel/Xray version to show at all - one row of two cards side
+  // by side is enough, unlike a real panel which needs the full 2x2 grid below.
+  if (!isPanelType) {
+    return (
+      <div className="grid gap-2 sm:grid-cols-2">
+        {locationRow}
+        {typeRow}
+      </div>
+    );
+  }
+
   return (
     <div className="grid gap-2 sm:grid-cols-2">
       <div className="space-y-2">
-        <InfoRow
-          label="Локация"
-          value={
-            source.countryCode ? (
-              <span className="flex items-center gap-1.5">
-                <CountryFlag code={source.countryCode} />
-                {countryNameRu(source.countryCode) ?? source.countryCode}
-              </span>
-            ) : (
-              "Пока неизвестна"
-            )
-          }
-        />
-        <InfoRow label="Тип" value={providerLabel(source.providerType)} />
+        {locationRow}
+        {typeRow}
       </div>
       <div className="space-y-2">
-        {isPanelType && <InfoRow label="Версия панели" value={isLoading ? "…" : (panelVersion ?? "неизвестна")} />}
-        {isPanelType && <InfoRow label="Версия Xray" value={isLoading ? "…" : (xrayVersion ?? "неизвестна")} />}
+        <InfoRow label="Версия панели" value={isLoading ? "…" : (panelVersion ?? "неизвестна")} />
+        <InfoRow label="Версия Xray" value={isLoading ? "…" : (xrayVersion ?? "неизвестна")} />
       </div>
     </div>
   );
@@ -242,6 +254,32 @@ function LinkedVpsSection({ sourceId }: { sourceId: string }) {
   );
 }
 
+/**
+ * A standalone protocol lives on exactly one dedicated VPS (never shared, never "nodes") - shows
+ * that single link directly instead of LinkedVpsSection's "(count)" list, which is built for a
+ * panel that can genuinely have many.
+ */
+function SingleVpsCard({ sourceId }: { sourceId: string }) {
+  const vpsInstances = useQuery({ queryKey: ["admin-vps-instances", "all"], queryFn: () => adminApi.listVpsInstances(), retry: false });
+  const vps = (vpsInstances.data ?? []).find((instance) => instance.controlPlaneSourceId === sourceId);
+
+  return (
+    <div className="space-y-2">
+      <p className="text-sm font-medium">VPS</p>
+      {vpsInstances.isLoading ? (
+        <p className="text-sm text-muted-foreground">Загрузка…</p>
+      ) : vps ? (
+        <Link href={`/infrastructure/vps/${vps.id}`} className="flex items-center justify-between gap-2 rounded-md border px-2.5 py-1.5 text-sm hover:bg-accent">
+          <span className="font-medium underline">{vps.code}</span>
+          <span className="text-xs text-muted-foreground">{vps.host}</span>
+        </Link>
+      ) : (
+        <p className="text-sm text-muted-foreground">Не привязан ни к одному VPS.</p>
+      )}
+    </div>
+  );
+}
+
 function NodesSection({ sourceId, mayWrite }: { sourceId: string; mayWrite: boolean }) {
   const queryClient = useQueryClient();
   const detail = useQuery({ queryKey: ["admin-infrastructure-source-detail", sourceId], queryFn: () => adminApi.getControlPlaneSourceDetail(sourceId), retry: false });
@@ -324,9 +362,11 @@ export function SourceEditDialog({
 
 function SourceEditBody({ source, mayWrite, onClose }: { source: ControlPlaneSourceSummary; mayWrite: boolean; onClose: () => void }) {
   const queryClient = useQueryClient();
+  const isPanel = isPanelProviderType(source.providerType);
   const form = useForm<UpdateSourceValues>({
     resolver: zodResolver(updateSourceSchema),
     defaultValues: {
+      code: source.code,
       comment: source.comment ?? "",
     },
   });
@@ -334,6 +374,9 @@ function SourceEditBody({ source, mayWrite, onClose }: { source: ControlPlaneSou
   const mutation = useMutation({
     mutationFn: (values: UpdateSourceValues) =>
       adminApi.updateControlPlaneSource(source.id, {
+        // code только реально меняется для протокольных источников - у панели поле не рендерится,
+        // так что values.code всегда равен исходному source.code (PATCH тем же значением - no-op).
+        code: values.code,
         comment: values.comment,
       }),
     onSuccess: async () => {
@@ -350,7 +393,13 @@ function SourceEditBody({ source, mayWrite, onClose }: { source: ControlPlaneSou
     <>
       <DialogHeader>
         <DialogTitle className="flex items-center gap-2">
-          {source.providerType === "REMNAWAVE" ? <LayoutDashboardIcon className="size-4 text-muted-foreground" /> : <ServerIcon className="size-4 text-muted-foreground" />}
+          {source.providerType === "REMNAWAVE" ? (
+            <LayoutDashboardIcon className="size-4 text-muted-foreground" />
+          ) : source.providerType === "3X_UI" ? (
+            <ServerIcon className="size-4 text-muted-foreground" />
+          ) : (
+            <KeyRoundIcon className="size-4 text-muted-foreground" />
+          )}
           <span className="font-heading text-lg font-semibold tracking-tight">{source.code}</span>
           <StatusBadge status={source.status} />
         </DialogTitle>
@@ -367,18 +416,28 @@ function SourceEditBody({ source, mayWrite, onClose }: { source: ControlPlaneSou
       <div className="contents">
         <PanelInfoCards source={source} />
 
-        <div className="mt-4">
-          <PanelAccessSection source={source} mayWrite={mayWrite} />
-        </div>
+        {/* Панели (REMNAWAVE/3X_UI) знают свои креды/адрес и имеют "ноды" - у отдельного
+            протокола (WireGuard и т.п.) нет ни API, ни нод вообще, показывать эти блоки нечего. */}
+        {isPanel && (
+          <div className="mt-4">
+            <PanelAccessSection source={source} mayWrite={mayWrite} />
+          </div>
+        )}
 
-        <div className="mt-4">
-          <LinkedVpsSection sourceId={source.id} />
-        </div>
+        <div className="mt-4">{isPanel ? <LinkedVpsSection sourceId={source.id} /> : <SingleVpsCard sourceId={source.id} />}</div>
 
         {source.providerType === "REMNAWAVE" && (
           <div className="mt-4">
             <NodesSection sourceId={source.id} mayWrite={mayWrite} />
           </div>
+        )}
+
+        {!isPanel && (
+          <Field data-invalid={Boolean(form.formState.errors.code)} className="mt-4">
+            <FieldLabel htmlFor="source-edit-code">Код</FieldLabel>
+            <Input id="source-edit-code" disabled={!mayWrite} {...form.register("code")} />
+            <FieldError errors={[form.formState.errors.code]} />
+          </Field>
         )}
 
         <Field data-invalid={Boolean(form.formState.errors.comment)} className="mt-4">

@@ -2,6 +2,7 @@
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import type { ColumnDef } from "@tanstack/react-table";
+import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useMemo, useState } from "react";
 import { toast } from "sonner";
@@ -20,6 +21,7 @@ import { CreateSourceDialog } from "@/features/infrastructure/create-source-dial
 import { SourceEditDialog } from "@/features/infrastructure/source-edit-dialog";
 import { VpsListPage } from "@/features/vps/vps-list-page";
 import { can } from "@/lib/access-control";
+import { isPanelProviderType, providerLabel } from "@/lib/control-plane-provider";
 import { countryNameRu } from "@/lib/country-name";
 
 function apiErrorMessage(error: ApiError): string {
@@ -32,10 +34,19 @@ function formatDate(value?: string | null) {
   return value ? new Date(value).toLocaleString("ru-RU", { timeZone: "Europe/Moscow" }) : "—";
 }
 
-function providerLabel(providerType: string) {
-  if (providerType === "3X_UI") return "3x-ui";
-  if (providerType === "REMNAWAVE") return "Remnawave";
-  return providerType;
+function sourceIdentityCell(source: ControlPlaneSourceSummary) {
+  const countryName = countryNameRu(source.countryCode);
+  return (
+    <div>
+      <p className="font-medium">{source.code}</p>
+      {source.countryCode && (
+        <p className="flex items-center gap-1 text-xs text-muted-foreground">
+          <CountryFlag code={source.countryCode} />
+          {countryName ?? source.countryCode}
+        </p>
+      )}
+    </div>
+  );
 }
 
 function PanelsCard() {
@@ -44,7 +55,8 @@ function PanelsCard() {
   const searchParams = useSearchParams();
   const staff = useQuery({ queryKey: ["staff-session"], queryFn: adminApi.getSession, retry: false });
   const mayWrite = can(staff.data, "infrastructure.write");
-  const sources = useQuery({ queryKey: ["admin-infrastructure-sources"], queryFn: adminApi.listControlPlaneSources, retry: false });
+  const allSources = useQuery({ queryKey: ["admin-infrastructure-sources"], queryFn: adminApi.listControlPlaneSources, retry: false });
+  const sources = { ...allSources, data: allSources.data?.filter((source) => isPanelProviderType(source.providerType)) };
   const [syncingId, setSyncingId] = useState<string>();
   const [bulkSyncing, setBulkSyncing] = useState(false);
   // Deep-link support: other pages (VPS detail, domain detail, endpoints) link a panel as
@@ -106,25 +118,7 @@ function PanelsCard() {
 
   const columns = useMemo<ColumnDef<ControlPlaneSourceSummary>[]>(
     () => [
-      {
-        accessorKey: "code",
-        header: "Панель",
-        cell: ({ row }) => {
-          const source = row.original;
-          const countryName = countryNameRu(source.countryCode);
-          return (
-            <div>
-              <p className="font-medium">{source.code}</p>
-              {source.countryCode && (
-                <p className="flex items-center gap-1 text-xs text-muted-foreground">
-                  <CountryFlag code={source.countryCode} />
-                  {countryName ?? source.countryCode}
-                </p>
-              )}
-            </div>
-          );
-        },
-      },
+      { accessorKey: "code", header: "Панель", cell: ({ row }) => sourceIdentityCell(row.original) },
       { id: "provider", header: "Провайдер", cell: ({ row }) => providerLabel(row.original.providerType) },
       { id: "status", header: "Статус", cell: ({ row }) => <StatusBadge status={row.original.status} /> },
       {
@@ -239,6 +233,103 @@ function PanelsCard() {
   );
 }
 
+/**
+ * Standalone protocols (WireGuard, Hysteria2, and whatever else lands via the not-yet-built
+ * deploy-protocol role) are stored as control_plane_sources too - just with a providerType that
+ * isn't REMNAWAVE/3X_UI, and no real API behind them (no sync, no credentials, no nodes). Same
+ * query as PanelsCard (shared cache, filtered client-side the other way), trimmed columns - no
+ * "Провайдер"/"Последняя синхронизация"/"Синхронизация", since none of that applies without an
+ * API. Hidden entirely while there are none yet, rather than showing an empty card for a feature
+ * nothing has used yet (unlike "Ноды" on a real panel, which is an existing entity with zero
+ * children, not a whole entity family with zero instances anywhere in the system).
+ */
+function ProtocolsCard() {
+  const searchParams = useSearchParams();
+  const router = useRouter();
+  const staff = useQuery({ queryKey: ["staff-session"], queryFn: adminApi.getSession, retry: false });
+  const mayWrite = can(staff.data, "infrastructure.write");
+  const allSources = useQuery({ queryKey: ["admin-infrastructure-sources"], queryFn: adminApi.listControlPlaneSources, retry: false });
+  const vpsInstances = useQuery({ queryKey: ["admin-vps-instances", "all"], queryFn: () => adminApi.listVpsInstances(), retry: false });
+  const protocolSources = (allSources.data ?? []).filter((source) => !isPanelProviderType(source.providerType));
+  const vpsBySourceId = useMemo(
+    () => new Map(vpsInstances.data?.filter((vps) => vps.controlPlaneSourceId).map((vps) => [vps.controlPlaneSourceId as string, vps])),
+    [vpsInstances.data],
+  );
+  const [selectedSourceId, setSelectedSourceId] = useState<string | undefined>(searchParams.get("source") ?? undefined);
+
+  const columns = useMemo<ColumnDef<ControlPlaneSourceSummary>[]>(
+    () => [
+      { accessorKey: "code", header: "Протокол", cell: ({ row }) => sourceIdentityCell(row.original) },
+      {
+        id: "vps",
+        header: "VPS",
+        cell: ({ row }) => {
+          const vps = vpsBySourceId.get(row.original.id);
+          if (!vps) return "—";
+          return (
+            <Link href={`/infrastructure/vps/${vps.id}`} className="underline" onClick={(event) => event.stopPropagation()}>
+              {vps.code}
+            </Link>
+          );
+        },
+      },
+      { id: "status", header: "Статус", cell: ({ row }) => <StatusBadge status={row.original.status} /> },
+      {
+        id: "health",
+        header: "Здоровье",
+        cell: ({ row }) => (row.original.unhealthyCount > 0 ? <span className="text-destructive">{row.original.unhealthyCount} из {row.original.endpointCount} неисправны</span> : `${row.original.endpointCount} точек, все исправны`),
+      },
+      ...(mayWrite
+        ? [
+            {
+              id: "edit",
+              header: "",
+              cell: ({ row }: { row: { original: ControlPlaneSourceSummary } }) => (
+                <Button size="sm" variant="outline" onClick={(event) => { event.stopPropagation(); setSelectedSourceId(row.original.id); }}>
+                  Редактировать
+                </Button>
+              ),
+            } satisfies ColumnDef<ControlPlaneSourceSummary>,
+          ]
+        : []),
+    ],
+    [vpsBySourceId, mayWrite],
+  );
+
+  if (!allSources.isLoading && protocolSources.length === 0) return null;
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle>Отдельные протоколы</CardTitle>
+        <CardDescription>Протоколы вроде WireGuard, развёрнутые без панели — один протокол на выделенном VPS</CardDescription>
+      </CardHeader>
+      <CardContent>
+        <DataTable
+          columns={columns}
+          data={protocolSources}
+          isLoading={allSources.isLoading}
+          isError={allSources.isError}
+          errorMessage="Не удалось получить данные инфраструктуры."
+          emptyMessage="Протоколов пока нет."
+          onRowClick={(source) => setSelectedSourceId(source.id)}
+          isRowActive={(source) => source.id === selectedSourceId}
+        />
+      </CardContent>
+
+      <SourceEditDialog
+        source={allSources.data?.find((source) => source.id === selectedSourceId)}
+        onOpenChange={(open) => {
+          if (open) return;
+          setSelectedSourceId(undefined);
+          if (searchParams.get("source")) router.replace("/infrastructure/panels-and-servers");
+        }}
+        mayWrite={mayWrite}
+      />
+    </Card>
+  );
+}
+
 export function PanelsAndServersPage() {
   return (
     <AppShell>
@@ -248,6 +339,7 @@ export function PanelsAndServersPage() {
       />
 
       <PanelsCard />
+      <ProtocolsCard />
       <VpsListPage />
     </AppShell>
   );
