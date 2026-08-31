@@ -35,12 +35,9 @@ export type RotateCredentialsValues = z.infer<typeof rotateCredentialsSchema>;
 // Статус здесь намеренно не редактируется (только отображается) — панель либо реально
 // зарегистрирована нашей автоустановкой, либо это активная запись стороннего источника;
 // staff не должен иметь возможность руками щёлкнуть её в ACTIVE/INACTIVE вручную.
+// Код панели тоже больше не редактируется отсюда — он уже виден в заголовке диалога, отдельное
+// поле-инпут для него было чистым дублем.
 export const updateSourceSchema = z.object({
-  code: z
-    .string()
-    .trim()
-    .toUpperCase()
-    .regex(/^[A-Z0-9_]{2,64}$/, "2–64 символов: A-Z, 0-9, _"),
   comment: z.string().trim().max(2000, "До 2000 символов"),
 });
 export type UpdateSourceValues = z.infer<typeof updateSourceSchema>;

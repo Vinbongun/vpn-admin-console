@@ -2,7 +2,7 @@
 
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { GlobeIcon, KeyRoundIcon, RefreshCwIcon, ServerIcon, UserIcon } from "lucide-react";
+import { GlobeIcon, KeyRoundIcon, LayoutDashboardIcon, RefreshCwIcon, ServerIcon, UserIcon } from "lucide-react";
 import Link from "next/link";
 import { useState } from "react";
 import { useForm } from "react-hook-form";
@@ -16,7 +16,6 @@ import { StatusBadge } from "@/components/status-badge";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogClose, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Field, FieldError, FieldGroup, FieldLabel } from "@/components/ui/field";
-import { Input } from "@/components/ui/input";
 import { Spinner } from "@/components/ui/spinner";
 import { Textarea } from "@/components/ui/textarea";
 import { CredentialsFields } from "@/features/infrastructure/credentials-fields";
@@ -90,23 +89,27 @@ function PanelInfoCards({ source }: { source: ControlPlaneSourceSummary }) {
   const xrayVersion = typeof payload?.xrayVersion === "string" ? payload.xrayVersion : undefined;
 
   return (
-    <div className="space-y-2">
-      <InfoRow
-        label="Локация"
-        value={
-          source.countryCode ? (
-            <span className="flex items-center gap-1.5">
-              <CountryFlag code={source.countryCode} />
-              {countryNameRu(source.countryCode) ?? source.countryCode}
-            </span>
-          ) : (
-            "Пока неизвестна"
-          )
-        }
-      />
-      <InfoRow label="Тип" value={providerLabel(source.providerType)} />
-      {isPanelType && <InfoRow label="Версия панели" value={isLoading ? "…" : (panelVersion ?? "неизвестна")} />}
-      {isPanelType && <InfoRow label="Версия Xray" value={isLoading ? "…" : (xrayVersion ?? "неизвестна")} />}
+    <div className="grid gap-2 sm:grid-cols-2">
+      <div className="space-y-2">
+        <InfoRow
+          label="Локация"
+          value={
+            source.countryCode ? (
+              <span className="flex items-center gap-1.5">
+                <CountryFlag code={source.countryCode} />
+                {countryNameRu(source.countryCode) ?? source.countryCode}
+              </span>
+            ) : (
+              "Пока неизвестна"
+            )
+          }
+        />
+        <InfoRow label="Тип" value={providerLabel(source.providerType)} />
+      </div>
+      <div className="space-y-2">
+        {isPanelType && <InfoRow label="Версия панели" value={isLoading ? "…" : (panelVersion ?? "неизвестна")} />}
+        {isPanelType && <InfoRow label="Версия Xray" value={isLoading ? "…" : (xrayVersion ?? "неизвестна")} />}
+      </div>
     </div>
   );
 }
@@ -324,7 +327,6 @@ function SourceEditBody({ source, mayWrite, onClose }: { source: ControlPlaneSou
   const form = useForm<UpdateSourceValues>({
     resolver: zodResolver(updateSourceSchema),
     defaultValues: {
-      code: source.code,
       comment: source.comment ?? "",
     },
   });
@@ -332,7 +334,6 @@ function SourceEditBody({ source, mayWrite, onClose }: { source: ControlPlaneSou
   const mutation = useMutation({
     mutationFn: (values: UpdateSourceValues) =>
       adminApi.updateControlPlaneSource(source.id, {
-        code: values.code,
         comment: values.comment,
       }),
     onSuccess: async () => {
@@ -349,9 +350,13 @@ function SourceEditBody({ source, mayWrite, onClose }: { source: ControlPlaneSou
     <>
       <DialogHeader>
         <DialogTitle className="flex items-center gap-2">
-          {source.code}
+          {source.providerType === "REMNAWAVE" ? <LayoutDashboardIcon className="size-4 text-muted-foreground" /> : <ServerIcon className="size-4 text-muted-foreground" />}
+          <span className="font-heading text-lg font-semibold tracking-tight">{source.code}</span>
           <StatusBadge status={source.status} />
         </DialogTitle>
+        <p className="text-sm text-muted-foreground">
+          {providerLabel(source.providerType)} · {source.id}
+        </p>
       </DialogHeader>
       {/*
         A plain div, not a <form> - this dialog nests several independent mutations (panel fields,
@@ -360,23 +365,14 @@ function SourceEditBody({ source, mayWrite, onClose }: { source: ControlPlaneSou
         handleSubmit directly from onClick instead of relying on a submit event.
       */}
       <div className="contents">
-        <div className="grid gap-4 sm:grid-cols-2">
-          <div className="space-y-4">
-            <FieldGroup>
-              <Field data-invalid={Boolean(form.formState.errors.code)}>
-                <FieldLabel htmlFor="source-edit-code">Код панели</FieldLabel>
-                <Input id="source-edit-code" disabled={!mayWrite} {...form.register("code")} />
-                <FieldError errors={[form.formState.errors.code]} />
-              </Field>
-            </FieldGroup>
-            <PanelInfoCards source={source} />
-          </div>
-
-          <LinkedVpsSection sourceId={source.id} />
-        </div>
+        <PanelInfoCards source={source} />
 
         <div className="mt-4">
           <PanelAccessSection source={source} mayWrite={mayWrite} />
+        </div>
+
+        <div className="mt-4">
+          <LinkedVpsSection sourceId={source.id} />
         </div>
 
         {source.providerType === "REMNAWAVE" && (
