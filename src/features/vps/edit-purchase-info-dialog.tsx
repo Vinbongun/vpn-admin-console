@@ -8,6 +8,7 @@ import { adminApi, ApiError } from "@/api/client";
 import type { VpsInstance } from "@/api/types";
 import { Button } from "@/components/ui/button";
 import { CountryFlag } from "@/components/country-flag";
+import { CountrySearchSelect } from "@/components/country-search-select";
 import { Dialog, DialogClose, DialogContent, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -138,26 +139,13 @@ export function EditPurchaseInfoDialog({ vps }: { vps: VpsInstance }) {
           <div className="space-y-2 sm:col-span-2">
             <Label htmlFor="edit-vps-country">Страна дата-центра</Label>
             {isManual ? (
-              <Select
-                items={(countries.data ?? []).map((entry) => ({ value: entry.code, label: entry.name }))}
+              <CountrySearchSelect
+                id="edit-vps-country"
+                options={countries.data ?? []}
                 value={form.datacenterCountryCode}
-                onValueChange={(value) => setForm((prev) => ({ ...prev, datacenterCountryCode: value ?? "" }))}
-              >
-                <SelectTrigger id="edit-vps-country" className="w-full">
-                  <SelectValue placeholder={countries.isLoading ? "Загрузка…" : "Выберите страну"} />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectGroup>
-                    <SelectLabel>Страна</SelectLabel>
-                    {(countries.data ?? []).map((entry) => (
-                      <SelectItem key={entry.code} value={entry.code}>
-                        <CountryFlag code={entry.code} className="mr-1" />
-                        {entry.name}
-                      </SelectItem>
-                    ))}
-                  </SelectGroup>
-                </SelectContent>
-              </Select>
+                onChange={(code) => setForm((prev) => ({ ...prev, datacenterCountryCode: code }))}
+                loading={countries.isLoading}
+              />
             ) : (
               <p className="flex h-9 items-center gap-1.5 text-sm text-muted-foreground">
                 {vps.datacenterCountryCode ? (
