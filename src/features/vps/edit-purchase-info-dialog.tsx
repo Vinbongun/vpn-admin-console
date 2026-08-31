@@ -10,8 +10,11 @@ import { Button } from "@/components/ui/button";
 import { Dialog, DialogClose, DialogContent, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Select, SelectContent, SelectGroup, SelectItem, SelectLabel, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Spinner } from "@/components/ui/spinner";
 import { Switch } from "@/components/ui/switch";
+
+const currencies = ["RUB", "USD"] as const;
 
 function apiErrorMessage(error: ApiError): string {
   const details = error.details as { message?: string | string[] } | undefined;
@@ -23,7 +26,10 @@ function formFrom(vps: VpsInstance) {
   return {
     purchasedAt: vps.purchasedAt ? vps.purchasedAt.slice(0, 10) : "",
     expireDate: vps.expireDate ?? "",
-    purchaseCostCents: vps.purchaseCostCents != null ? String(vps.purchaseCostCents) : "",
+    // Бэкенд хранит и принимает целые центы (purchaseCostCents) - здесь только отображение/ввод
+    // в долларах с копейками для удобства staff, конвертация туда-обратно происходит только на
+    // границе формы (см. formFrom()/mutationFn ниже), контракт с бэком не меняется.
+    purchaseCostDollars: vps.purchaseCostCents != null ? (vps.purchaseCostCents / 100).toFixed(2) : "",
     currency: vps.currency ?? "",
     period: vps.period != null ? String(vps.period) : "",
     autoProlong: vps.autoProlong,
@@ -40,7 +46,7 @@ export function EditPurchaseInfoDialog({ vps }: { vps: VpsInstance }) {
       adminApi.updateVpsInstanceMetadata(vps.id, {
         ...(form.purchasedAt ? { purchasedAt: new Date(`${form.purchasedAt}T00:00:00Z`).toISOString() } : {}),
         ...(form.expireDate ? { expireDate: form.expireDate } : {}),
-        ...(form.purchaseCostCents ? { purchaseCostCents: Number(form.purchaseCostCents) } : {}),
+        ...(form.purchaseCostDollars ? { purchaseCostCents: Math.round(Number(form.purchaseCostDollars) * 100) } : {}),
         ...(form.currency ? { currency: form.currency } : {}),
         ...(form.period ? { period: Number(form.period) } : {}),
         autoProlong: form.autoProlong,
@@ -86,12 +92,33 @@ export function EditPurchaseInfoDialog({ vps }: { vps: VpsInstance }) {
             <Input id="edit-vps-expire-date" type="date" value={form.expireDate} onChange={(event) => setForm((prev) => ({ ...prev, expireDate: event.target.value }))} />
           </div>
           <div className="space-y-2">
-            <Label htmlFor="edit-vps-cost">Стоимость, центы</Label>
-            <Input id="edit-vps-cost" type="number" min={0} value={form.purchaseCostCents} onChange={(event) => setForm((prev) => ({ ...prev, purchaseCostCents: event.target.value }))} />
+            <Label htmlFor="edit-vps-cost">Стоимость</Label>
+            <Input
+              id="edit-vps-cost"
+              type="number"
+              min={0}
+              step="0.01"
+              value={form.purchaseCostDollars}
+              onChange={(event) => setForm((prev) => ({ ...prev, purchaseCostDollars: event.target.value }))}
+            />
           </div>
           <div className="space-y-2">
             <Label htmlFor="edit-vps-currency">Валюта</Label>
-            <Input id="edit-vps-currency" placeholder="USD" value={form.currency} onChange={(event) => setForm((prev) => ({ ...prev, currency: event.target.value }))} />
+            <Select items={currencies.map((value) => ({ value, label: value }))} value={form.currency} onValueChange={(value) => setForm((prev) => ({ ...prev, currency: value ?? "" }))}>
+              <SelectTrigger id="edit-vps-currency" className="w-full">
+                <SelectValue placeholder="Выберите валюту" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectGroup>
+                  <SelectLabel>Валюта</SelectLabel>
+                  {currencies.map((value) => (
+                    <SelectItem key={value} value={value}>
+                      {value}
+                    </SelectItem>
+                  ))}
+                </SelectGroup>
+              </SelectContent>
+            </Select>
           </div>
           <div className="space-y-2">
             <Label htmlFor="edit-vps-period">Период, мес.</Label>
