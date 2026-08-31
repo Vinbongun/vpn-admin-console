@@ -6,6 +6,7 @@ import { toast } from "sonner";
 import { adminApi, ApiError } from "@/api/client";
 import type { PlatformSetting, RateLimitValue } from "@/api/types";
 import { Button } from "@/components/ui/button";
+import { CopyButton } from "@/components/copy-button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -52,12 +53,38 @@ export function PlatformSettingCard({ meta, setting, mayWrite }: { meta: Setting
   const windowSeconds = Number(windowInput);
   const scalar = Number(scalarInput);
   const isValid =
-    meta.kind === "rate_limit" ? inBounds(limit, meta.limitBounds) && inBounds(windowSeconds, meta.windowBounds) : inBounds(scalar, meta.bounds);
+    meta.kind === "rate_limit"
+      ? inBounds(limit, meta.limitBounds) && inBounds(windowSeconds, meta.windowBounds)
+      : meta.kind === "scalar"
+        ? inBounds(scalar, meta.bounds)
+        : true; // readonly_text - never edited, nothing to validate
 
   const save = () => {
     if (!isValid) return;
-    mutation.mutate(meta.kind === "rate_limit" ? { limit, windowSeconds } : scalar);
+    if (meta.kind === "rate_limit") mutation.mutate({ limit, windowSeconds });
+    else if (meta.kind === "scalar") mutation.mutate(scalar);
   };
+
+  // Read-only by design (see settings-metadata.ts) - no edit affordance at all, regardless of
+  // mayWrite. Rotating this key means re-deploying it to every managed server; that's a
+  // separate, more involved task the owner explicitly did not ask for here.
+  if (meta.kind === "readonly_text") {
+    const value = String(setting.value);
+    return (
+      <Card>
+        <CardHeader>
+          <CardTitle>{meta.label}</CardTitle>
+          <CardDescription>{meta.description}</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="flex items-center gap-2">
+            <code className="flex-1 truncate rounded-md border bg-muted/30 px-3 py-2 text-xs">{value}</code>
+            <CopyButton value={value} />
+          </div>
+        </CardContent>
+      </Card>
+    );
+  }
 
   return (
     <Card>

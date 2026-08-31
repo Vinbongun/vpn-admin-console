@@ -2,7 +2,8 @@ import type { PlatformSettingKey } from "@/api/types";
 
 export type SettingMeta =
   | { key: PlatformSettingKey; kind: "rate_limit"; label: string; description: string; limitBounds: [number, number]; windowBounds: [number, number] }
-  | { key: PlatformSettingKey; kind: "scalar"; label: string; description: string; unit: string; bounds: [number, number] };
+  | { key: PlatformSettingKey; kind: "scalar"; label: string; description: string; unit: string; bounds: [number, number] }
+  | { key: PlatformSettingKey; kind: "readonly_text"; label: string; description: string };
 
 export const settingsMeta: SettingMeta[] = [
   {
@@ -68,5 +69,11 @@ export const settingsMeta: SettingMeta[] = [
     description: "Насколько «свежим» должно быть последнее подключение устройства, чтобы оно считалось «недавно активным» в списке устройств клиента",
     unit: "сек",
     bounds: [30, 3600],
+  },
+  {
+    key: "vps_automation.ssh_public_key",
+    kind: "readonly_text",
+    label: "SSH-ключ автоматизации",
+    description: "Один общий публичный ключ на всю платформу — установлен на каждом управляемом VPS. Только просмотр: смена потребует раскатки нового ключа на все серверы, это отдельная задача.",
   },
 ];

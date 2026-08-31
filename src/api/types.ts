@@ -138,13 +138,15 @@ export type PlatformSettingKey =
   | "otp.max_attempts"
   | "session.customer_lifetime_days"
   | "session.staff_lifetime_hours"
-  | "device.active_window_seconds";
+  | "device.active_window_seconds"
+  | "vps_automation.ssh_public_key";
 export type RateLimitValue = { limit: number; windowSeconds: number };
 // The generated PlatformSetting.value is `unknown` (the schema documents the shape only in
-// prose) - narrow it here per-key: rate_limit.* is { limit, windowSeconds }, the rest are a bare integer.
+// prose) - narrow it here per-key: rate_limit.* is { limit, windowSeconds }, most others are a
+// bare integer, vps_automation.ssh_public_key is a bare string (read-only, never edited via UI).
 export type PlatformSetting = Omit<Schemas["PlatformSetting"], "key" | "value"> & {
   key: PlatformSettingKey;
-  value: RateLimitValue | number;
+  value: RateLimitValue | number | string;
 };
 export type UpdatePlatformSetting = { value: RateLimitValue | number };
 
