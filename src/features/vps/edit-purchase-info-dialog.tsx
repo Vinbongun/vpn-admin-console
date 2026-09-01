@@ -36,6 +36,7 @@ function formFrom(vps: VpsInstance) {
     period: vps.period != null ? String(vps.period) : "",
     autoProlong: vps.autoProlong,
     datacenterCountryCode: vps.datacenterCountryCode ?? "",
+    registrarAccountId: vps.registrarAccountId ?? "",
   };
 }
 
@@ -45,6 +46,9 @@ export function EditPurchaseInfoDialog({ vps }: { vps: VpsInstance }) {
   const queryClient = useQueryClient();
   const isManual = vps.providerType === "MANUAL";
   const countries = useQuery({ queryKey: ["reference-countries"], queryFn: adminApi.listReferenceCountries, retry: false, enabled: open && isManual });
+  // Purely informational for a MANUAL VPS - lets staff retroactively note which real registrar
+  // account this server was actually bought through (not wired into automation/purchase-operations).
+  const registrarAccounts = useQuery({ queryKey: ["admin-vps-registrar-accounts"], queryFn: adminApi.listVpsRegistrarAccounts, retry: false, enabled: open && isManual });
 
   const mutation = useMutation({
     mutationFn: () =>
@@ -58,6 +62,7 @@ export function EditPurchaseInfoDialog({ vps }: { vps: VpsInstance }) {
         // Только для MANUAL - у API-купленного сервера локация всегда приходит от регистратора,
         // бэкенд сам отклонит попытку задать это поле для не-MANUAL (см. updateMetadata()).
         ...(isManual && form.datacenterCountryCode ? { datacenterCountryCode: form.datacenterCountryCode } : {}),
+        ...(isManual && form.registrarAccountId ? { registrarAccountId: form.registrarAccountId } : {}),
       }),
     onSuccess: async () => {
       toast.success("Данные о покупке обновлены.");
@@ -136,6 +141,35 @@ export function EditPurchaseInfoDialog({ vps }: { vps: VpsInstance }) {
             <Label htmlFor="edit-vps-auto-prolong">Авто-продление</Label>
             <Switch id="edit-vps-auto-prolong" checked={form.autoProlong} onCheckedChange={(checked) => setForm((prev) => ({ ...prev, autoProlong: checked }))} />
           </div>
+          {isManual && (
+            <div className="space-y-2 sm:col-span-2">
+              <Label htmlFor="edit-vps-registrar">Регистратор (задним числом)</Label>
+              <Select
+                items={[
+                  { value: "", label: "Не указан" },
+                  ...(registrarAccounts.data ?? []).map((account) => ({ value: account.id, label: account.code })),
+                ]}
+                value={form.registrarAccountId}
+                onValueChange={(value) => setForm((prev) => ({ ...prev, registrarAccountId: value ?? "" }))}
+              >
+                <SelectTrigger id="edit-vps-registrar" className="w-full">
+                  <SelectValue placeholder="Не указан" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectGroup>
+                    <SelectLabel>Регистратор</SelectLabel>
+                    <SelectItem value="">Не указан</SelectItem>
+                    {(registrarAccounts.data ?? []).map((account) => (
+                      <SelectItem key={account.id} value={account.id}>
+                        {account.code}
+                      </SelectItem>
+                    ))}
+                  </SelectGroup>
+                </SelectContent>
+              </Select>
+              <p className="text-xs text-muted-foreground">Чисто информационно — отмечает, у какого регистратора реально куплен сервер, не создаёт связь для автоматизации.</p>
+            </div>
+          )}
           <div className="space-y-2 sm:col-span-2">
             <Label htmlFor="edit-vps-country">Страна дата-центра</Label>
             {isManual ? (

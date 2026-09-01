@@ -34,6 +34,10 @@ export function VpsRegistrarDetailPage({ accountId }: { accountId: string }) {
   const mayWrite = can(staff.data, "vps_registrar.write");
   const accounts = useQuery({ queryKey: ["admin-vps-registrar-accounts"], queryFn: adminApi.listVpsRegistrarAccounts, retry: false });
   const account = accounts.data?.find((row) => row.id === accountId);
+  // MANUAL has no real provider/API behind it at all - none of balance sync, activation
+  // (meaningless without purchase automation reading it), credential rotation, or the
+  // servers/payment-methods/tariff panels (all of which call the registrar's own API) apply.
+  const isManual = account?.providerType === "MANUAL";
 
   const refresh = () => queryClient.invalidateQueries({ queryKey: ["admin-vps-registrar-accounts"] });
 
@@ -79,10 +83,10 @@ export function VpsRegistrarDetailPage({ accountId }: { accountId: string }) {
                 {account.status === "ACTIVE" && <Badge variant="outline">Активный для {account.providerType}</Badge>}
               </div>
               <p className="text-sm text-muted-foreground">
-                {account.providerType} · баланс {formatBalance(account.balanceCents, account.balanceCurrency)}
+                {isManual ? `Вручную${account.providerDisplayName ? ` (${account.providerDisplayName})` : ""}` : `${account.providerType} · баланс ${formatBalance(account.balanceCents, account.balanceCurrency)}`}
               </p>
             </div>
-            {mayWrite && (
+            {mayWrite && !isManual && (
               <div className="flex flex-wrap gap-2">
                 <Button size="sm" variant="outline" disabled={syncBalanceMutation.isPending} onClick={() => syncBalanceMutation.mutate()}>
                   {syncBalanceMutation.isPending && <Spinner />}
@@ -99,9 +103,17 @@ export function VpsRegistrarDetailPage({ accountId }: { accountId: string }) {
             )}
           </div>
 
-          <RegistrarServersPanel accountId={account.id} mayWrite={mayWrite} />
-          <PaymentMethodsPanel accountId={account.id} mayWrite={mayWrite} />
-          <TariffCatalogPanel accountId={account.id} mayWrite={mayWrite} />
+          {isManual ? (
+            <p className="text-sm text-muted-foreground">
+              Аккаунт добавлен вручную — без API/кредов, здесь нечего синхронизировать. Серверы, купленные у этого хостера, привязываются со стороны карточки VPS («Данные о покупке» → «Регистратор»).
+            </p>
+          ) : (
+            <>
+              <RegistrarServersPanel accountId={account.id} mayWrite={mayWrite} />
+              <PaymentMethodsPanel accountId={account.id} mayWrite={mayWrite} />
+              <TariffCatalogPanel accountId={account.id} mayWrite={mayWrite} />
+            </>
+          )}
         </div>
       )}
     </AppShell>

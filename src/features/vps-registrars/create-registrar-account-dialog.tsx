@@ -1,14 +1,15 @@
 "use client";
 
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { PlusIcon } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
 import { adminApi, ApiError } from "@/api/client";
 import { Button } from "@/components/ui/button";
-import { Dialog, DialogClose, DialogContent, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Dialog, DialogClose, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Select, SelectContent, SelectGroup, SelectItem, SelectLabel, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Spinner } from "@/components/ui/spinner";
 
 function apiErrorMessage(error: ApiError): string {
@@ -18,17 +19,28 @@ function apiErrorMessage(error: ApiError): string {
   return (Array.isArray(message) ? message.join(", ") : message) ?? error.message;
 }
 
-const emptyForm = { code: "", username: "", password: "" };
+const providerKinds = [
+  { value: "QWINS", label: "QWINS (через API)" },
+  { value: "MANUAL", label: "Вручную (без API)" },
+] as const;
+
+const emptyForm = { code: "", providerKind: "QWINS" as (typeof providerKinds)[number]["value"], providerDisplayName: "", username: "", password: "" };
 
 export function CreateRegistrarAccountDialog() {
   const [open, setOpen] = useState(false);
   const [form, setForm] = useState(emptyForm);
   const queryClient = useQueryClient();
+  const isManual = form.providerKind === "MANUAL";
+  // Suggestion list only - free text is always allowed via the datalist's native "or type your own" behavior.
+  const directory = useQuery({ queryKey: ["admin-vps-registrar-provider-directory"], queryFn: adminApi.listVpsRegistrarProviderDirectory, retry: false, enabled: open && isManual });
 
   const mutation = useMutation({
-    // providerType is currently locked to "QWINS" on the backend - the only real VPS-registrar
-    // integration that exists today. A provider Select belongs here once a second one ships.
-    mutationFn: () => adminApi.createVpsRegistrarAccount({ code: form.code.trim(), providerType: "QWINS", username: form.username.trim(), password: form.password }),
+    mutationFn: () =>
+      adminApi.createVpsRegistrarAccount(
+        isManual
+          ? { code: form.code.trim(), providerType: "MANUAL", providerDisplayName: form.providerDisplayName.trim() || undefined }
+          : { code: form.code.trim(), providerType: "QWINS", username: form.username.trim(), password: form.password },
+      ),
     onSuccess: async () => {
       toast.success("Аккаунт регистратора добавлен.");
       setOpen(false);
@@ -38,7 +50,7 @@ export function CreateRegistrarAccountDialog() {
     onError: (error) => toast.error(error instanceof ApiError ? apiErrorMessage(error) : "Не удалось добавить аккаунт."),
   });
 
-  const canSubmit = Boolean(form.code.trim() && form.username.trim() && form.password) && !mutation.isPending;
+  const canSubmit = Boolean(form.code.trim() && (isManual || (form.username.trim() && form.password))) && !mutation.isPending;
 
   return (
     <Dialog
@@ -66,13 +78,56 @@ export function CreateRegistrarAccountDialog() {
             <Input id="registrar-code" placeholder="Например main" value={form.code} onChange={(event) => setForm((prev) => ({ ...prev, code: event.target.value }))} />
           </div>
           <div className="space-y-2">
-            <Label htmlFor="registrar-username">Логин</Label>
-            <Input id="registrar-username" value={form.username} onChange={(event) => setForm((prev) => ({ ...prev, username: event.target.value }))} />
+            <Label htmlFor="registrar-kind">Тип</Label>
+            <Select
+              items={providerKinds.map((kind) => ({ value: kind.value, label: kind.label }))}
+              value={form.providerKind}
+              onValueChange={(value) => setForm((prev) => ({ ...prev, providerKind: (value as typeof prev.providerKind) ?? "QWINS" }))}
+            >
+              <SelectTrigger id="registrar-kind" className="w-full">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectGroup>
+                  <SelectLabel>Тип</SelectLabel>
+                  {providerKinds.map((kind) => (
+                    <SelectItem key={kind.value} value={kind.value}>
+                      {kind.label}
+                    </SelectItem>
+                  ))}
+                </SelectGroup>
+              </SelectContent>
+            </Select>
           </div>
-          <div className="space-y-2">
-            <Label htmlFor="registrar-password">Пароль</Label>
-            <Input id="registrar-password" type="password" value={form.password} onChange={(event) => setForm((prev) => ({ ...prev, password: event.target.value }))} />
-          </div>
+          {isManual ? (
+            <div className="space-y-2">
+              <Label htmlFor="registrar-provider-name">Название хостера</Label>
+              <Input
+                id="registrar-provider-name"
+                list="registrar-provider-directory"
+                placeholder="Например hip.hosting"
+                value={form.providerDisplayName}
+                onChange={(event) => setForm((prev) => ({ ...prev, providerDisplayName: event.target.value }))}
+              />
+              <datalist id="registrar-provider-directory">
+                {(directory.data ?? []).map((name) => (
+                  <option key={name} value={name} />
+                ))}
+              </datalist>
+              <DialogDescription>Без API/кредов — просто именованный контейнер для серверов, купленных у этого хостера вручную.</DialogDescription>
+            </div>
+          ) : (
+            <>
+              <div className="space-y-2">
+                <Label htmlFor="registrar-username">Логин</Label>
+                <Input id="registrar-username" value={form.username} onChange={(event) => setForm((prev) => ({ ...prev, username: event.target.value }))} />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="registrar-password">Пароль</Label>
+                <Input id="registrar-password" type="password" value={form.password} onChange={(event) => setForm((prev) => ({ ...prev, password: event.target.value }))} />
+              </div>
+            </>
+          )}
         </div>
         <DialogFooter>
           <DialogClose render={<Button type="button" variant="outline" />}>Отмена</DialogClose>
