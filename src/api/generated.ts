@@ -1663,6 +1663,40 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/admin/v1/vps-registrar-accounts/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /** @description Refuses (409) if real VPS instances or purchase-operation history still reference this account. */
+        delete: operations["deleteVpsRegistrarAccount"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/v1/vps-registrar-accounts/provider-directory": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description Open-ended, previously-used real-world hoster names - suggestion source for the MANUAL-account create dialog, not a strict enum. */
+        get: operations["listVpsRegistrarProviderDirectory"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/admin/v1/vps-registrar-accounts/{id}/credentials": {
         parameters: {
             query?: never;
@@ -2140,7 +2174,7 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** @description Enqueues an INSTALL_REMNAWAVE_PANEL job - installs a full Remnawave panel stack (backend+postgres+redis) on this VPS, live-verified 2026-08-28. Self-contained (no extraParams needed): the Ansible role generates its own secrets, registers a real superadmin, mints a real long-lived API token, and auto-registers a REMNAWAVE control_plane_source from it - controlPlaneSourceId is set automatically on success, no manual credential entry needed (unlike install-panel/3x-ui). Bound to the bare IP over plain HTTP with no reverse proxy/TLS yet - put a real one in front before production use. */
+        /** @description Enqueues an INSTALL_REMNAWAVE_PANEL job - installs a full Remnawave panel stack (backend+postgres+redis) on this VPS, live-verified 2026-08-28. The Ansible role generates its own secrets, registers a real superadmin, mints a real long-lived API token, and auto-registers a REMNAWAVE control_plane_source from it - controlPlaneSourceId is set automatically on success, no manual credential entry needed (unlike install-panel/3x-ui). Domain is MANDATORY here (unlike 3x-ui's optional, later install-reverse-proxy step) - a bare-IP Remnawave panel is barely usable at all (ProxyCheckMiddleware rejects everything without spoofed proxy headers). Reserves the domain, creates its 3 DNS records (root decoy + panel + sub subdomain), then chains straight into INSTALL_REVERSE_PROXY (REMNAWAVE branch) so one call drives the whole sequence. */
         post: operations["installRemnawavePanelOnVpsInstance"];
         delete?: never;
         options?: never;
@@ -3755,6 +3789,8 @@ export interface components {
             balanceCurrency?: string | null;
             /** Format: date-time */
             balanceSyncedAt?: string | null;
+            /** @description MANUAL only - the real-world hoster's name (e.g. hip.hosting). */
+            providerDisplayName?: string | null;
         };
         /** @description One row of BILLmanager's service.history - a real, read-only audit trail (verified live 2026-08-28), not a form/confirm step like prolong/changeTariff. */
         VpsHistoryEntry: {
@@ -3976,6 +4012,13 @@ export interface components {
             /**
              * Format: uuid
              * @description Must already be assigned to this VPS's panel via POST /domains/{id}/assign.
+             */
+            domainId: string;
+        };
+        InstallRemnawavePanel: {
+            /**
+             * Format: uuid
+             * @description A free (unassigned) domain - this endpoint reserves it and creates its DNS records itself, do NOT call POST /domains/{id}/assign first.
              */
             domainId: string;
         };
@@ -8178,12 +8221,14 @@ export interface operations {
                 "application/json": {
                     code: string;
                     /**
-                     * @description DEMO has no real provider behind it - fake read-only data, every mutating action fails cleanly.
+                     * @description DEMO has no real provider behind it - fake read-only data, every mutating action fails cleanly. MANUAL has no provider/credentials at all - a named container for a real-world hoster we have no API integration for (e.g. hip.hosting); username/password are required for QWINS/DEMO, ignored for MANUAL.
                      * @enum {string}
                      */
-                    providerType: "QWINS" | "DEMO";
-                    username: string;
-                    password: string;
+                    providerType: "QWINS" | "DEMO" | "MANUAL";
+                    username?: string;
+                    password?: string;
+                    /** @description MANUAL only - the real-world hoster's name, upserted into the provider directory for future suggestion. */
+                    providerDisplayName?: string;
                 };
             };
         };
@@ -8195,6 +8240,50 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["VpsRegistrarAccount"];
+                };
+            };
+        };
+    };
+    deleteVpsRegistrarAccount: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        ok?: boolean;
+                    };
+                };
+            };
+        };
+    };
+    listVpsRegistrarProviderDirectory: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": string[];
                 };
             };
         };
@@ -9183,7 +9272,11 @@ export interface operations {
             };
             cookie?: never;
         };
-        requestBody?: never;
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["InstallRemnawavePanel"];
+            };
+        };
         responses: {
             /** @description Job enqueued (or deduped) */
             201: {
@@ -9194,6 +9287,13 @@ export interface operations {
                     "application/json": components["schemas"]["VpsAutomationJobRef"];
                 };
             };
+            /** @description Domain already assigned to something else */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
             /** @description Missing vps.write permission */
             403: {
                 headers: {
@@ -9201,7 +9301,7 @@ export interface operations {
                 };
                 content?: never;
             };
-            /** @description VPS instance not found */
+            /** @description VPS instance or domain not found */
             404: {
                 headers: {
                     [name: string]: unknown;

@@ -194,6 +194,7 @@ export type UpdateVpsPaymentMethod = NonNullable<operations["updateVpsPaymentMet
 export type RegistrarServerSummary = Schemas["RegistrarServerSummary"];
 export type InstallRemnawaveNode = Schemas["InstallRemnawaveNode"];
 export type InstallReverseProxy = Schemas["InstallReverseProxy"];
+export type InstallRemnawavePanel = Schemas["InstallRemnawavePanel"];
 export type ControlPlaneSourceDetail = Schemas["ControlPlaneSourceDetail"];
 export type RemnawaveNodeSummary = Schemas["RemnawaveNodeSummary"];
 export type ConfigProfileSummary = Schemas["ConfigProfileSummary"];

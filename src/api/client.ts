@@ -52,6 +52,7 @@ import type {
   ExtendSubscription,
   GenerateDomainCandidatesRequest,
   InstallRemnawaveNode,
+  InstallRemnawavePanel,
   InstallReverseProxy,
   IssuedSubscriptionToken,
   PasswordLogin,
@@ -269,9 +270,11 @@ export const adminApi = {
   runVpsInstanceUpdate: async (id: string) => unwrap<VpsAutomationJobRef>(await client.POST("/admin/v1/vps-instances/{id}/update", { params: { path: { id } }, headers: staffHeaders() })),
   backupVpsInstance: async (id: string) => unwrap<VpsAutomationJobRef>(await client.POST("/admin/v1/vps-instances/{id}/backup", { params: { path: { id } }, headers: staffHeaders() })),
   installPanelOnVpsInstance: async (id: string) => unwrap<VpsAutomationJobRef>(await client.POST("/admin/v1/vps-instances/{id}/install-panel", { params: { path: { id } }, headers: staffHeaders() })),
-  // Self-contained: creates a new control_plane_source with a freshly-minted API token, no manual registration step afterward (unlike install-panel/3x-ui).
-  installRemnawavePanelOnVpsInstance: async (id: string) =>
-    unwrap<VpsAutomationJobRef>(await client.POST("/admin/v1/vps-instances/{id}/install-remnawave-panel", { params: { path: { id } }, headers: staffHeaders() })),
+  // Domain is mandatory (unlike install-panel/3x-ui, where it's an optional later step) - a
+  // bare-IP Remnawave panel is barely usable at all. Creates a new control_plane_source with a
+  // freshly-minted API token, no manual registration step afterward.
+  installRemnawavePanelOnVpsInstance: async (id: string, body: InstallRemnawavePanel) =>
+    unwrap<VpsAutomationJobRef>(await client.POST("/admin/v1/vps-instances/{id}/install-remnawave-panel", { params: { path: { id } }, body, headers: staffHeaders() })),
   // Attaches to an EXISTING REMNAWAVE panel - backend calls that panel's own API (create node + mint SECRET_KEY) before enqueueing the SSH job.
   installRemnawaveNodeOnVpsInstance: async (id: string, body: InstallRemnawaveNode) =>
     unwrap<VpsAutomationJobRef>(await client.POST("/admin/v1/vps-instances/{id}/install-remnawave-node", { params: { path: { id } }, body, headers: staffHeaders() })),
@@ -287,6 +290,10 @@ export const adminApi = {
 
   listVpsRegistrarAccounts: async () => unwrap<VpsRegistrarAccount[]>(await client.GET("/admin/v1/vps-registrar-accounts", { headers: staffHeaders() })),
   createVpsRegistrarAccount: async (body: CreateVpsRegistrarAccount) => unwrap<VpsRegistrarAccount>(await client.POST("/admin/v1/vps-registrar-accounts", { body, headers: staffHeaders() })),
+  // Refuses (409) if real VPS instances or purchase-operation history still reference the account.
+  deleteVpsRegistrarAccount: async (id: string) => unwrap<{ ok?: boolean }>(await client.DELETE("/admin/v1/vps-registrar-accounts/{id}", { params: { path: { id } }, headers: staffHeaders() })),
+  // Suggestion source for the MANUAL-account create dialog's provider-name combobox, not a strict enum.
+  listVpsRegistrarProviderDirectory: async () => unwrap<string[]>(await client.GET("/admin/v1/vps-registrar-accounts/provider-directory", { headers: staffHeaders() })),
   updateVpsRegistrarCredentials: async (id: string, body: UpdateVpsRegistrarCredentials) =>
     unwrap<{ ok?: boolean }>(await client.POST("/admin/v1/vps-registrar-accounts/{id}/credentials", { params: { path: { id } }, body, headers: staffHeaders() })),
   // Deactivates every other account of this providerType first - "1 активный аккаунт на регистратора" is DB-enforced.

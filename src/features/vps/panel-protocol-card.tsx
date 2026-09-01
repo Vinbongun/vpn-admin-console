@@ -69,36 +69,92 @@ function InstallPanelDialog({ vps, alreadyInstalled }: { vps: VpsInstanceDetail;
   );
 }
 
+/**
+ * Shared by every "pick a free domain" step (Remnawave panel install here, 3x-ui's reverse-proxy
+ * dialog below, and eventually the server wizard's own domain step) - not duplicated per caller.
+ * Free = not yet assigned to any panel or VPS, matches the backend's own "free domain" notion.
+ */
+function DomainPicker({ domainId, onChange }: { domainId: string; onChange: (id: string) => void }) {
+  const domains = useQuery({ queryKey: ["admin-domains", "all"], queryFn: () => adminApi.listDomains(), retry: false });
+  const freeDomains = (domains.data?.domains ?? []).filter((domain) => !domain.controlPlaneSourceId && !domain.vpsInstanceId && !domain.archivedAt);
+
+  if (domains.isLoading) return <p className="text-sm text-muted-foreground">Загрузка доменов…</p>;
+  if (freeDomains.length === 0) {
+    return (
+      <p className="text-sm text-muted-foreground">
+        Нет свободных доменов. Купите домен на странице{" "}
+        <Link href="/infrastructure/domains" className="underline">
+          «Домены»
+        </Link>{" "}
+        и вернитесь сюда.
+      </p>
+    );
+  }
+  return (
+    <Select items={freeDomains.map((domain) => ({ value: domain.id, label: domain.fqdn }))} value={domainId} onValueChange={(value) => onChange(value ?? "")}>
+      <SelectTrigger className="w-full">
+        <SelectValue placeholder="Выберите домен" />
+      </SelectTrigger>
+      <SelectContent>
+        <SelectGroup>
+          <SelectLabel>Свободные домены</SelectLabel>
+          {freeDomains.map((domain) => (
+            <SelectItem key={domain.id} value={domain.id}>
+              {domain.fqdn}
+            </SelectItem>
+          ))}
+        </SelectGroup>
+      </SelectContent>
+    </Select>
+  );
+}
+
+/**
+ * Unlike 3x-ui's InstallPanelDialog (works by bare IP, domain attached later via
+ * InstallReverseProxyDialog), a domain is mandatory here and chosen BEFORE the panel install
+ * even runs - a bare-IP Remnawave panel is barely usable at all (ProxyCheckMiddleware rejects
+ * everything without spoofed proxy headers). The backend reserves the domain, creates its 3 DNS
+ * records, and chains straight into the reverse-proxy install - this one call drives all of it.
+ */
 function InstallRemnawavePanelDialog({ vps }: { vps: VpsInstanceDetail }) {
   const [open, setOpen] = useState(false);
+  const [domainId, setDomainId] = useState("");
   const queryClient = useQueryClient();
   const mutation = useMutation({
-    mutationFn: () => adminApi.installRemnawavePanelOnVpsInstance(vps.id),
+    mutationFn: () => adminApi.installRemnawavePanelOnVpsInstance(vps.id, { domainId }),
     onSuccess: async () => {
-      toast.success("Задача установки панели Remnawave поставлена.");
+      toast.success("Домен закреплён, задача установки панели Remnawave поставлена.");
       setOpen(false);
-      await queryClient.invalidateQueries({ queryKey: ["admin-vps-instance", vps.id] });
+      setDomainId("");
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ["admin-vps-instance", vps.id] }),
+        queryClient.invalidateQueries({ queryKey: ["admin-domains"] }),
+      ]);
     },
     onError: (error) => toast.error(error instanceof ApiError ? apiErrorMessage(error) : "Не удалось поставить задачу установки панели."),
   });
 
   return (
-    <Dialog open={open} onOpenChange={setOpen}>
+    <Dialog open={open} onOpenChange={(next) => { setOpen(next); if (!next) setDomainId(""); }}>
       <DialogTrigger render={<OptionTile icon={LayoutDashboardIcon} />}>
         <OptionTileTitle>Панель Remnawave</OptionTileTitle>
         <OptionTileDescription>Отдельная панель — ноды ставятся на другие серверы</OptionTileDescription>
       </DialogTrigger>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
-          <DialogTitle>Установить панель Remnawave?</DialogTitle>
-          <DialogDescription>
-            Поставит Postgres + Redis + backend Remnawave на этот сервер и сам зарегистрирует панель в системе с реально выпущенным
-            API-токеном — в отличие от 3x-ui, ручной регистрации после установки не требуется.
+          <DialogTitle>Установить панель Remnawave</DialogTitle>
+          <DialogDescription render={<div />}>
+            <ul className="list-disc space-y-1.5 pl-4">
+              <li>Поставит Postgres + Redis + backend Remnawave и сам зарегистрирует панель в системе с реально выпущенным API-токеном.</li>
+              <li>Домен обязателен — без него панель почти бесполезна (её же middleware отклоняет запросы без реального реверс-прокси).</li>
+              <li>Из одного домена сделаются 3 записи: заглушка на корне, поддомен панели, поддомен подписки — новый домен для будущих нод покупать не придётся.</li>
+            </ul>
           </DialogDescription>
         </DialogHeader>
+        <DomainPicker domainId={domainId} onChange={setDomainId} />
         <DialogFooter>
           <DialogClose render={<Button type="button" variant="outline" />}>Отмена</DialogClose>
-          <Button disabled={mutation.isPending} onClick={() => mutation.mutate()}>
+          <Button disabled={!domainId || mutation.isPending} onClick={() => mutation.mutate()}>
             {mutation.isPending && <Spinner />}
             Установить
           </Button>
@@ -114,8 +170,6 @@ function InstallReverseProxyDialog({ vps }: { vps: VpsInstanceDetail }) {
   const [open, setOpen] = useState(false);
   const [domainId, setDomainId] = useState("");
   const queryClient = useQueryClient();
-  const domains = useQuery({ queryKey: ["admin-domains", "all"], queryFn: () => adminApi.listDomains(), retry: false, enabled: open });
-  const freeDomains = (domains.data?.domains ?? []).filter((domain) => !domain.controlPlaneSourceId && !domain.vpsInstanceId && !domain.archivedAt);
 
   const mutation = useMutation({
     mutationFn: async () => {
@@ -144,33 +198,7 @@ function InstallReverseProxyDialog({ vps }: { vps: VpsInstanceDetail }) {
             Выберите свободный домен — панель переключится на него по HTTPS, на корне появится статичная заглушка вместо самой панели.
           </DialogDescription>
         </DialogHeader>
-        {domains.isLoading ? (
-          <p className="text-sm text-muted-foreground">Загрузка доменов…</p>
-        ) : freeDomains.length === 0 ? (
-          <p className="text-sm text-muted-foreground">
-            Нет свободных доменов. Купите домен на странице{" "}
-            <Link href="/infrastructure/domains" className="underline">
-              «Домены»
-            </Link>{" "}
-            и вернитесь сюда.
-          </p>
-        ) : (
-          <Select items={freeDomains.map((domain) => ({ value: domain.id, label: domain.fqdn }))} value={domainId} onValueChange={(value) => setDomainId(value ?? "")}>
-            <SelectTrigger className="w-full">
-              <SelectValue placeholder="Выберите домен" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectGroup>
-                <SelectLabel>Свободные домены</SelectLabel>
-                {freeDomains.map((domain) => (
-                  <SelectItem key={domain.id} value={domain.id}>
-                    {domain.fqdn}
-                  </SelectItem>
-                ))}
-              </SelectGroup>
-            </SelectContent>
-          </Select>
-        )}
+        <DomainPicker domainId={domainId} onChange={setDomainId} />
         <DialogFooter>
           <DialogClose render={<Button type="button" variant="outline" />}>Отмена</DialogClose>
           <Button disabled={!domainId || mutation.isPending} onClick={() => mutation.mutate()}>
